@@ -1,12 +1,19 @@
 #include <stdio.h>
+#include <string.h>
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/event_groups.h"
 #include "esp_sleep.h"
 #include "driver/gpio.h"
 #include "driver/rtc_io.h"
 #include "esp_camera.h"
 #include "driver/i2s_std.h"
+#include "nvs_flash.h"
+#include "esp_wifi.h"
+#include "esp_event.h"
+#include "mqtt_client.h"
+#include "config.h"
 
 static const char *TAG = "smart_doorbell";
 
@@ -160,8 +167,103 @@ static esp_err_t init_i2s(void)
     return ESP_OK;
 }
 
+#define WIFI_CONNECTED_BIT BIT0
+
+static EventGroupHandle_t s_wifi_event_group;
+
+static void wifi_event_handler(void* arg, esp_event_base_t event_base,
+                                int32_t event_id, void* event_data)
+{
+    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
+        esp_wifi_connect();
+    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+        esp_wifi_connect();
+        ESP_LOGI(TAG, "retry to connect to the AP");
+    } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+        ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
+        ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
+        xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
+    }
+}
+
+static void init_wifi(void)
+{
+    s_wifi_event_group = xEventGroupCreate();
+
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    esp_netif_create_default_wifi_sta();
+
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
+    esp_event_handler_instance_t instance_any_id;
+    esp_event_handler_instance_t instance_got_ip;
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
+                                                        ESP_EVENT_ANY_ID,
+                                                        &wifi_event_handler,
+                                                        NULL,
+                                                        &instance_any_id));
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
+                                                        IP_EVENT_STA_GOT_IP,
+                                                        &wifi_event_handler,
+                                                        NULL,
+                                                        &instance_got_ip));
+
+    wifi_config_t wifi_config = {
+        .sta = {
+            .ssid = WIFI_SSID,
+            .password = WIFI_PASSWORD,
+            .threshold.authmode = WIFI_AUTH_WPA2_PSK,
+        },
+    };
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
+    ESP_ERROR_CHECK(esp_wifi_start());
+
+    ESP_LOGI(TAG, "wifi_init_sta finished. Waiting for connection...");
+
+    // Wait until connection is established
+    xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
+}
+
+static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
+{
+    esp_mqtt_event_handle_t event = event_data;
+    switch ((esp_mqtt_event_id_t)event_id) {
+    case MQTT_EVENT_CONNECTED:
+        ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
+        break;
+    case MQTT_EVENT_DISCONNECTED:
+        ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
+        break;
+    default:
+        break;
+    }
+}
+
+static void init_mqtt(void)
+{
+    esp_mqtt_client_config_t mqtt_cfg = {
+        .broker.address.uri = MQTT_BROKER_URI,
+    };
+
+    esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_cfg);
+    esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
+    esp_mqtt_client_start(client);
+    ESP_LOGI(TAG, "MQTT Init Succeeded");
+}
+
 void app_main(void)
 {
+    // Initialize NVS (Required for WiFi)
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+      ESP_ERROR_CHECK(nvs_flash_erase());
+      ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
+
     ESP_LOGI(TAG, "Initializing Smart Doorbell System");
 
     // 1. Determine wakeup cause
@@ -170,10 +272,10 @@ void app_main(void)
     if (wakeup_cause == ESP_SLEEP_WAKEUP_EXT0) {
         ESP_LOGI(TAG, "Woke up from deep sleep due to doorbell button press!");
         
-        // TODO: Initialize WiFi Station
-        ESP_LOGI(TAG, "[Placeholder] WiFi Init");
+        // 2. Initialize WiFi Station
+        init_wifi();
 
-        // 2. Initialize Camera (OV5640)
+        // 3. Initialize Camera (OV5640)
         if (init_camera() == ESP_OK) {
             // Take a picture
             camera_fb_t *pic = esp_camera_fb_get();
@@ -186,13 +288,13 @@ void app_main(void)
             }
         }
 
-        // 3. Initialize I2S (INMP441 & MAX98357A)
+        // 4. Initialize I2S (INMP441 & MAX98357A)
         if (init_i2s() == ESP_OK) {
             ESP_LOGI(TAG, "Audio peripherals ready for streaming");
         }
 
-        // TODO: Connect to MQTT Broker
-        ESP_LOGI(TAG, "[Placeholder] MQTT Init");
+        // 5. Connect to MQTT Broker
+        init_mqtt();
 
         // Simulating the time it takes to handle a doorbell event
         vTaskDelay(10000 / portTICK_PERIOD_MS);
