@@ -211,7 +211,7 @@ export default function Home() {
                 </h3>
                 
                 {/* The actual scrolling list */}
-                <div className="flex flex-col gap-5 overflow-y-auto pr-2 flex-1 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
+                <div className="flex flex-col gap-5 overflow-y-auto pr-2 flex-1 min-h-0 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent [mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)]">
                   {events.map((evt) => (
                     <button
                       key={evt.id}
