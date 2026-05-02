@@ -14,6 +14,7 @@
 #include "esp_event.h"
 #include "mqtt_client.h"
 #include "config.h"
+#include "esp_http_client.h"
 
 static const char *TAG = "smart_doorbell";
 
@@ -254,6 +255,77 @@ static void init_mqtt(void)
     ESP_LOGI(TAG, "MQTT Init Succeeded");
 }
 
+static esp_err_t upload_image_to_gateway(const uint8_t *image_data, size_t image_len)
+{
+    esp_err_t err = ESP_OK;
+    
+    esp_http_client_config_t config = {
+        .url = GATEWAY_API_URL,
+        .method = HTTP_METHOD_POST,
+        .timeout_ms = 10000,
+    };
+
+    esp_http_client_handle_t client = esp_http_client_init(&config);
+    if (!client) {
+        ESP_LOGE(TAG, "Failed to initialize HTTP client");
+        return ESP_FAIL;
+    }
+
+    // Generate boundary
+    const char *boundary = "----SmartDoorbellBoundary123456789";
+    char content_type[64];
+    snprintf(content_type, sizeof(content_type), "multipart/form-data; boundary=%s", boundary);
+    esp_http_client_set_header(client, "Content-Type", content_type);
+
+    // Build the multipart body
+    const char *part1 = 
+        "------SmartDoorbellBoundary123456789\r\n"
+        "Content-Disposition: form-data; name=\"eventType\"\r\n\r\n"
+        "DOORBELL_PRESS\r\n"
+        "------SmartDoorbellBoundary123456789\r\n"
+        "Content-Disposition: form-data; name=\"image\"; filename=\"dummy.jpg\"\r\n"
+        "Content-Type: image/jpeg\r\n\r\n";
+    
+    const char *part2 = "\r\n------SmartDoorbellBoundary123456789--\r\n";
+
+    // Calculate total content length
+    int total_len = strlen(part1) + image_len + strlen(part2);
+    
+    // Open connection
+    err = esp_http_client_open(client, total_len);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to open HTTP connection: %s", esp_err_to_name(err));
+        esp_http_client_cleanup(client);
+        return err;
+    }
+
+    // Write parts
+    esp_http_client_write(client, part1, strlen(part1));
+    esp_http_client_write(client, (const char *)image_data, image_len);
+    esp_http_client_write(client, part2, strlen(part2));
+
+    // Fetch response
+    int content_length = esp_http_client_fetch_headers(client);
+    int status_code = esp_http_client_get_status_code(client);
+    ESP_LOGI(TAG, "HTTP POST Status = %d, content_length = %d", status_code, content_length);
+    
+    if (status_code == 200) {
+        ESP_LOGI(TAG, "Image uploaded successfully!");
+        char response_buf[256] = {0};
+        int read_len = esp_http_client_read(client, response_buf, sizeof(response_buf) - 1);
+        if (read_len > 0) {
+            ESP_LOGI(TAG, "Gateway Response: %s", response_buf);
+        }
+    } else {
+        ESP_LOGE(TAG, "Upload failed with status %d", status_code);
+        err = ESP_FAIL;
+    }
+
+    esp_http_client_close(client);
+    esp_http_client_cleanup(client);
+    return err;
+}
+
 void app_main(void)
 {
     // Initialize NVS (Required for WiFi)
@@ -269,24 +341,20 @@ void app_main(void)
     // 1. Determine wakeup cause
     esp_sleep_wakeup_cause_t wakeup_cause = esp_sleep_get_wakeup_cause();
 
-    if (wakeup_cause == ESP_SLEEP_WAKEUP_EXT0) {
-        ESP_LOGI(TAG, "Woke up from deep sleep due to doorbell button press!");
+    // For testing without the button, run on normal boot or EXT0
+    if (wakeup_cause == ESP_SLEEP_WAKEUP_EXT0 || wakeup_cause == ESP_SLEEP_WAKEUP_UNDEFINED) {
+        ESP_LOGI(TAG, "Woke up from deep sleep (or normal boot). Starting network flow.");
         
         // 2. Initialize WiFi Station
         init_wifi();
 
-        // 3. Initialize Camera (OV5640)
-        if (init_camera() == ESP_OK) {
-            // Take a picture
-            camera_fb_t *pic = esp_camera_fb_get();
-            if (!pic) {
-                ESP_LOGE(TAG, "Failed to capture image");
-            } else {
-                ESP_LOGI(TAG, "Picture taken! Size: %zu bytes", pic->len);
-                // Return the frame buffer back to the driver for reuse
-                esp_camera_fb_return(pic);
-            }
-        }
+        // 3. Dummy Image Generation & Upload
+        ESP_LOGI(TAG, "Generating dummy image data...");
+        const uint8_t dummy_image[] = "This is a fake JPEG payload to test the gateway.";
+        size_t dummy_len = sizeof(dummy_image);
+        
+        ESP_LOGI(TAG, "Uploading dummy image...");
+        upload_image_to_gateway(dummy_image, dummy_len);
 
         // 4. Initialize I2S (INMP441 & MAX98357A)
         if (init_i2s() == ESP_OK) {
@@ -300,7 +368,7 @@ void app_main(void)
         vTaskDelay(10000 / portTICK_PERIOD_MS);
 
     } else {
-        ESP_LOGI(TAG, "Woke up from normal boot or reset (cause: %d). Going to sleep immediately.", wakeup_cause);
+        ESP_LOGI(TAG, "Woke up from reset (cause: %d). Going to sleep immediately.", wakeup_cause);
     }
 
     ESP_LOGI(TAG, "Preparing to enter deep sleep...");
