@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
+import { LayoutDashboard, Database, CalendarDays, Activity, Settings } from 'lucide-react';
 
 interface DoorbellEvent {
   id: number;
@@ -83,22 +84,27 @@ export default function Home() {
           <span className="font-bold text-xl tracking-wide text-zinc-100">Smart Doorbell</span>
         </div>
 
+        {/* Menu Items */}
         <nav className="flex-1 py-6 flex flex-col gap-2">
           <a href="#" className="flex items-center px-6 py-4 bg-emerald-500/10 border-l-4 border-emerald-500 text-emerald-500">
-            <svg className="w-5 h-5 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+            <LayoutDashboard className="w-5 h-5 mr-4" />
             <span className="text-sm font-medium uppercase tracking-wider">Dashboard</span>
           </a>
           <a href="#" className="flex items-center px-6 py-4 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 transition-colors border-l-4 border-transparent">
-            <svg className="w-5 h-5 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            <span className="text-sm font-medium uppercase tracking-wider">History</span>
+            <Database className="w-5 h-5 mr-4" />
+            <span className="text-sm font-medium uppercase tracking-wider">Event Log</span>
           </a>
           <a href="#" className="flex items-center px-6 py-4 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 transition-colors border-l-4 border-transparent">
-            <svg className="w-5 h-5 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-            <span className="text-sm font-medium uppercase tracking-wider">Deliveries</span>
+            <CalendarDays className="w-5 h-5 mr-4" />
+            <span className="text-sm font-medium uppercase tracking-wider">Calendar View</span>
           </a>
           <a href="#" className="flex items-center px-6 py-4 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 transition-colors border-l-4 border-transparent">
-            <svg className="w-5 h-5 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+            <Activity className="w-5 h-5 mr-4" />
             <span className="text-sm font-medium uppercase tracking-wider">System Health</span>
+          </a>
+          <a href="#" className="flex items-center px-6 py-4 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 transition-colors border-l-4 border-transparent">
+            <Settings className="w-5 h-5 mr-4" />
+            <span className="text-sm font-medium uppercase tracking-wider">Settings</span>
           </a>
         </nav>
       </aside>
@@ -106,7 +112,7 @@ export default function Home() {
       {/* Main Content Area Container */}
       <main className="flex-1 bg-zinc-900 rounded-l-[2.5rem] border-l border-t border-b border-zinc-800 shadow-2xl relative overflow-hidden flex flex-col my-3 mr-4">
         {/* Subtle Grid Background */}
-        <div className="absolute inset-0 bg-grid opacity-[0.35] pointer-events-none z-0"></div>
+        <div className="absolute inset-0 bg-grid opacity-[0.3] pointer-events-none z-0"></div>
         
         {/* Top Bar */}
         <header className="h-20 border-b border-zinc-800/50 flex justify-between items-center px-10 relative z-10 bg-zinc-900/50 backdrop-blur-sm">
@@ -127,20 +133,20 @@ export default function Home() {
         {/* Dashboard Content */}
         <div className="p-10 flex-1 relative z-10 overflow-hidden">
           
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 w-full max-w-[1800px] mx-auto h-full items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 w-full max-w-[1800px] mx-auto items-start">
             
-            {/* Left Column: Media Card (Scaled Up) */}
-            <div className="lg:col-span-9 flex flex-col min-h-0 h-fit">
+            {/* Left Column: Media Card (Scaled Up 1.25x - The Anchor) */}
+            <div className="lg:col-span-9 h-fit flex flex-col min-h-0">
               {/* Media Card - key prop forces re-render/animation on change */}
               <div key={activeEvent.id} className="w-full bg-zinc-950 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-flash-event h-fit">
                 
-                {/* Image Container - Strict 4:3 Aspect Ratio */}
+                {/* Image Container - Strict 4:3 Aspect Ratio for OV5640 */}
                 <div className="relative w-full aspect-[4/3] bg-black flex items-center justify-center border-b border-zinc-800 group overflow-hidden">
                   <Image
                     src={`${MINIO_BASE_URL}/${activeEvent.imageKey}`}
                     alt="Doorbell snapshot"
                     fill
-                    className="object-cover transition-transform duration-700 group-hover:scale-105"
+                    className="object-cover w-full transition-transform duration-700 group-hover:scale-105"
                     unoptimized
                   />
                   {isMostRecent && (
@@ -195,15 +201,17 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Right Column: History Feed (Absolute Inset Trick) */}
-            <div className="lg:col-span-3 relative h-full min-h-[500px]">
-              <div className="absolute inset-0 flex flex-col pr-2 overflow-hidden">
+            {/* Right Column: History Feed (The Bounding Box - Relative self-stretch allows it to match left height) */}
+            <div className="lg:col-span-3 relative self-stretch min-h-[500px]">
+              {/* The Inner Content (Absolute Inset Trick) */}
+              <div className="absolute inset-0 flex flex-col overflow-hidden">
                 <h3 className="text-xs font-mono text-zinc-500 uppercase tracking-[0.2em] mb-5 flex items-center gap-3 shrink-0 px-2 font-black">
                   <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
                   Recent Log
                 </h3>
                 
-                <div className="flex flex-col gap-5 overflow-y-auto pr-3 flex-1 min-h-0 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
+                {/* The actual scrolling list */}
+                <div className="flex flex-col gap-5 overflow-y-auto pr-2 flex-1 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
                   {events.map((evt) => (
                     <button
                       key={evt.id}
