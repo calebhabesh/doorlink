@@ -104,47 +104,47 @@ export default function Home() {
       </aside>
 
       {/* Main Content Area Container */}
-      <main className="flex-1 bg-zinc-900 rounded-l-[2rem] border-l border-t border-b border-zinc-800 shadow-2xl relative overflow-hidden flex flex-col my-4 mr-4">
+      <main className="flex-1 bg-zinc-900 rounded-l-[2.5rem] border-l border-t border-b border-zinc-800 shadow-2xl relative overflow-hidden flex flex-col my-3 mr-4">
         {/* Subtle Grid Background */}
-        <div className="absolute inset-0 bg-grid opacity-[0.15] pointer-events-none"></div>
+        <div className="absolute inset-0 bg-grid opacity-[0.25] pointer-events-none z-0"></div>
         
         {/* Top Bar */}
-        <header className="h-20 border-b border-zinc-800/50 flex justify-between items-center px-10 relative z-10">
-          <div className="flex items-center font-mono uppercase tracking-widest text-lg">
+        <header className="h-20 border-b border-zinc-800/50 flex justify-between items-center px-10 relative z-10 bg-zinc-900/50 backdrop-blur-sm">
+          <div className="flex items-center font-mono uppercase tracking-widest text-xl">
             <span className="text-zinc-500">Dashboard</span>
             <span className="mx-3 text-zinc-700">/</span>
-            <span className="text-zinc-100 font-bold">Active Event</span>
+            <span className="text-zinc-100 font-black">Active Event</span>
           </div>
-          <div className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 px-4 py-2 rounded shadow-inner font-mono tracking-wider">
+          <div className="flex items-center gap-4 bg-zinc-950 border border-zinc-800 px-5 py-2.5 rounded-lg shadow-inner font-mono tracking-wider text-sm">
             <div className="relative flex h-3 w-3">
               {isConnected && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>}
               <span className={`relative inline-flex rounded-full h-3 w-3 ${isConnected ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
             </div>
-            <span className={`text-sm font-bold ${isConnected ? 'text-emerald-500' : 'text-red-500'}`}>{isConnected ? 'SYSTEM LIVE' : 'DISCONNECTED'}</span>
+            <span className={`font-bold uppercase ${isConnected ? 'text-emerald-500' : 'text-red-500'}`}>{isConnected ? 'SYSTEM LIVE' : 'DISCONNECTED'}</span>
           </div>
         </header>
 
         {/* Dashboard Content */}
-        <div className="p-10 flex flex-col flex-1 overflow-y-auto relative z-10">
+        <div className="p-10 flex flex-col flex-1 relative z-10 overflow-hidden">
           
-          <div className="flex flex-col lg:flex-row gap-10 w-full max-w-7xl mx-auto items-stretch">
+          <div className="flex flex-col lg:flex-row gap-10 w-full max-w-7xl mx-auto h-full items-stretch">
             
             {/* Left Column: Media Card */}
-            <div className="flex-1 flex flex-col">
+            <div className="flex-[2] max-w-4xl flex flex-col min-h-0">
               {/* Media Card - key prop forces re-render/animation on change */}
-              <div key={activeEvent.id} className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col animate-flash-event h-full">
+              <div key={activeEvent.id} className="w-full bg-zinc-950 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-flash-event flex-1">
                 
                 {/* Image Container */}
-                <div className="relative w-full flex-1 aspect-video bg-black flex items-center justify-center border-b border-zinc-800">
+                <div className="relative w-full aspect-video bg-black flex items-center justify-center border-b border-zinc-800 group overflow-hidden flex-1">
                   <Image
                     src={`${MINIO_BASE_URL}/${activeEvent.imageKey}`}
                     alt="Doorbell snapshot"
                     fill
-                    className="object-contain"
+                    className="object-contain transition-transform duration-700 group-hover:scale-105"
                     unoptimized
                   />
                   {isMostRecent && (
-                    <div className="absolute top-4 right-4 bg-emerald-500/20 border border-emerald-500/50 text-emerald-500 text-xs font-bold px-3 py-1 rounded shadow-lg backdrop-blur-sm flex items-center gap-2">
+                    <div className="absolute top-6 right-6 bg-emerald-500/20 border border-emerald-500/50 text-emerald-500 text-xs font-black px-4 py-1.5 rounded-full shadow-lg backdrop-blur-md flex items-center gap-2 tracking-widest ring-1 ring-emerald-500/30">
                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                        MOST RECENT
                     </div>
@@ -152,12 +152,12 @@ export default function Home() {
                 </div>
                 
                 {/* Event Metadata & Audio Interface */}
-                <div className="p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 bg-zinc-900/50 shrink-0">
+                <div className="p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-8 bg-zinc-900/40 shrink-0">
                   
                   {/* Metadata */}
-                  <div>
-                    <h2 className="text-3xl font-bold text-zinc-100">{formatTitleCase(activeEvent.eventType)}</h2>
-                    <p className="text-base font-mono text-zinc-400 mt-2 tracking-widest">
+                  <div className="flex-1">
+                    <h2 className="text-3xl font-black text-zinc-100 tracking-tight">{formatTitleCase(activeEvent.eventType)}</h2>
+                    <p className="text-lg font-mono text-zinc-400 mt-2 tracking-widest leading-relaxed">
                       {new Date(activeEvent.timestamp).toLocaleString(undefined, {
                         weekday: 'short', month: 'short', day: 'numeric',
                         hour: 'numeric', minute: '2-digit', second: '2-digit'
@@ -166,13 +166,13 @@ export default function Home() {
                   </div>
 
                   {/* Audio Controls */}
-                  <div className="flex gap-4">
+                  <div className="flex gap-4 shrink-0">
                     <button 
                       disabled={!activeEvent.hasAudio} 
-                      className={`flex items-center gap-2 px-5 py-3 rounded text-sm font-bold uppercase tracking-wider transition-colors border ${
+                      className={`flex items-center gap-2 px-6 py-3.5 rounded-xl text-sm font-bold uppercase tracking-widest transition-all border ${
                         activeEvent.hasAudio 
-                          ? 'bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-100' 
-                          : 'bg-zinc-900 border-zinc-800 text-zinc-600 cursor-not-allowed'
+                          ? 'bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-100 shadow-lg' 
+                          : 'bg-zinc-900 border-zinc-800 text-zinc-600 cursor-not-allowed opacity-50'
                       }`}
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -183,7 +183,7 @@ export default function Home() {
                     </button>
                     
                     {isMostRecent && (
-                      <button className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-3 rounded text-sm font-bold uppercase tracking-wider transition-colors shadow-lg shadow-emerald-900/50">
+                      <button className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white px-6 py-3.5 rounded-xl text-sm font-bold uppercase tracking-widest transition-all shadow-xl shadow-emerald-900/40 border border-emerald-500/50">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                         </svg>
@@ -197,34 +197,40 @@ export default function Home() {
 
             {/* Right Column: History Feed */}
             <div className="w-full lg:w-96 flex flex-col min-h-0">
-              <h3 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2 shrink-0">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+              <h3 className="text-xs font-mono text-zinc-500 uppercase tracking-[0.2em] mb-5 flex items-center gap-3 shrink-0 px-2 font-black">
+                <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
                 Recent Log
               </h3>
               
-              <div className="flex flex-col gap-4 overflow-y-auto pr-2 flex-1 min-h-0">
+              <div className="flex flex-col gap-5 overflow-y-auto pr-3 flex-1 min-h-0 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
                 {events.map((evt) => (
                   <button
                     key={evt.id}
                     onClick={() => setActiveEvent(evt)}
-                    className={`text-left bg-zinc-950 border rounded-xl p-4 transition-all duration-200 animate-slide-in ${
+                    className={`text-left bg-zinc-950 border rounded-2xl p-6 transition-all duration-300 animate-slide-in shrink-0 relative group overflow-hidden ${
                       activeEvent.id === evt.id 
-                        ? 'border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.1)]' 
-                        : 'border-zinc-800 hover:border-zinc-600 hover:bg-zinc-900'
+                        ? 'border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)] bg-emerald-500/[0.03]' 
+                        : 'border-zinc-800 hover:border-zinc-600 hover:bg-zinc-900/50'
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-base font-bold text-zinc-100">{formatTitleCase(evt.eventType)}</span>
+                    <div className="flex items-center justify-between mb-3 relative z-10">
+                      <span className="text-lg font-black text-zinc-100 tracking-tight">{formatTitleCase(evt.eventType)}</span>
                       {evt.id === events[0]?.id && (
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_5px_#10b981]"></span>
+                        <span className="flex h-2.5 w-2.5">
+                           <span className="animate-ping absolute inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 opacity-75"></span>
+                           <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                        </span>
                       )}
                     </div>
-                    <div className="text-sm text-zinc-400 font-medium">
+                    <div className="text-sm text-zinc-400 font-bold uppercase tracking-wider mb-1 relative z-10">
                       {new Date(evt.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                     </div>
-                    <div className="text-xs font-mono text-zinc-500 mt-1">
+                    <div className="text-xs font-mono text-zinc-500 tracking-widest relative z-10">
                       {new Date(evt.timestamp).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', second: '2-digit' })}
                     </div>
+                    {activeEvent.id === evt.id && (
+                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500 shadow-[2px_0_10px_rgba(16,185,129,0.5)]"></div>
+                    )}
                   </button>
                 ))}
               </div>
