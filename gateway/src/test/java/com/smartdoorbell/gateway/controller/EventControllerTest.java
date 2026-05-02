@@ -1,5 +1,6 @@
 package com.smartdoorbell.gateway.controller;
 
+import com.smartdoorbell.gateway.config.MqttGateway;
 import com.smartdoorbell.gateway.entity.Event;
 import com.smartdoorbell.gateway.repository.EventRepository;
 import com.smartdoorbell.gateway.service.MinioService;
@@ -11,6 +12,9 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -26,6 +30,9 @@ public class EventControllerTest {
 
     @MockBean
     private EventRepository eventRepository;
+
+    @MockBean
+    private MqttGateway mqttGateway;
 
     @Test
     public void testUploadEvent() throws Exception {
@@ -43,5 +50,7 @@ public class EventControllerTest {
                 .file(file)
                 .param("eventType", "DOORBELL_PRESS"))
                 .andExpect(status().isOk());
+
+        verify(mqttGateway).sendToMqtt(anyString(), eq("doorbell/events"));
     }
 }
