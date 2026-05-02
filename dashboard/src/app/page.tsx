@@ -106,7 +106,7 @@ export default function Home() {
       {/* Main Content Area Container */}
       <main className="flex-1 bg-zinc-900 rounded-l-[2.5rem] border-l border-t border-b border-zinc-800 shadow-2xl relative overflow-hidden flex flex-col my-3 mr-4">
         {/* Subtle Grid Background */}
-        <div className="absolute inset-0 bg-grid opacity-[0.25] pointer-events-none z-0"></div>
+        <div className="absolute inset-0 bg-grid opacity-[0.35] pointer-events-none z-0"></div>
         
         {/* Top Bar */}
         <header className="h-20 border-b border-zinc-800/50 flex justify-between items-center px-10 relative z-10 bg-zinc-900/50 backdrop-blur-sm">
@@ -125,22 +125,22 @@ export default function Home() {
         </header>
 
         {/* Dashboard Content */}
-        <div className="p-10 flex flex-col flex-1 relative z-10 overflow-hidden">
+        <div className="p-10 flex-1 relative z-10 overflow-hidden">
           
-          <div className="flex flex-col lg:flex-row gap-10 w-full max-w-7xl mx-auto h-full items-stretch">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 w-full max-w-[1600px] mx-auto h-fit items-start">
             
-            {/* Left Column: Media Card */}
-            <div className="flex-[2] max-w-4xl flex flex-col min-h-0">
+            {/* Left Column: Media Card (Scaled Up) */}
+            <div className="lg:col-span-8 flex flex-col min-h-0 h-fit">
               {/* Media Card - key prop forces re-render/animation on change */}
-              <div key={activeEvent.id} className="w-full bg-zinc-950 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-flash-event flex-1">
+              <div key={activeEvent.id} className="w-full bg-zinc-950 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-flash-event h-fit">
                 
-                {/* Image Container */}
-                <div className="relative w-full aspect-video bg-black flex items-center justify-center border-b border-zinc-800 group overflow-hidden flex-1">
+                {/* Image Container - Strict 4:3 Aspect Ratio */}
+                <div className="relative w-full aspect-[4/3] bg-black flex items-center justify-center border-b border-zinc-800 group overflow-hidden">
                   <Image
                     src={`${MINIO_BASE_URL}/${activeEvent.imageKey}`}
                     alt="Doorbell snapshot"
                     fill
-                    className="object-contain transition-transform duration-700 group-hover:scale-105"
+                    className="object-cover transition-transform duration-700 group-hover:scale-105"
                     unoptimized
                   />
                   {isMostRecent && (
@@ -195,44 +195,46 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Right Column: History Feed */}
-            <div className="w-full lg:w-96 flex flex-col min-h-0">
-              <h3 className="text-xs font-mono text-zinc-500 uppercase tracking-[0.2em] mb-5 flex items-center gap-3 shrink-0 px-2 font-black">
-                <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
-                Recent Log
-              </h3>
-              
-              <div className="flex flex-col gap-5 overflow-y-auto pr-3 flex-1 min-h-0 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
-                {events.map((evt) => (
-                  <button
-                    key={evt.id}
-                    onClick={() => setActiveEvent(evt)}
-                    className={`text-left bg-zinc-950 border rounded-2xl p-6 transition-all duration-300 animate-slide-in shrink-0 relative group overflow-hidden ${
-                      activeEvent.id === evt.id 
-                        ? 'border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)] bg-emerald-500/[0.03]' 
-                        : 'border-zinc-800 hover:border-zinc-600 hover:bg-zinc-900/50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-3 relative z-10">
-                      <span className="text-lg font-black text-zinc-100 tracking-tight">{formatTitleCase(evt.eventType)}</span>
-                      {evt.id === events[0]?.id && (
-                        <span className="flex h-2.5 w-2.5">
-                           <span className="animate-ping absolute inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 opacity-75"></span>
-                           <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                        </span>
+            {/* Right Column: History Feed (Absolute Inset Trick) */}
+            <div className="lg:col-span-4 relative h-full min-h-[500px]">
+              <div className="absolute inset-0 flex flex-col pr-2 overflow-hidden">
+                <h3 className="text-xs font-mono text-zinc-500 uppercase tracking-[0.2em] mb-5 flex items-center gap-3 shrink-0 px-2 font-black">
+                  <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+                  Recent Log
+                </h3>
+                
+                <div className="flex flex-col gap-5 overflow-y-auto pr-3 flex-1 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
+                  {events.map((evt) => (
+                    <button
+                      key={evt.id}
+                      onClick={() => setActiveEvent(evt)}
+                      className={`text-left bg-zinc-950 border rounded-2xl p-6 transition-all duration-300 animate-slide-in shrink-0 relative group overflow-hidden ${
+                        activeEvent.id === evt.id 
+                          ? 'border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)] bg-emerald-500/[0.03]' 
+                          : 'border-zinc-800 hover:border-zinc-600 hover:bg-zinc-900/50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-3 relative z-10">
+                        <span className="text-lg font-black text-zinc-100 tracking-tight">{formatTitleCase(evt.eventType)}</span>
+                        {evt.id === events[0]?.id && (
+                          <span className="flex h-2.5 w-2.5">
+                             <span className="animate-ping absolute inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 opacity-75"></span>
+                             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-sm text-zinc-400 font-bold uppercase tracking-wider mb-1 relative z-10">
+                        {new Date(evt.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </div>
+                      <div className="text-xs font-mono text-zinc-500 tracking-widest relative z-10">
+                        {new Date(evt.timestamp).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', second: '2-digit' })}
+                      </div>
+                      {activeEvent.id === evt.id && (
+                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500 shadow-[2px_0_10px_rgba(16,185,129,0.5)]"></div>
                       )}
-                    </div>
-                    <div className="text-sm text-zinc-400 font-bold uppercase tracking-wider mb-1 relative z-10">
-                      {new Date(evt.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </div>
-                    <div className="text-xs font-mono text-zinc-500 tracking-widest relative z-10">
-                      {new Date(evt.timestamp).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', second: '2-digit' })}
-                    </div>
-                    {activeEvent.id === evt.id && (
-                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500 shadow-[2px_0_10px_rgba(16,185,129,0.5)]"></div>
-                    )}
-                  </button>
-                ))}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
             
