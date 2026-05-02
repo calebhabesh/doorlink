@@ -39,7 +39,7 @@ const config: Config = {
     plugin(function({ addUtilities }) {
       addUtilities({
         '.bg-grid': {
-          'background-image': 'linear-gradient(to right, #27272a 1px, transparent 1px), linear-gradient(to bottom, #27272a 1px, transparent 1px)',
+          'background-image': 'linear-gradient(to right, rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 1px, transparent 1px)',
           'background-size': '40px 40px',
         }
       })

@@ -106,7 +106,7 @@ export default function Home() {
       {/* Main Content Area Container */}
       <main className="flex-1 bg-zinc-900 rounded-l-[2rem] border-l border-t border-b border-zinc-800 shadow-2xl relative overflow-hidden flex flex-col my-4 mr-4">
         {/* Subtle Grid Background */}
-        <div className="absolute inset-0 bg-grid opacity-[0.03] pointer-events-none"></div>
+        <div className="absolute inset-0 bg-grid opacity-[0.15] pointer-events-none"></div>
         
         {/* Top Bar */}
         <header className="h-20 border-b border-zinc-800/50 flex justify-between items-center px-10 relative z-10">
@@ -127,15 +127,15 @@ export default function Home() {
         {/* Dashboard Content */}
         <div className="p-10 flex flex-col flex-1 overflow-y-auto relative z-10">
           
-          <div className="flex flex-col lg:flex-row gap-10 w-full max-w-7xl mx-auto">
+          <div className="flex flex-col lg:flex-row gap-10 w-full max-w-7xl mx-auto items-stretch">
             
             {/* Left Column: Media Card */}
             <div className="flex-1 flex flex-col">
               {/* Media Card - key prop forces re-render/animation on change */}
-              <div key={activeEvent.id} className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col animate-flash-event">
+              <div key={activeEvent.id} className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col animate-flash-event h-full">
                 
                 {/* Image Container */}
-                <div className="relative w-full aspect-video bg-black flex items-center justify-center border-b border-zinc-800">
+                <div className="relative w-full flex-1 aspect-video bg-black flex items-center justify-center border-b border-zinc-800">
                   <Image
                     src={`${MINIO_BASE_URL}/${activeEvent.imageKey}`}
                     alt="Doorbell snapshot"
@@ -152,7 +152,7 @@ export default function Home() {
                 </div>
                 
                 {/* Event Metadata & Audio Interface */}
-                <div className="p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 bg-zinc-900/50">
+                <div className="p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 bg-zinc-900/50 shrink-0">
                   
                   {/* Metadata */}
                   <div>
@@ -196,13 +196,13 @@ export default function Home() {
             </div>
 
             {/* Right Column: History Feed */}
-            <div className="w-full lg:w-96 flex flex-col">
-              <h3 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <div className="w-full lg:w-96 flex flex-col min-h-0">
+              <h3 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2 shrink-0">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
                 Recent Log
               </h3>
               
-              <div className="flex flex-col gap-4 overflow-y-auto pr-2" style={{ maxHeight: '60vh' }}>
+              <div className="flex flex-col gap-4 overflow-y-auto pr-2 flex-1 min-h-0">
                 {events.map((evt) => (
                   <button
                     key={evt.id}
