@@ -22,6 +22,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import com.fasterxml.jackson.databind.SerializationFeature;
+
 @RestController
 @RequestMapping("/api/events")
 public class EventController {
@@ -41,6 +43,7 @@ public class EventController {
         this.mqttGateway = mqttGateway;
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
+        this.objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); // Ensure ISO 8601 string format
     }
 
     @PostMapping
