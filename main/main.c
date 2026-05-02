@@ -341,24 +341,20 @@ void app_main(void)
     // 1. Determine wakeup cause
     esp_sleep_wakeup_cause_t wakeup_cause = esp_sleep_get_wakeup_cause();
 
-    if (wakeup_cause == ESP_SLEEP_WAKEUP_EXT0) {
-        ESP_LOGI(TAG, "Woke up from deep sleep due to doorbell button press!");
+    // For testing without the button, run on normal boot or EXT0
+    if (wakeup_cause == ESP_SLEEP_WAKEUP_EXT0 || wakeup_cause == ESP_SLEEP_WAKEUP_UNDEFINED) {
+        ESP_LOGI(TAG, "Woke up from deep sleep (or normal boot). Starting network flow.");
         
         // 2. Initialize WiFi Station
         init_wifi();
 
-        // 3. Initialize Camera (OV5640)
-        if (init_camera() == ESP_OK) {
-            // Take a picture
-            camera_fb_t *pic = esp_camera_fb_get();
-            if (!pic) {
-                ESP_LOGE(TAG, "Failed to capture image");
-            } else {
-                ESP_LOGI(TAG, "Picture taken! Size: %zu bytes", pic->len);
-                // Return the frame buffer back to the driver for reuse
-                esp_camera_fb_return(pic);
-            }
-        }
+        // 3. Dummy Image Generation & Upload
+        ESP_LOGI(TAG, "Generating dummy image data...");
+        const uint8_t dummy_image[] = "This is a fake JPEG payload to test the gateway.";
+        size_t dummy_len = sizeof(dummy_image);
+        
+        ESP_LOGI(TAG, "Uploading dummy image...");
+        upload_image_to_gateway(dummy_image, dummy_len);
 
         // 4. Initialize I2S (INMP441 & MAX98357A)
         if (init_i2s() == ESP_OK) {
@@ -372,7 +368,7 @@ void app_main(void)
         vTaskDelay(10000 / portTICK_PERIOD_MS);
 
     } else {
-        ESP_LOGI(TAG, "Woke up from normal boot or reset (cause: %d). Going to sleep immediately.", wakeup_cause);
+        ESP_LOGI(TAG, "Woke up from reset (cause: %d). Going to sleep immediately.", wakeup_cause);
     }
 
     ESP_LOGI(TAG, "Preparing to enter deep sleep...");
