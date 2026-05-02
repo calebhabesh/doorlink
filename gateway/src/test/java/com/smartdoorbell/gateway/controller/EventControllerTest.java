@@ -1,0 +1,47 @@
+package com.smartdoorbell.gateway.controller;
+
+import com.smartdoorbell.gateway.entity.Event;
+import com.smartdoorbell.gateway.repository.EventRepository;
+import com.smartdoorbell.gateway.service.MinioService;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.web.servlet.MockMvc;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@WebMvcTest(EventController.class)
+public class EventControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockBean
+    private MinioService minioService;
+
+    @MockBean
+    private EventRepository eventRepository;
+
+    @Test
+    public void testUploadEvent() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "image",
+                "test.jpg",
+                "image/jpeg",
+                "test image content".getBytes()
+        );
+
+        when(minioService.uploadFile(any())).thenReturn("random-uuid.jpg");
+        when(eventRepository.save(any())).thenReturn(new Event());
+
+        mockMvc.perform(multipart("/api/events")
+                .file(file)
+                .param("eventType", "DOORBELL_PRESS"))
+                .andExpect(status().isOk());
+    }
+}
