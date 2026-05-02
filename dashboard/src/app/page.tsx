@@ -1,101 +1,120 @@
-import Image from "next/image";
+'use client';
+
+import { useEffect, useState } from 'react';
+import Image from 'next/image';
+
+interface DoorbellEvent {
+  id: number;
+  timestamp: string;
+  eventType: string;
+  imageKey: string;
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [events, setEvents] = useState<DoorbellEvent[]>([]);
+  const [activeEvent, setActiveEvent] = useState<DoorbellEvent | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const API_BASE_URL = 'http://localhost:8080/api/events';
+  const MINIO_BASE_URL = 'http://localhost:9000';
+
+  useEffect(() => {
+    // Fetch initial history
+    fetch(API_BASE_URL)
+      .then((res) => res.json())
+      .then((data: DoorbellEvent[]) => {
+        setEvents(data);
+        if (data.length > 0) {
+          setActiveEvent(data[0]);
+        }
+      })
+      .catch((err) => console.error("Failed to fetch history", err));
+
+    // Connect to SSE Stream
+    const eventSource = new EventSource(`${API_BASE_URL}/stream`);
+
+    eventSource.onopen = () => setIsConnected(true);
+    eventSource.onerror = () => setIsConnected(false);
+
+    eventSource.addEventListener('doorbell-event', (e) => {
+      try {
+        const newEvent: DoorbellEvent = JSON.parse(e.data);
+        setEvents((prev) => [newEvent, ...prev]);
+        setActiveEvent(newEvent); // Auto-focus the new event
+      } catch (err) {
+        console.error("Failed to parse event", err);
+      }
+    });
+
+    return () => {
+      eventSource.close();
+    };
+  }, []);
+
+  if (!activeEvent) {
+    return (
+      <div className="min-h-screen bg-neutral-900 text-white flex items-center justify-center">
+        <p className="text-xl text-neutral-400">Waiting for events...</p>
+      </div>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-neutral-900 text-white flex flex-col">
+      {/* Header */}
+      <header className="p-4 border-b border-neutral-800 flex justify-between items-center bg-neutral-950">
+        <h1 className="text-xl font-semibold">Smart Doorbell Dashboard</h1>
+        <div className="flex items-center gap-2">
+          <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+          <span className="text-sm text-neutral-400">{isConnected ? 'Live' : 'Disconnected'}</span>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
+      </header>
+
+      {/* Main Focus Area */}
+      <div className="flex-1 flex flex-col items-center justify-center p-8">
+        <div className="relative w-full max-w-4xl aspect-video bg-black rounded-lg overflow-hidden border border-neutral-800 shadow-2xl">
           <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+            src={`${MINIO_BASE_URL}/${activeEvent.imageKey}`}
+            alt="Doorbell snapshot"
+            fill
+            className="object-contain"
+            unoptimized // Bypass next/image optimization for local dev to avoid setup issues
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+        </div>
+        <div className="mt-6 text-center">
+          <h2 className="text-3xl font-bold text-neutral-100">{activeEvent.eventType}</h2>
+          <p className="text-lg text-neutral-400 mt-2">
+            {new Date(activeEvent.timestamp).toLocaleString()}
+          </p>
+        </div>
+      </div>
+
+      {/* Recent History Footer */}
+      <div className="h-48 border-t border-neutral-800 bg-neutral-950 p-4 overflow-x-auto">
+        <h3 className="text-sm font-semibold text-neutral-500 uppercase mb-3">Recent Events</h3>
+        <div className="flex gap-4">
+          {events.map((evt) => (
+            <button
+              key={evt.id}
+              onClick={() => setActiveEvent(evt)}
+              className={`relative flex-shrink-0 w-48 aspect-video rounded-md overflow-hidden border-2 transition-all ${
+                activeEvent.id === evt.id ? 'border-blue-500 scale-105' : 'border-transparent opacity-60 hover:opacity-100'
+              }`}
+            >
+              <Image
+                src={`${MINIO_BASE_URL}/${evt.imageKey}`}
+                alt="Thumbnail"
+                fill
+                className="object-cover"
+                unoptimized
+              />
+              <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-2 text-xs text-left">
+                {new Date(evt.timestamp).toLocaleTimeString()}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </main>
   );
 }
