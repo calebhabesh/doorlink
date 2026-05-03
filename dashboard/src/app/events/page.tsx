@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import MainLayout from '../../components/MainLayout';
 import { Search, Calendar, Download, ChevronLeft, ChevronRight, Play } from 'lucide-react';
 
@@ -35,15 +35,19 @@ export default function EventLog() {
     return str.toLowerCase().split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
 
-  const filteredEvents = events.filter(e => {
-    const matchesSearch = e.eventType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          e.imageKey.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    if (!filterDate) return matchesSearch;
-    
-    const eventDateStr = new Date(e.timestamp).toISOString().split('T')[0];
-    return matchesSearch && eventDateStr === filterDate;
-  });
+  const filteredEvents = useMemo(() => {
+    return events.filter(e => {
+      const matchesSearch = e.eventType.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            e.imageKey.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      if (!filterDate) return matchesSearch;
+      
+      const eventDate = new Date(e.timestamp);
+      const eventDateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
+      
+      return matchesSearch && eventDateStr === filterDate;
+    });
+  }, [events, searchQuery, filterDate]);
 
   return (
     <MainLayout isConnected={isConnected} breadcrumbs={[{ label: 'Dashboard' }, { label: 'Event Log', active: true }]}>
