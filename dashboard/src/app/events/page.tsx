@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import MainLayout from '../../components/MainLayout';
+
+type ConnectionStatus = 'connecting' | 'connected' | 'error';
 import { Search, Calendar, Download, ChevronLeft, ChevronRight, Play } from 'lucide-react';
 
 interface DoorbellEvent {
@@ -13,7 +15,7 @@ interface DoorbellEvent {
 
 export default function EventLog() {
   const [events, setEvents] = useState<DoorbellEvent[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDate, setFilterDate] = useState<string>('');
 
@@ -26,8 +28,20 @@ export default function EventLog() {
       .catch((err) => console.error("Failed to fetch logs", err));
 
     const eventSource = new EventSource(`${API_BASE_URL}/stream`);
-    eventSource.onopen = () => setIsConnected(true);
-    eventSource.onerror = () => setIsConnected(false);
+    
+    eventSource.onopen = () => {
+      setConnectionStatus('connected');
+    };
+
+    eventSource.onerror = () => {
+      setConnectionStatus('connecting');
+    };
+
+    // Fallback: if we receive the init event, we are definitely connected
+    eventSource.addEventListener('init', () => {
+      setConnectionStatus('connected');
+    });
+
     return () => eventSource.close();
   }, []);
 
@@ -50,7 +64,7 @@ export default function EventLog() {
   }, [events, searchQuery, filterDate]);
 
   return (
-    <MainLayout isConnected={isConnected} breadcrumbs={[{ label: 'Dashboard' }, { label: 'Event Log', active: true }]}>
+    <MainLayout status={connectionStatus} breadcrumbs={[{ label: 'Dashboard' }, { label: 'Event Log', active: true }]}>
       <div className="w-full max-w-[1800px] mx-auto flex flex-col h-full overflow-hidden">
         
         {/* Action Toolbar */}
@@ -96,7 +110,7 @@ export default function EventLog() {
         </div>
 
         {/* Data Table Container */}
-        <div className="w-full overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950/50 flex flex-col min-h-0 shadow-2xl relative z-10">
+        <div className="w-full overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950/50 flex flex-col min-h-0 shadow-2xl relative z-10 animate-flash-event">
           <div className="overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
             <table className="w-full border-collapse text-left">
               <thead className="bg-zinc-900/80 sticky top-0 z-20 backdrop-blur-md">

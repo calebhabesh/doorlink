@@ -13,12 +13,14 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.integration.annotation.ServiceActivator;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -73,13 +75,44 @@ public class EventController {
 
     @GetMapping(path = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamEvents() {
+        // Use a 0 timeout to mean infinite, or a very large value
         SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
-        this.emitters.add(emitter);
+        
+        try {
+            // 1. Send an empty comment to flush headers immediately. 
+            // Most browsers trigger 'onopen' upon receiving any body content.
+            emitter.send(SseEmitter.event().comment("connection-open"));
+            
+            // 2. Send a named 'init' event
+            emitter.send(SseEmitter.event()
+                    .name("init")
+                    .data("Connection established"));
+            
+            this.emitters.add(emitter);
+        } catch (IOException e) {
+            return null;
+        }
 
         emitter.onCompletion(() -> this.emitters.remove(emitter));
         emitter.onTimeout(() -> this.emitters.remove(emitter));
+        emitter.onError((ex) -> this.emitters.remove(emitter));
 
         return emitter;
+    }
+
+    @Scheduled(fixedRate = 20000) // 20 seconds
+    public void sendHeartbeat() {
+        List<SseEmitter> deadEmitters = new ArrayList<>();
+        for (SseEmitter emitter : emitters) {
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("heartbeat")
+                        .data("keep-alive"));
+            } catch (IOException e) {
+                deadEmitters.add(emitter);
+            }
+        }
+        emitters.removeAll(deadEmitters);
     }
 
     @ServiceActivator(inputChannel = "mqttInputChannel")
