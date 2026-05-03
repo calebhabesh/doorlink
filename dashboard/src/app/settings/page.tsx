@@ -20,13 +20,13 @@ export default function Settings() {
     showSaveToast();
   };
 
-  const handleSelect = (setter: any, val: string) => {
+  const handleSelect = (setter: React.Dispatch<React.SetStateAction<string>>, val: string) => {
     setter(val);
     showSaveToast();
   };
 
   return (
-    <MainLayout status="connected" breadcrumbs={[{ label: 'Dashboard' }, { label: 'Settings', active: true }]}>
+    <MainLayout isConnected={true} breadcrumbs={[{ label: 'Dashboard' }, { label: 'Settings', active: true }]}>
       <div className="w-full max-w-[800px] mx-auto flex flex-col h-full relative">
         
         {/* Toast Notification */}

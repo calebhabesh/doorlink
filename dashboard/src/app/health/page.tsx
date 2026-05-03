@@ -5,7 +5,7 @@ import { Activity, Server, Cpu, Database, Wifi } from 'lucide-react';
 
 export default function SystemHealth() {
   return (
-    <MainLayout status="connected" breadcrumbs={[{ label: 'Dashboard' }, { label: 'System Health', active: true }]}>
+    <MainLayout isConnected={true} breadcrumbs={[{ label: 'Dashboard' }, { label: 'System Health', active: true }]}>
       <div className="w-full max-w-[1200px] mx-auto flex flex-col h-full">
         
         <div className="mb-8 flex items-center gap-3">

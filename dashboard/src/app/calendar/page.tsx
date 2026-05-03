@@ -28,7 +28,7 @@ export default function CalendarView() {
   const daysWithEvents = [2, 14, 21, 28];
 
   return (
-    <MainLayout status="connected" breadcrumbs={[{ label: 'Dashboard' }, { label: 'Calendar View', active: true }]}>
+    <MainLayout isConnected={true} breadcrumbs={[{ label: 'Dashboard' }, { label: 'Calendar View', active: true }]}>
       <div className="w-full max-w-[1200px] mx-auto flex flex-col h-full relative">
         
         {/* Toast Notification */}
