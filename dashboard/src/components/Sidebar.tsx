@@ -10,9 +10,9 @@ export default function Sidebar() {
   const menuItems = [
     { label: 'Dashboard', icon: LayoutDashboard, href: '/' },
     { label: 'Event Log', icon: Database, href: '/events' },
-    { label: 'Calendar View', icon: CalendarDays, href: '#' },
-    { label: 'System Health', icon: Activity, href: '#' },
-    { label: 'Settings', icon: Settings, href: '#' },
+    { label: 'Calendar View', icon: CalendarDays, href: '/calendar' },
+    { label: 'System Health', icon: Activity, href: '/health' },
+    { label: 'Settings', icon: Settings, href: '/settings' },
   ];
 
   return (
