@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import MainLayout from '../../components/MainLayout';
 import { Settings as SettingsIcon, Bell, HardDrive, Camera } from 'lucide-react';
 
@@ -9,10 +9,12 @@ export default function Settings() {
   const [retention, setRetention] = useState('30');
   const [quality, setQuality] = useState('1080');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const showSaveToast = () => {
     setToastMessage('Settings saved successfully');
-    setTimeout(() => setToastMessage(null), 3000);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => setToastMessage(null), 3000);
   };
 
   const handleToggle = () => {
