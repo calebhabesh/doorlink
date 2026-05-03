@@ -15,6 +15,7 @@ export default function EventLog() {
   const [events, setEvents] = useState<DoorbellEvent[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterDate, setFilterDate] = useState<string>('');
 
   const API_BASE_URL = 'http://localhost:8080/api/events';
 
@@ -34,10 +35,15 @@ export default function EventLog() {
     return str.toLowerCase().split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
 
-  const filteredEvents = events.filter(e => 
-    e.eventType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    e.imageKey.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredEvents = events.filter(e => {
+    const matchesSearch = e.eventType.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          e.imageKey.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    if (!filterDate) return matchesSearch;
+    
+    const eventDateStr = new Date(e.timestamp).toISOString().split('T')[0];
+    return matchesSearch && eventDateStr === filterDate;
+  });
 
   return (
     <MainLayout isConnected={isConnected} breadcrumbs={[{ label: 'Dashboard' }, { label: 'Event Log', active: true }]}>
@@ -56,10 +62,28 @@ export default function EventLog() {
             />
           </div>
           <div className="flex gap-4">
-            <button className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 text-zinc-200 px-6 py-3 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors shadow-lg">
-              <Calendar className="w-5 h-5 text-zinc-400" />
-              Filter by Date
-            </button>
+            <div className="relative group">
+              <input 
+                type="date"
+                value={filterDate}
+                onChange={(e) => setFilterDate(e.target.value)}
+                className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 text-zinc-200 px-4 py-3 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors shadow-lg cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-500 [color-scheme:dark]"
+              />
+              {!filterDate && (
+                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center gap-2 bg-zinc-950 rounded-xl group-hover:bg-zinc-800 transition-colors">
+                   <Calendar className="w-5 h-5 text-zinc-400" />
+                   <span className="text-sm font-bold uppercase tracking-widest text-zinc-200">Filter by Date</span>
+                 </div>
+              )}
+              {filterDate && (
+                <button 
+                  onClick={() => setFilterDate('')} 
+                  className="absolute -right-2 -top-2 bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
             <button className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 text-zinc-200 px-6 py-3 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors shadow-lg">
               <Download className="w-5 h-5 text-zinc-400" />
               Export CSV
