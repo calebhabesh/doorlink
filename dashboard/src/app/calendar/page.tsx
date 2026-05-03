@@ -1,15 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import MainLayout from '../../components/MainLayout';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function CalendarView() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const showToast = (date: number) => {
-    setToastMessage(`No events found for May ${date}, 2026`);
-    setTimeout(() => setToastMessage(null), 3000);
+  const showToast = (date: number, hasEvent: boolean) => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    const msg = hasEvent 
+      ? `Loading events for May ${date}, 2026...` 
+      : `No events found for May ${date}, 2026`;
+    setToastMessage(msg);
+    timeoutRef.current = setTimeout(() => setToastMessage(null), 3000);
   };
 
   // Mock data for May 2026
@@ -72,7 +77,8 @@ export default function CalendarView() {
             return (
               <button
                 key={day}
-                onClick={() => showToast(day)}
+                onClick={() => showToast(day, hasEvent)}
+                aria-label={`May ${day}, 2026`}
                 className="bg-zinc-950 min-h-[120px] p-4 flex flex-col items-start justify-start hover:bg-zinc-900 transition-colors group relative border-t border-transparent hover:border-zinc-800"
               >
                 <span className={`text-lg font-bold ${hasEvent ? 'text-zinc-100' : 'text-zinc-500'}`}>
