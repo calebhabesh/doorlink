@@ -22,20 +22,19 @@ export default function Sidebar() {
         <div className="mr-3 p-2 bg-blue-600/10 rounded-lg border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]">
           <svg className="w-8 h-8" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
             <defs>
-              <linearGradient id="doorbell-gradient" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="50%" stopColor="#2563eb" /> {/* blue-600 */}
-                <stop offset="50%" stopColor="#ffffff" /> {/* pure white */}
+              <linearGradient id="doorbell-gradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="50%" stopColor="#2563eb" /> {/* blue-600 (Top) */}
+                <stop offset="50%" stopColor="#ffffff" /> {/* white (Bottom) */}
               </linearGradient>
             </defs>
             <g>
               <path d="m221.66 85.66l-120 120a8 8 0 0 1-11.32 0L52.69 168L184 36.69l37.66 37.65a8 8 0 0 1 0 11.32" fill="url(#doorbell-gradient)"/>
-              <path d="M248 136a8 8 0 0 0-8 8v16h-44.69L177 141.66l50.34-50.35a16 16 0 0 0 0-22.62l-56-56a16 16 0 0 0-22.63 0L2.92 158.94A10 10 0 0 0 10 176h39.37l35.32 35.31a16 16 0 0 0 22.62 0L165.66 153L184 171.31a15.86 15.86 0 0 0 11.31 4.69H240v16a8 8 0 0 0 16 0v-48a8 8 0 0 0-8-8M160 24l12.69 12.69L49.37 160H24.46ZM96 200l-32-32L184 48l32 32Z" fill="white" fillOpacity="0.8"/>
+              <path d="M248 136a8 8 0 0 0-8 8v16h-44.69L177 141.66l50.34-50.35a16 16 0 0 0 0-22.62l-56-56a16 16 0 0 0-22.63 0L2.92 158.94A10 10 0 0 0 10 176h39.37l35.32 35.31a16 16 0 0 0 22.62 0L165.66 153L184 171.31a15.86 15.86 0 0 0 11.31 4.69H240v16a8 8 0 0 0 16 0v-48a8 8 0 0 0-8-8M160 24l12.69 12.69L49.37 160H24.46ZM96 200l-32-32L184 48l32 32Z" fill="white" fillOpacity="0.7"/>
             </g>
           </svg>
         </div>
         <span className="font-black text-xl tracking-tight text-zinc-100">Smart Doorbell</span>
-      </div>
-      <nav className="flex-1 py-6 flex flex-col gap-2">
+      </div>      <nav className="flex-1 py-6 flex flex-col gap-2">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;

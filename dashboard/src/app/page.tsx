@@ -69,10 +69,10 @@ export default function Home() {
 
   return (
     <MainLayout isConnected={isConnected} breadcrumbs={[{ label: 'Dashboard' }, { label: 'Active Event', active: true }]}>
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 w-full max-w-[1400px] mx-auto h-full items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start w-full max-w-[1350px] mx-auto">
         
-        {/* Left Column: Media Card (Scaled down for tighter fit) */}
-        <div className="lg:col-span-8 h-fit flex flex-col min-h-0">
+        {/* Left Column: Media Card (The Anchor) */}
+        <div className="lg:col-span-8 h-fit flex flex-col">
           <div key={activeEvent.id} className="w-full bg-zinc-950 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-flash-event h-fit">
             
             {/* Image Container - Strict 4:3 Aspect Ratio */}
@@ -85,7 +85,7 @@ export default function Home() {
                 unoptimized 
               />
               {isMostRecent && (
-                <div className="absolute top-6 right-6 bg-emerald-500/20 border border-emerald-500/50 text-emerald-500 text-xs font-black px-4 py-1.5 rounded-full shadow-lg backdrop-blur-md flex items-center gap-2 tracking-widest ring-1 ring-emerald-500/30">
+                <div className="absolute top-6 right-6 bg-emerald-500/20 border border-emerald-500/50 text-emerald-500 text-xs font-black px-4 py-1.5 rounded-full shadow-lg backdrop-blur-md flex items-center gap-2 tracking-widest ring-1 ring-emerald-500/30 z-20">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                   MOST RECENT
                 </div>
@@ -95,8 +95,8 @@ export default function Home() {
             {/* Event Metadata & Audio Interface */}
             <div className="p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-8 bg-zinc-900/40 shrink-0 text-left">
               <div className="flex-1">
-                <h2 className="text-4xl font-black text-zinc-100 tracking-tight">{formatTitleCase(activeEvent.eventType)}</h2>
-                <p className="text-xl font-mono text-zinc-400 mt-2 tracking-widest leading-relaxed">
+                <h2 className="text-3xl font-black text-zinc-100 tracking-tight">{formatTitleCase(activeEvent.eventType)}</h2>
+                <p className="text-lg font-mono text-zinc-400 mt-2 tracking-widest leading-relaxed">
                   {new Date(activeEvent.timestamp).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' })}
                 </p>
               </div>
@@ -116,14 +116,15 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Right Column: History Feed (Absolute Inset Trick) */}
-        <div className="lg:col-span-4 relative self-stretch min-h-[500px]">
-          <div className="absolute inset-0 flex flex-col overflow-hidden">
-            <h3 className="text-xs font-mono text-zinc-500 uppercase tracking-[0.2em] mb-5 flex items-center gap-3 shrink-0 px-2 font-black">
+        {/* Right Wrapper (The Bounding Box) */}
+        <div className="lg:col-span-4 relative h-full self-stretch min-h-[500px]">
+          {/* The Scrolling List (The Inner Content) */}
+          <div className="absolute inset-0 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent [mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)]">
+            <h3 className="text-xs font-mono text-zinc-500 uppercase tracking-[0.2em] mb-5 flex items-center gap-3 shrink-0 px-2 font-black sticky top-0 bg-zinc-900/80 backdrop-blur-md py-2 z-10">
               <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
               Recent Log
             </h3>
-            <div className="flex flex-col gap-5 overflow-y-auto pr-3 flex-1 min-h-0 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent [mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)]">
+            <div className="flex flex-col gap-4">
               {events.map((evt) => (
                 <button key={evt.id} onClick={() => setActiveEvent(evt)} className={`text-left bg-zinc-950 border rounded-2xl p-6 transition-all duration-300 animate-slide-in shrink-0 relative group overflow-hidden ${activeEvent.id === evt.id ? 'border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)] bg-emerald-500/[0.03]' : 'border-zinc-800 hover:border-zinc-600 hover:bg-zinc-900/50'}`}>
                   <div className="flex items-center justify-between mb-3 relative z-10 text-left">
