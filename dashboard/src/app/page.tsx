@@ -69,11 +69,21 @@ export default function Home() {
 
   return (
     <MainLayout isConnected={isConnected} breadcrumbs={[{ label: 'Dashboard' }, { label: 'Active Event', active: true }]}>
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 w-full max-w-[1800px] mx-auto h-full items-start">
-        <div className="lg:col-span-9 h-fit flex flex-col min-h-0">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 w-full max-w-[1400px] mx-auto h-full items-start">
+        
+        {/* Left Column: Media Card (Scaled down for tighter fit) */}
+        <div className="lg:col-span-8 h-fit flex flex-col min-h-0">
           <div key={activeEvent.id} className="w-full bg-zinc-950 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-flash-event h-fit">
+            
+            {/* Image Container - Strict 4:3 Aspect Ratio */}
             <div className="relative w-full aspect-[4/3] bg-black flex items-center justify-center border-b border-zinc-800 group overflow-hidden">
-              <Image src={`${MINIO_BASE_URL}/${activeEvent.imageKey}`} alt="Doorbell snapshot" fill className="object-cover w-full transition-transform duration-700 group-hover:scale-105" unoptimized />
+              <Image 
+                src={`${MINIO_BASE_URL}/${activeEvent.imageKey}`} 
+                alt="Doorbell snapshot" 
+                fill 
+                className="object-cover w-full transition-transform duration-700 group-hover:scale-105" 
+                unoptimized 
+              />
               {isMostRecent && (
                 <div className="absolute top-6 right-6 bg-emerald-500/20 border border-emerald-500/50 text-emerald-500 text-xs font-black px-4 py-1.5 rounded-full shadow-lg backdrop-blur-md flex items-center gap-2 tracking-widest ring-1 ring-emerald-500/30">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -81,6 +91,8 @@ export default function Home() {
                 </div>
               )}
             </div>
+
+            {/* Event Metadata & Audio Interface */}
             <div className="p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-8 bg-zinc-900/40 shrink-0 text-left">
               <div className="flex-1">
                 <h2 className="text-4xl font-black text-zinc-100 tracking-tight">{formatTitleCase(activeEvent.eventType)}</h2>
@@ -103,7 +115,9 @@ export default function Home() {
             </div>
           </div>
         </div>
-        <div className="lg:col-span-3 relative self-stretch min-h-[500px]">
+
+        {/* Right Column: History Feed (Absolute Inset Trick) */}
+        <div className="lg:col-span-4 relative self-stretch min-h-[500px]">
           <div className="absolute inset-0 flex flex-col overflow-hidden">
             <h3 className="text-xs font-mono text-zinc-500 uppercase tracking-[0.2em] mb-5 flex items-center gap-3 shrink-0 px-2 font-black">
               <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
