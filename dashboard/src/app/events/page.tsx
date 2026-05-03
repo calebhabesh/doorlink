@@ -41,68 +41,71 @@ export default function EventLog() {
 
   return (
     <MainLayout isConnected={isConnected} breadcrumbs={[{ label: 'Dashboard' }, { label: 'Event Log', active: true }]}>
-      <div className="w-full max-w-7xl mx-auto flex flex-col h-full overflow-hidden">
+      <div className="w-full max-w-[1800px] mx-auto flex flex-col h-full overflow-hidden">
         
         {/* Action Toolbar */}
-        <div className="flex justify-between items-center mb-6 shrink-0 relative z-10">
-          <div className="relative w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+        <div className="flex justify-between items-center mb-10 shrink-0 relative z-10">
+          <div className="relative w-96">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-4 text-zinc-500" />
             <input 
               type="text" 
               placeholder="Search events..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2 pl-10 pr-4 text-sm text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 pl-12 pr-6 text-base text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-inner"
             />
           </div>
-          <div className="flex gap-3">
-            <button className="flex items-center gap-2 bg-zinc-950 border border-zinc-800 text-zinc-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-zinc-800 transition-colors">
-              <Calendar className="w-4 h-4 text-zinc-400" />
+          <div className="flex gap-4">
+            <button className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 text-zinc-200 px-6 py-3 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors shadow-lg">
+              <Calendar className="w-5 h-5 text-zinc-400" />
               Filter by Date
             </button>
-            <button className="flex items-center gap-2 bg-zinc-950 border border-zinc-800 text-zinc-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-zinc-800 transition-colors">
-              <Download className="w-4 h-4 text-zinc-400" />
+            <button className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 text-zinc-200 px-6 py-3 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors shadow-lg">
+              <Download className="w-5 h-5 text-zinc-400" />
               Export CSV
             </button>
           </div>
         </div>
 
         {/* Data Table Container */}
-        <div className="w-full overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950/50 flex flex-col min-h-0 shadow-2xl relative z-10">
+        <div className="w-full overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950/50 flex flex-col min-h-0 shadow-2xl relative z-10">
           <div className="overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
             <table className="w-full border-collapse text-left">
-              <thead className="bg-zinc-900 sticky top-0 z-10">
+              <thead className="bg-zinc-900/80 sticky top-0 z-20 backdrop-blur-md">
                 <tr className="border-b border-zinc-800">
-                  <th className="px-6 py-4 text-xs uppercase tracking-widest text-zinc-400 font-black">Timestamp</th>
-                  <th className="px-6 py-4 text-xs uppercase tracking-widest text-zinc-400 font-black">Event Type</th>
-                  <th className="px-6 py-4 text-xs uppercase tracking-widest text-zinc-400 font-black">Media</th>
-                  <th className="px-6 py-4 text-xs uppercase tracking-widest text-zinc-400 font-black">Status</th>
-                  <th className="px-6 py-4 text-xs uppercase tracking-widest text-zinc-400 font-black text-right">Actions</th>
+                  <th className="px-8 py-6 text-sm uppercase tracking-[0.2em] text-zinc-400 font-black">Timestamp</th>
+                  <th className="px-8 py-6 text-sm uppercase tracking-[0.2em] text-zinc-400 font-black">Event Type</th>
+                  <th className="px-8 py-6 text-sm uppercase tracking-[0.2em] text-zinc-400 font-black">Media Reference</th>
+                  <th className="px-8 py-6 text-sm uppercase tracking-[0.2em] text-zinc-400 font-black">System Status</th>
+                  <th className="px-8 py-6 text-sm uppercase tracking-[0.2em] text-zinc-400 font-black text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/50">
                 {filteredEvents.map((evt) => (
-                  <tr key={evt.id} className="hover:bg-zinc-800/30 transition-colors cursor-pointer group">
-                    <td className="px-6 py-4 font-mono text-zinc-300 text-sm whitespace-nowrap">
-                      {new Date(evt.timestamp).toLocaleString()}
+                  <tr key={evt.id} className="hover:bg-zinc-800/30 transition-all cursor-pointer group">
+                    <td className="px-8 py-6 font-mono text-zinc-300 text-base whitespace-nowrap">
+                      {new Date(evt.timestamp).toLocaleString(undefined, {
+                        year: 'numeric', month: 'short', day: 'numeric',
+                        hour: 'numeric', minute: '2-digit', second: '2-digit'
+                      })}
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border border-emerald-500/20">
+                    <td className="px-8 py-6">
+                      <span className="bg-emerald-500/10 text-emerald-500 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]">
                         {formatTitleCase(evt.eventType)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-zinc-400 text-sm max-w-xs truncate">
+                    <td className="px-8 py-6 text-zinc-400 text-base font-mono max-w-md truncate">
                       {evt.imageKey}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]"></div>
-                        <span className="text-zinc-300 text-sm">Processed</span>
+                    <td className="px-8 py-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse"></div>
+                        <span className="text-zinc-200 text-sm font-bold uppercase tracking-widest">Verified</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                       <button className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-zinc-700 rounded-lg">
-                          <Play className="w-4 h-4 text-emerald-500 fill-emerald-500/20" />
+                    <td className="px-8 py-6 text-right">
+                       <button className="opacity-0 group-hover:opacity-100 transition-all p-3 hover:bg-zinc-700 bg-zinc-800/50 rounded-xl border border-zinc-700 shadow-lg">
+                          <Play className="w-5 h-5 text-emerald-500 fill-emerald-500/20" />
                        </button>
                     </td>
                   </tr>
