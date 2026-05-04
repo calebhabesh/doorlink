@@ -6,6 +6,7 @@ import com.smartdoorbell.gateway.config.MqttGateway;
 import com.smartdoorbell.gateway.entity.Event;
 import com.smartdoorbell.gateway.repository.EventRepository;
 import com.smartdoorbell.gateway.service.MinioService;
+import com.smartdoorbell.gateway.service.NtfyService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -33,32 +34,42 @@ public class EventController {
     private final MinioService minioService;
     private final EventRepository eventRepository;
     private final MqttGateway mqttGateway;
+    private final NtfyService ntfyService;
     private final ObjectMapper objectMapper;
     private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
 
     @Value("${mqtt.topic.events:doorbell/events}")
     private String eventsTopic;
 
-    public EventController(MinioService minioService, EventRepository eventRepository, MqttGateway mqttGateway) {
+    public EventController(MinioService minioService, EventRepository eventRepository, MqttGateway mqttGateway, NtfyService ntfyService) {
         this.minioService = minioService;
         this.eventRepository = eventRepository;
         this.mqttGateway = mqttGateway;
+        this.ntfyService = ntfyService;
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
-        this.objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); // Ensure ISO 8601 string format
+        this.objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }
 
     @PostMapping
     public ResponseEntity<String> createEvent(
             @RequestParam("image") MultipartFile image,
+            @RequestParam(value = "audio", required = false) MultipartFile audio,
             @RequestParam(value = "eventType", defaultValue = "DOORBELL_PRESS") String eventType) {
         try {
             String imageKey = minioService.uploadFile(image);
-            Event event = new Event(LocalDateTime.now(), eventType, imageKey);
+            String audioKey = null;
+            if (audio != null && !audio.isEmpty()) {
+                audioKey = minioService.uploadFile(audio);
+            }
+            
+            Event event = new Event(LocalDateTime.now(), eventType, imageKey, audioKey);
             Event savedEvent = eventRepository.save(event);
             
             String payload = objectMapper.writeValueAsString(savedEvent);
             mqttGateway.sendToMqtt(payload, eventsTopic);
+            
+            ntfyService.sendNotification(savedEvent);
             
             return ResponseEntity.ok("Event processed successfully with image key: " + imageKey);
         } catch (Exception e) {
@@ -75,15 +86,10 @@ public class EventController {
 
     @GetMapping(path = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamEvents() {
-        // Use a 0 timeout to mean infinite, or a very large value
         SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
         
         try {
-            // 1. Send an empty comment to flush headers immediately. 
-            // Most browsers trigger 'onopen' upon receiving any body content.
             emitter.send(SseEmitter.event().comment("connection-open"));
-            
-            // 2. Send a named 'init' event
             emitter.send(SseEmitter.event()
                     .name("init")
                     .data("Connection established"));
@@ -100,7 +106,7 @@ public class EventController {
         return emitter;
     }
 
-    @Scheduled(fixedRate = 20000) // 20 seconds
+    @Scheduled(fixedRate = 20000)
     public void sendHeartbeat() {
         List<SseEmitter> deadEmitters = new ArrayList<>();
         for (SseEmitter emitter : emitters) {
