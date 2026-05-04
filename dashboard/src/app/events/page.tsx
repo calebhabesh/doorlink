@@ -1,10 +1,8 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import MainLayout from '../../components/MainLayout';
-
-type ConnectionStatus = 'connecting' | 'connected' | 'error';
-import { Search, Calendar, Download, ChevronLeft, ChevronRight, Play } from 'lucide-react';
+import MainLayout, { ConnectionStatus } from '../../components/MainLayout';
+import { Search, Download, ChevronLeft, ChevronRight, Play } from 'lucide-react';
 
 interface DoorbellEvent {
   id: number;
@@ -57,7 +55,8 @@ export default function EventLog() {
       if (!filterDate) return matchesSearch;
       
       const eventDate = new Date(e.timestamp);
-      const eventDateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
+      // 'en-CA' locale format is YYYY-MM-DD, matching the date input value exactly
+      const eventDateStr = eventDate.toLocaleDateString('en-CA');
       
       return matchesSearch && eventDateStr === filterDate;
     });
@@ -80,23 +79,18 @@ export default function EventLog() {
             />
           </div>
           <div className="flex gap-4">
-            <div className="relative group">
+            <div className="relative">
               <input 
                 type="date"
                 value={filterDate}
                 onChange={(e) => setFilterDate(e.target.value)}
-                className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 text-zinc-200 px-4 py-3 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors shadow-lg cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-500 [color-scheme:dark]"
+                className="bg-zinc-950 border border-zinc-800 text-zinc-200 px-4 py-3 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors shadow-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 [color-scheme:dark] min-w-[200px]"
               />
-              {!filterDate && (
-                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center gap-2 bg-zinc-950 rounded-xl group-hover:bg-zinc-800 transition-colors">
-                   <Calendar className="w-5 h-5 text-zinc-400" />
-                   <span className="text-sm font-bold uppercase tracking-widest text-zinc-200">Filter by Date</span>
-                 </div>
-              )}
               {filterDate && (
                 <button 
-                  onClick={() => setFilterDate('')} 
-                  className="absolute -right-2 -top-2 bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
+                  onClick={(e) => { e.preventDefault(); setFilterDate(''); }} 
+                  className="absolute right-10 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-200 p-1"
+                  title="Clear filter"
                 >
                   ✕
                 </button>
