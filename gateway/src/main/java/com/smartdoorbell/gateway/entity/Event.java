@@ -19,6 +19,9 @@ public class Event {
     @Column(nullable = false)
     private String imageKey;
 
+    @Column(nullable = true)
+    private String audioKey;
+
     public Event() {}
 
     public Event(LocalDateTime timestamp, String eventType, String imageKey) {
@@ -27,8 +30,16 @@ public class Event {
         this.imageKey = imageKey;
     }
 
+    public Event(LocalDateTime timestamp, String eventType, String imageKey, String audioKey) {
+        this.timestamp = timestamp;
+        this.eventType = eventType;
+        this.imageKey = imageKey;
+        this.audioKey = audioKey;
+    }
+
     public Long getId() { return id; }
     public LocalDateTime getTimestamp() { return timestamp; }
     public String getEventType() { return eventType; }
     public String getImageKey() { return imageKey; }
+    public String getAudioKey() { return audioKey; }
 }

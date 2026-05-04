@@ -9,6 +9,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.time.LocalDateTime;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @ExtendWith(SpringExtension.class)
@@ -27,5 +28,13 @@ public class EventRepositoryTest {
         Event event = new Event(LocalDateTime.now(), "DOORBELL_PRESS", "doorbell-images/test.jpg");
         Event saved = eventRepository.save(event);
         assertNotNull(saved.getId());
+    }
+
+    @Test
+    public void testSaveEventWithAudio() {
+        Event event = new Event(LocalDateTime.now(), "DOORBELL_PRESS", "images/test.jpg", "audio/test.wav");
+        Event saved = eventRepository.save(event);
+        assertNotNull(saved.getId());
+        assertEquals("audio/test.wav", saved.getAudioKey());
     }
 }
