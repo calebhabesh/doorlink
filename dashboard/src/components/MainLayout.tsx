@@ -2,15 +2,43 @@
 
 import Sidebar from './Sidebar';
 
+export type ConnectionStatus = 'connected' | 'disconnected' | 'connecting';
+
 export default function MainLayout({ 
   children, 
   breadcrumbs, 
-  isConnected 
+  status = 'disconnected'
 }: { 
   children: React.ReactNode;
   breadcrumbs: { label: string; active?: boolean }[];
-  isConnected: boolean;
+  status?: ConnectionStatus;
 }) {
+  const getStatusColor = () => {
+    switch (status) {
+      case 'connected': return 'text-emerald-500';
+      case 'connecting': return 'text-amber-500';
+      case 'disconnected': return 'text-red-500';
+      default: return 'text-red-500';
+    }
+  };
+
+  const getDotColor = () => {
+    switch (status) {
+      case 'connected': return 'bg-emerald-500';
+      case 'connecting': return 'bg-amber-500';
+      case 'disconnected': return 'bg-red-500';
+      default: return 'bg-red-500';
+    }
+  };
+
+  const getPingColor = () => {
+    switch (status) {
+      case 'connected': return 'bg-emerald-400';
+      case 'connecting': return 'bg-amber-400';
+      default: return '';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex font-sans overflow-hidden">
       <Sidebar />
@@ -30,11 +58,11 @@ export default function MainLayout({
           </div>
           <div className="flex items-center gap-4 bg-zinc-950 border border-zinc-800 px-5 py-2.5 rounded-lg shadow-inner font-mono tracking-wider text-sm">
             <div className="relative flex h-3 w-3">
-              {isConnected && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>}
-              <span className={`relative inline-flex rounded-full h-3 w-3 ${isConnected ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
+              {status !== 'disconnected' && <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${getPingColor()}`}></span>}
+              <span className={`relative inline-flex rounded-full h-3 w-3 ${getDotColor()}`}></span>
             </div>
-            <span className={`font-bold uppercase ${isConnected ? 'text-emerald-500' : 'text-red-500'}`}>
-              {isConnected ? 'SYSTEM LIVE' : 'DISCONNECTED'}
+            <span className={`font-bold uppercase ${getStatusColor()}`}>
+              {status === 'connected' ? 'SYSTEM LIVE' : status === 'connecting' ? 'CONNECTING...' : 'DISCONNECTED'}
             </span>
           </div>
         </header>

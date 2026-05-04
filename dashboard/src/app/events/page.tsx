@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import MainLayout from '../../components/MainLayout';
+
+type ConnectionStatus = 'connecting' | 'connected' | 'error';
 import { Search, Calendar, Download, ChevronLeft, ChevronRight, Play } from 'lucide-react';
 
 interface DoorbellEvent {
@@ -13,8 +15,9 @@ interface DoorbellEvent {
 
 export default function EventLog() {
   const [events, setEvents] = useState<DoorbellEvent[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterDate, setFilterDate] = useState<string>('');
 
   const API_BASE_URL = 'http://localhost:8080/api/events';
 
@@ -25,8 +28,20 @@ export default function EventLog() {
       .catch((err) => console.error("Failed to fetch logs", err));
 
     const eventSource = new EventSource(`${API_BASE_URL}/stream`);
-    eventSource.onopen = () => setIsConnected(true);
-    eventSource.onerror = () => setIsConnected(false);
+    
+    eventSource.onopen = () => {
+      setConnectionStatus('connected');
+    };
+
+    eventSource.onerror = () => {
+      setConnectionStatus('connecting');
+    };
+
+    // Fallback: if we receive the init event, we are definitely connected
+    eventSource.addEventListener('init', () => {
+      setConnectionStatus('connected');
+    });
+
     return () => eventSource.close();
   }, []);
 
@@ -34,13 +49,22 @@ export default function EventLog() {
     return str.toLowerCase().split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
 
-  const filteredEvents = events.filter(e => 
-    e.eventType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    e.imageKey.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredEvents = useMemo(() => {
+    return events.filter(e => {
+      const matchesSearch = e.eventType.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            e.imageKey.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      if (!filterDate) return matchesSearch;
+      
+      const eventDate = new Date(e.timestamp);
+      const eventDateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
+      
+      return matchesSearch && eventDateStr === filterDate;
+    });
+  }, [events, searchQuery, filterDate]);
 
   return (
-    <MainLayout isConnected={isConnected} breadcrumbs={[{ label: 'Dashboard' }, { label: 'Event Log', active: true }]}>
+    <MainLayout status={connectionStatus} breadcrumbs={[{ label: 'Dashboard' }, { label: 'Event Log', active: true }]}>
       <div className="w-full max-w-[1800px] mx-auto flex flex-col h-full overflow-hidden">
         
         {/* Action Toolbar */}
@@ -56,10 +80,28 @@ export default function EventLog() {
             />
           </div>
           <div className="flex gap-4">
-            <button className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 text-zinc-200 px-6 py-3 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors shadow-lg">
-              <Calendar className="w-5 h-5 text-zinc-400" />
-              Filter by Date
-            </button>
+            <div className="relative group">
+              <input 
+                type="date"
+                value={filterDate}
+                onChange={(e) => setFilterDate(e.target.value)}
+                className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 text-zinc-200 px-4 py-3 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors shadow-lg cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-500 [color-scheme:dark]"
+              />
+              {!filterDate && (
+                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center gap-2 bg-zinc-950 rounded-xl group-hover:bg-zinc-800 transition-colors">
+                   <Calendar className="w-5 h-5 text-zinc-400" />
+                   <span className="text-sm font-bold uppercase tracking-widest text-zinc-200">Filter by Date</span>
+                 </div>
+              )}
+              {filterDate && (
+                <button 
+                  onClick={() => setFilterDate('')} 
+                  className="absolute -right-2 -top-2 bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
             <button className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 text-zinc-200 px-6 py-3 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors shadow-lg">
               <Download className="w-5 h-5 text-zinc-400" />
               Export CSV
@@ -68,7 +110,7 @@ export default function EventLog() {
         </div>
 
         {/* Data Table Container */}
-        <div className="w-full overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950/50 flex flex-col min-h-0 shadow-2xl relative z-10">
+        <div className="w-full overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950/50 flex flex-col min-h-0 shadow-2xl relative z-10 animate-flash-event">
           <div className="overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
             <table className="w-full border-collapse text-left">
               <thead className="bg-zinc-900/80 sticky top-0 z-20 backdrop-blur-md">

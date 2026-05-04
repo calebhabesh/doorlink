@@ -79,3 +79,6 @@ Desktop.ini
 
 # Project specific secrets
 main/config.h
+
+# Worktrees
+.worktrees/

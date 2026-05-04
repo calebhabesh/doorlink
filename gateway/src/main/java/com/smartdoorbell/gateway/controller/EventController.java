@@ -6,6 +6,7 @@ import com.smartdoorbell.gateway.config.MqttGateway;
 import com.smartdoorbell.gateway.entity.Event;
 import com.smartdoorbell.gateway.repository.EventRepository;
 import com.smartdoorbell.gateway.service.MinioService;
+import com.smartdoorbell.gateway.service.NtfyService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -13,12 +14,14 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.integration.annotation.ServiceActivator;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -31,32 +34,42 @@ public class EventController {
     private final MinioService minioService;
     private final EventRepository eventRepository;
     private final MqttGateway mqttGateway;
+    private final NtfyService ntfyService;
     private final ObjectMapper objectMapper;
     private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
 
     @Value("${mqtt.topic.events:doorbell/events}")
     private String eventsTopic;
 
-    public EventController(MinioService minioService, EventRepository eventRepository, MqttGateway mqttGateway) {
+    public EventController(MinioService minioService, EventRepository eventRepository, MqttGateway mqttGateway, NtfyService ntfyService) {
         this.minioService = minioService;
         this.eventRepository = eventRepository;
         this.mqttGateway = mqttGateway;
+        this.ntfyService = ntfyService;
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
-        this.objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); // Ensure ISO 8601 string format
+        this.objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }
 
     @PostMapping
     public ResponseEntity<String> createEvent(
             @RequestParam("image") MultipartFile image,
+            @RequestParam(value = "audio", required = false) MultipartFile audio,
             @RequestParam(value = "eventType", defaultValue = "DOORBELL_PRESS") String eventType) {
         try {
             String imageKey = minioService.uploadFile(image);
-            Event event = new Event(LocalDateTime.now(), eventType, imageKey);
+            String audioKey = null;
+            if (audio != null && !audio.isEmpty()) {
+                audioKey = minioService.uploadFile(audio);
+            }
+            
+            Event event = new Event(LocalDateTime.now(), eventType, imageKey, audioKey);
             Event savedEvent = eventRepository.save(event);
             
             String payload = objectMapper.writeValueAsString(savedEvent);
             mqttGateway.sendToMqtt(payload, eventsTopic);
+            
+            ntfyService.sendNotification(savedEvent);
             
             return ResponseEntity.ok("Event processed successfully with image key: " + imageKey);
         } catch (Exception e) {
@@ -74,12 +87,38 @@ public class EventController {
     @GetMapping(path = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamEvents() {
         SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
-        this.emitters.add(emitter);
+        
+        try {
+            emitter.send(SseEmitter.event().comment("connection-open"));
+            emitter.send(SseEmitter.event()
+                    .name("init")
+                    .data("Connection established"));
+            
+            this.emitters.add(emitter);
+        } catch (IOException e) {
+            return null;
+        }
 
         emitter.onCompletion(() -> this.emitters.remove(emitter));
         emitter.onTimeout(() -> this.emitters.remove(emitter));
+        emitter.onError((ex) -> this.emitters.remove(emitter));
 
         return emitter;
+    }
+
+    @Scheduled(fixedRate = 20000)
+    public void sendHeartbeat() {
+        List<SseEmitter> deadEmitters = new ArrayList<>();
+        for (SseEmitter emitter : emitters) {
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("heartbeat")
+                        .data("keep-alive"));
+            } catch (IOException e) {
+                deadEmitters.add(emitter);
+            }
+        }
+        emitters.removeAll(deadEmitters);
     }
 
     @ServiceActivator(inputChannel = "mqttInputChannel")

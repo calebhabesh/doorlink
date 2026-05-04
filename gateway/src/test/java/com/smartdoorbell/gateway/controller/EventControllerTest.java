@@ -4,6 +4,7 @@ import com.smartdoorbell.gateway.config.MqttGateway;
 import com.smartdoorbell.gateway.entity.Event;
 import com.smartdoorbell.gateway.repository.EventRepository;
 import com.smartdoorbell.gateway.service.MinioService;
+import com.smartdoorbell.gateway.service.NtfyService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -33,24 +34,39 @@ public class EventControllerTest {
 
     @MockBean
     private MqttGateway mqttGateway;
+    
+    @MockBean
+    private NtfyService ntfyService;
 
     @Test
-    public void testUploadEvent() throws Exception {
-        MockMultipartFile file = new MockMultipartFile(
+    public void testUploadEventWithAudio() throws Exception {
+        MockMultipartFile imageFile = new MockMultipartFile(
                 "image",
                 "test.jpg",
                 "image/jpeg",
                 "test image content".getBytes()
         );
+        
+        MockMultipartFile audioFile = new MockMultipartFile(
+                "audio",
+                "test.wav",
+                "audio/wav",
+                "test audio content".getBytes()
+        );
 
-        when(minioService.uploadFile(any())).thenReturn("random-uuid.jpg");
+        when(minioService.uploadFile(imageFile)).thenReturn("random-uuid.jpg");
+        when(minioService.uploadFile(audioFile)).thenReturn("random-uuid.wav");
         when(eventRepository.save(any())).thenReturn(new Event());
 
         mockMvc.perform(multipart("/api/events")
-                .file(file)
+                .file(imageFile)
+                .file(audioFile)
                 .param("eventType", "DOORBELL_PRESS"))
                 .andExpect(status().isOk());
 
+        verify(minioService).uploadFile(imageFile);
+        verify(minioService).uploadFile(audioFile);
         verify(mqttGateway).sendToMqtt(anyString(), eq("doorbell/events"));
+        verify(ntfyService).sendNotification(any(Event.class));
     }
 }
