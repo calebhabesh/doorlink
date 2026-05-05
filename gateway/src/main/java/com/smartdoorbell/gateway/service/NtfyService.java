@@ -40,7 +40,8 @@ public class NtfyService {
         headers.set("Tags", "doorbell, camera");
         headers.set("Actions", "view, Open Dashboard, " + dashboardUrl);
 
-        HttpEntity<String> entity = new HttpEntity<>("A doorbell event (" + event.getEventType() + ") was triggered.", headers);
+        String message = "Visitor presence detected at the main entry. Media captured and securely logged.";
+        HttpEntity<String> entity = new HttpEntity<>(message, headers);
 
         try {
             restTemplate.postForEntity(url, entity, String.class);
