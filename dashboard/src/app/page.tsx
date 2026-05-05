@@ -9,7 +9,7 @@ interface DoorbellEvent {
   timestamp: string;
   eventType: string;
   imageKey: string;
-  hasAudio?: boolean;
+  audioKey?: string | null;
 }
 
 export default function Home() {
@@ -66,6 +66,13 @@ export default function Home() {
 
   const isMostRecent = activeEvent && events.length > 0 && activeEvent.id === events[0].id;
 
+  const playAudio = () => {
+    if (activeEvent?.audioKey) {
+      const audio = new Audio(`${MINIO_BASE_URL}/${activeEvent.audioKey}`);
+      audio.play().catch(err => console.error("Audio play failed:", err));
+    }
+  };
+
   return (
     <MainLayout status={connectionStatus} breadcrumbs={[{ label: 'Dashboard' }, { label: 'Active Event', active: true }]}>
       {!activeEvent ? (
@@ -111,7 +118,7 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="flex gap-4 shrink-0">
-                  <button disabled={!activeEvent.hasAudio} className={`flex items-center gap-2 px-6 py-3.5 rounded-xl text-sm font-bold uppercase tracking-widest transition-all border ${activeEvent.hasAudio ? 'bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-100 shadow-lg' : 'bg-zinc-900 border-zinc-800 text-zinc-600 cursor-not-allowed opacity-50'}`}>
+                  <button onClick={playAudio} disabled={!activeEvent.audioKey} className={`flex items-center gap-2 px-6 py-3.5 rounded-xl text-sm font-bold uppercase tracking-widest transition-all border ${activeEvent.audioKey ? 'bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-100 shadow-lg' : 'bg-zinc-900 border-zinc-800 text-zinc-600 cursor-not-allowed opacity-50'}`}>
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     Play Audio
                   </button>
