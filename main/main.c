@@ -52,7 +52,7 @@ static const char *TAG = "smart_doorbell";
 
 // MAX98357A Speaker (TX)
 #define I2S_SPK_WS      21 // LRC
-#define I2S_SPK_SD      22 // DIN
+#define I2S_SPK_SD      42 // DIN
 #define I2S_SPK_SCK     41 // BCLK
 
 static i2s_chan_handle_t rx_chan; // Microphone
