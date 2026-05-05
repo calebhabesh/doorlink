@@ -22,6 +22,15 @@
 
 - [Architecture Diagram Image]
 
+## Interaction Model (Audio & Wakeup)
+
+To maximize battery life (~27 days), the doorbell operates using an asynchronous "Record-and-Send" model followed by a "Half-Duplex" interaction window. Full-duplex (phone call style) is avoided to eliminate the need for heavy Acoustic Echo Cancellation (AEC) processing on the ESP32-S3.
+
+1. **Initial Trigger (Asynchronous):** A visitor single-presses the doorbell button (no need to hold). This wakes the ESP32 from deep sleep.
+2. **Capture Phase:** The ESP32 immediately snaps a JPEG photo, records 5-10 seconds of audio from the INMP441 microphone, and uploads both to the Gateway via HTTP POST.
+3. **Interactive Phase (Half-Duplex):** After uploading, the ESP32 connects to the MQTT broker and stays awake for 60 seconds listening for incoming audio packets. During this window, the homeowner receives the mobile notification, opens the dashboard, and can press and hold the "Push to Talk" button to stream their voice back to the doorbell's speaker.
+4. **Sleep Phase:** Once the 60-second window expires without new interaction, the ESP32 shuts down the peripherals and returns to deep sleep.
+
 ## Hardware
 
 - [Photo of assembled enclosure]
