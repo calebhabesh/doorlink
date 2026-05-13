@@ -28,7 +28,7 @@ export default function Settings() {
   };
 
   return (
-    <MainLayout isConnected={true} breadcrumbs={[{ label: 'Dashboard' }, { label: 'Settings', active: true }]}>
+    <MainLayout status="connected" breadcrumbs={[{ label: 'Dashboard' }, { label: 'Settings', active: true }]}>
       <div className="w-full max-w-[800px] mx-auto flex flex-col h-full relative">
         
         {/* Toast Notification */}

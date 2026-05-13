@@ -21,7 +21,7 @@ services:
       - mosquitto-data:/mosquitto/data
     restart: unless-stopped
     # This command generates a basic anonymous config on startup and runs the broker
-    command: sh -c "echo 'listener 1883 \nallow_anonymous true' > /mosquitto/config/mosquitto.conf && mosquitto -c /mosquitto/config/mosquitto.conf"
+    command: sh -c "echo 'listener 1883' > /mosquitto/config/mosquitto.conf && echo 'allow_anonymous true' >> /mosquitto/config/mosquitto.conf && mosquitto -c /mosquitto/config/mosquitto.conf"
 
   minio:
     image: minio/minio

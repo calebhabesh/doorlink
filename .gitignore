@@ -82,3 +82,24 @@ main/config.h
 
 # Worktrees
 .worktrees/
+
+# KiCad specific
+*.lck
+*-backups/
+_autosave-*
+*.kicad_sch-bak
+*.kicad_pcb-bak
+*.bck
+
+# PCB extra ignores
+.history/
+backups/
+*.rpt
+*.zip
+
+# Tooling and scripts
+.superpowers/
+netlist_report*.txt
+parse_netlist*.py
+get_component_groups.py
+check_status_led.py

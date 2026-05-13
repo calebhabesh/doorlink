@@ -27,11 +27,16 @@ const config: Config = {
         slideIn: {
           '0%': { opacity: '0', transform: 'translateX(-20px)' },
           '100%': { opacity: '1', transform: 'translateX(0)' },
+        },
+        fadeOut: {
+          '0%': { opacity: '1', transform: 'translateY(0)' },
+          '100%': { opacity: '0', transform: 'translateY(10px)' },
         }
       },
       animation: {
         'flash-event': 'flash 0.5s ease-out forwards',
         'slide-in': 'slideIn 0.3s ease-out forwards',
+        'fade-out': 'fadeOut 0.5s ease-in forwards',
       }
     },
   },

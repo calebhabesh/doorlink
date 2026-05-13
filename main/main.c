@@ -58,7 +58,7 @@ static const char *TAG = "smart_doorbell";
 static i2s_chan_handle_t rx_chan; // Microphone
 static i2s_chan_handle_t tx_chan; // Speaker
 
-static esp_err_t init_camera(void)
+static esp_err_t __attribute__((unused)) init_camera(void)
 {
     camera_config_t camera_config = {
         .pin_pwdn = CAM_PIN_PWDN,
@@ -230,7 +230,7 @@ static void init_wifi(void)
 
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
-    esp_mqtt_event_handle_t event = event_data;
+    // esp_mqtt_event_handle_t event = event_data;
     switch ((esp_mqtt_event_id_t)event_id) {
     case MQTT_EVENT_CONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
@@ -273,7 +273,7 @@ static esp_err_t upload_image_to_gateway(const uint8_t *image_data, size_t image
 
     // Generate boundary
     const char *boundary = "----SmartDoorbellBoundary123456789";
-    char content_type[64];
+    char content_type[128];
     snprintf(content_type, sizeof(content_type), "multipart/form-data; boundary=%s", boundary);
     esp_http_client_set_header(client, "Content-Type", content_type);
 
@@ -339,7 +339,10 @@ void app_main(void)
     ESP_LOGI(TAG, "Initializing Smart Doorbell System");
 
     // 1. Determine wakeup cause
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     esp_sleep_wakeup_cause_t wakeup_cause = esp_sleep_get_wakeup_cause();
+#pragma GCC diagnostic pop
 
     // For testing without the button, run on normal boot or EXT0
     if (wakeup_cause == ESP_SLEEP_WAKEUP_EXT0 || wakeup_cause == ESP_SLEEP_WAKEUP_UNDEFINED) {
