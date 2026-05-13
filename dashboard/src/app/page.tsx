@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
 import MainLayout from '../components/MainLayout';
 
@@ -16,6 +16,19 @@ export default function Home() {
   const [events, setEvents] = useState<DoorbellEvent[]>([]);
   const [activeEvent, setActiveEvent] = useState<DoorbellEvent | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [isAtBottom, setIsAtBottom] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const handleScroll = () => {
+    if (scrollRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+      setIsAtBottom(scrollTop + clientHeight >= scrollHeight - 20);
+    }
+  };
+
+  useEffect(() => {
+    handleScroll();
+  }, [events]);
 
   const API_BASE_URL = 'http://localhost:8080/api/events';
   const MINIO_BASE_URL = 'http://localhost:9000/doorbell-images';
@@ -109,7 +122,11 @@ export default function Home() {
               <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
               Recent Log
             </h3>
-            <div className="flex flex-col gap-5 overflow-y-auto pr-3 flex-1 min-h-0 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent [mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)]">
+            <div 
+              ref={scrollRef}
+              onScroll={handleScroll}
+              className={`flex flex-col gap-5 overflow-y-auto pr-3 flex-1 min-h-0 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent transition-[mask-image] duration-300 ${!isAtBottom ? '[mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)]' : ''}`}
+            >
               {events.map((evt) => (
                 <button key={evt.id} onClick={() => setActiveEvent(evt)} className={`text-left bg-zinc-950 border rounded-2xl p-6 transition-all duration-300 animate-slide-in shrink-0 relative group overflow-hidden ${activeEvent.id === evt.id ? 'border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)] bg-emerald-500/[0.03]' : 'border-zinc-800 hover:border-zinc-600 hover:bg-zinc-900/50'}`}>
                   <div className="flex items-center justify-between mb-3 relative z-10 text-left">
