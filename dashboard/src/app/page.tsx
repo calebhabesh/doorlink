@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
 import MainLayout, { ConnectionStatus } from '../components/MainLayout';
 
@@ -16,6 +16,19 @@ export default function Home() {
   const [events, setEvents] = useState<DoorbellEvent[]>([]);
   const [activeEvent, setActiveEvent] = useState<DoorbellEvent | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
+  const [isAtBottom, setIsAtBottom] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const handleScroll = () => {
+    if (scrollRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+      setIsAtBottom(scrollTop + clientHeight >= scrollHeight - 20);
+    }
+  };
+
+  useEffect(() => {
+    handleScroll();
+  }, [events]);
 
   const API_BASE_URL = 'http://localhost:8080/api/events';
   const MINIO_BASE_URL = 'http://localhost:9000/doorbell-images';
@@ -136,7 +149,11 @@ export default function Home() {
           {/* Right Wrapper (The Bounding Box) */}
           <div className="lg:col-span-4 relative h-full self-stretch min-h-[500px]">
             {/* The Scrolling List (The Inner Content) */}
-            <div className="absolute inset-0 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent [mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)]">
+            <div 
+              ref={scrollRef}
+              onScroll={handleScroll}
+              className={`absolute inset-0 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent transition-[mask-image] duration-300 ${!isAtBottom ? '[mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)]' : ''}`}
+            >
               <h3 className="text-xs font-mono text-zinc-500 uppercase tracking-[0.2em] mb-5 flex items-center gap-3 shrink-0 px-2 font-black sticky top-0 bg-zinc-900/80 backdrop-blur-md py-2 z-10">
                 <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
                 Recent Log
