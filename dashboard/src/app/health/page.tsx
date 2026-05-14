@@ -21,7 +21,7 @@ export default function SystemHealth() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           
           {/* Gateway Status */}
-          <div className="bg-zinc-950/50 backdrop-blur-md border border-zinc-800 p-6 rounded-3xl flex flex-col hover:border-zinc-700 transition-colors shadow-lg animate-slide-in">
+          <div className="bg-zinc-950/50 backdrop-blur-md border border-zinc-800 p-6 rounded-3xl flex flex-col hover:border-zinc-700 transition-colors shadow-lg animate-flash-event">
             <div className="flex justify-between items-start mb-6">
               <Server className="w-5 h-5 text-blue-400" />
               <span className="flex items-center gap-2 bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border border-emerald-500/20">
@@ -35,7 +35,7 @@ export default function SystemHealth() {
           </div>
 
           {/* Firmware Status */}
-          <div className="bg-zinc-950/50 backdrop-blur-md border border-zinc-800 p-6 rounded-3xl flex flex-col hover:border-zinc-700 transition-colors shadow-lg animate-slide-in">
+          <div className="bg-zinc-950/50 backdrop-blur-md border border-zinc-800 p-6 rounded-3xl flex flex-col hover:border-zinc-700 transition-colors shadow-lg animate-flash-event">
             <div className="flex justify-between items-start mb-6">
               <Cpu className="w-5 h-5 text-indigo-400" />
               <span className="flex items-center gap-2 bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border border-emerald-500/20">
@@ -49,7 +49,7 @@ export default function SystemHealth() {
           </div>
 
           {/* Storage */}
-          <div className="bg-zinc-950/50 backdrop-blur-md border border-zinc-800 p-6 rounded-3xl flex flex-col hover:border-zinc-700 transition-colors shadow-lg animate-slide-in">
+          <div className="bg-zinc-950/50 backdrop-blur-md border border-zinc-800 p-6 rounded-3xl flex flex-col hover:border-zinc-700 transition-colors shadow-lg animate-flash-event">
             <div className="flex justify-between items-start mb-6">
               <Database className="w-5 h-5 text-purple-400" />
               <span className="flex items-center gap-2 bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border border-blue-500/20">
@@ -65,7 +65,7 @@ export default function SystemHealth() {
           </div>
 
           {/* MQTT Broker */}
-          <div className="bg-zinc-950/50 backdrop-blur-md border border-zinc-800 p-6 rounded-3xl flex flex-col hover:border-zinc-700 transition-colors shadow-lg animate-slide-in">
+          <div className="bg-zinc-950/50 backdrop-blur-md border border-zinc-800 p-6 rounded-3xl flex flex-col hover:border-zinc-700 transition-colors shadow-lg animate-flash-event">
             <div className="flex justify-between items-start mb-6">
               <Wifi className="w-5 h-5 text-rose-400" />
               <span className="flex items-center gap-2 bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border border-emerald-500/20">

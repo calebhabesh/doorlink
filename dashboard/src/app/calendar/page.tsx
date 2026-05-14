@@ -107,7 +107,7 @@ export default function CalendarView() {
           )}
 
           {/* Header */}
-          <div className="flex justify-between items-center mb-8 bg-zinc-950/50 backdrop-blur-md border border-zinc-800 p-6 rounded-2xl animate-slide-in">
+          <div className="flex justify-between items-center mb-8 bg-zinc-950/50 backdrop-blur-md border border-zinc-800 p-6 rounded-2xl animate-flash-event">
             <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-3">
               <CalendarIcon className="w-6 h-6 text-emerald-500" />
               {viewDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
@@ -129,7 +129,7 @@ export default function CalendarView() {
           </div>
 
           {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-px bg-zinc-800 rounded-2xl overflow-hidden border border-zinc-800 animate-slide-in">
+          <div className="grid grid-cols-7 gap-px bg-zinc-800 rounded-2xl overflow-hidden border border-zinc-800 animate-flash-event">
             {/* Days of week */}
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
               <div key={day} className="bg-zinc-950 p-4 text-center text-xs font-bold uppercase tracking-widest text-zinc-500">
@@ -176,7 +176,7 @@ export default function CalendarView() {
 
         {/* Selected Day Side Panel */}
         {selectedDay && (
-          <div className="w-80 bg-zinc-950 border border-zinc-800 rounded-3xl p-6 flex flex-col h-full animate-slide-in shrink-0 shadow-2xl">
+          <div className="w-80 bg-zinc-950 border border-zinc-800 rounded-3xl p-6 flex flex-col h-full animate-flash-event shrink-0 shadow-2xl">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-black text-white uppercase tracking-tight">
                 {viewDate.toLocaleString('default', { month: 'short' })} {selectedDay}
