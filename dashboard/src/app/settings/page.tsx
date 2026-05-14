@@ -54,7 +54,7 @@ export default function Settings() {
         <div className="space-y-6">
           
           {/* Notifications Section */}
-          <div className="bg-zinc-950/50 backdrop-blur-md border border-zinc-800 rounded-3xl p-8 shadow-lg">
+          <div className="bg-zinc-950/50 backdrop-blur-md border border-zinc-800 rounded-3xl p-8 shadow-lg animate-slide-in">
             <div className="flex items-center gap-3 mb-6">
               <Bell className="w-5 h-5 text-indigo-400" />
               <h2 className="text-lg font-bold text-white">Notifications</h2>
@@ -75,7 +75,7 @@ export default function Settings() {
           </div>
 
           {/* Storage Section */}
-          <div className="bg-zinc-950/50 backdrop-blur-md border border-zinc-800 rounded-3xl p-8 shadow-lg">
+          <div className="bg-zinc-950/50 backdrop-blur-md border border-zinc-800 rounded-3xl p-8 shadow-lg animate-slide-in">
             <div className="flex items-center gap-3 mb-6">
               <HardDrive className="w-5 h-5 text-purple-400" />
               <h2 className="text-lg font-bold text-white">Storage & Retention</h2>
@@ -100,7 +100,7 @@ export default function Settings() {
           </div>
 
           {/* Device Section */}
-          <div className="bg-zinc-950/50 backdrop-blur-md border border-zinc-800 rounded-3xl p-8 shadow-lg">
+          <div className="bg-zinc-950/50 backdrop-blur-md border border-zinc-800 rounded-3xl p-8 shadow-lg animate-slide-in">
             <div className="flex items-center gap-3 mb-6">
               <Camera className="w-5 h-5 text-emerald-400" />
               <h2 className="text-lg font-bold text-white">Device Preferences</h2>
