@@ -30,8 +30,9 @@ export default function Home() {
     handleScroll();
   }, [events]);
 
-  const API_BASE_URL = 'http://localhost:8080/api/events';
-  const MINIO_BASE_URL = 'http://localhost:9000/doorbell-images';
+  const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+  const API_BASE_URL = `http://${hostname}:8080/api/events`;
+  const MINIO_BASE_URL = `http://${hostname}:9000/doorbell-images`;
 
   useEffect(() => {
     fetch(API_BASE_URL)
