@@ -106,6 +106,17 @@ public class EventController {
         return emitter;
     }
 
+    @GetMapping("/media/{key}")
+    public ResponseEntity<Void> getMediaUrl(@PathVariable String key) {
+        String presignedUrl = minioService.getPresignedUrl(key);
+        if (presignedUrl != null) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)
+                    .location(java.net.URI.create(presignedUrl))
+                    .build();
+        }
+        return ResponseEntity.notFound().build();
+    }
+
     @Scheduled(fixedRate = 20000)
     public void sendHeartbeat() {
         List<SseEmitter> deadEmitters = new ArrayList<>();

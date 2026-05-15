@@ -15,45 +15,9 @@
 #include "mqtt_client.h"
 #include "config.h"
 #include "esp_http_client.h"
+#include "board_pins.h"
 
 static const char *TAG = "smart_doorbell";
-
-// Assuming GPIO 4 is used for the doorbell button, connected to GND when pressed
-#define DOORBELL_BUTTON_PIN GPIO_NUM_4
-
-// =======================
-// Camera Wiring (OV5640)
-// =======================
-// Adjust these pins to match your ESP32-S3 wiring diagram
-#define CAM_PIN_PWDN    -1 // power down is not used
-#define CAM_PIN_RESET   -1 // software reset will be performed
-#define CAM_PIN_XCLK    10
-#define CAM_PIN_SIOD    40
-#define CAM_PIN_SIOC    39
-#define CAM_PIN_D7      17
-#define CAM_PIN_D6      16
-#define CAM_PIN_D5      15
-#define CAM_PIN_D4      14
-#define CAM_PIN_D3      13
-#define CAM_PIN_D2      12
-#define CAM_PIN_D1      11
-#define CAM_PIN_D0      9
-#define CAM_PIN_VSYNC   6
-#define CAM_PIN_HREF    7
-#define CAM_PIN_PCLK    8
-
-// =======================
-// I2S Audio Wiring
-// =======================
-// INMP441 Microphone (RX)
-#define I2S_MIC_WS      18
-#define I2S_MIC_SD      19 // DATA
-#define I2S_MIC_SCK     20 // BCLK
-
-// MAX98357A Speaker (TX)
-#define I2S_SPK_WS      21 // LRC
-#define I2S_SPK_SD      42 // DIN
-#define I2S_SPK_SCK     41 // BCLK
 
 static i2s_chan_handle_t rx_chan; // Microphone
 static i2s_chan_handle_t tx_chan; // Speaker
@@ -106,6 +70,10 @@ static esp_err_t __attribute__((unused)) init_camera(void)
 
 static esp_err_t init_i2s(void)
 {
+    gpio_reset_pin(AMP_EN_PIN);
+    gpio_set_direction(AMP_EN_PIN, GPIO_MODE_OUTPUT);
+    gpio_set_level(AMP_EN_PIN, 1);
+
     // 1. Allocate I2S channels
     i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_AUTO, I2S_ROLE_MASTER);
     esp_err_t err = i2s_new_channel(&chan_cfg, &tx_chan, &rx_chan);
@@ -120,8 +88,8 @@ static esp_err_t init_i2s(void)
         .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_MONO),
         .gpio_cfg = {
             .mclk = I2S_GPIO_UNUSED,
-            .bclk = I2S_SPK_SCK,
-            .ws   = I2S_SPK_WS,
+            .bclk = I2S_AUDIO_SCK,
+            .ws   = I2S_AUDIO_WS,
             .dout = I2S_SPK_SD,
             .din  = I2S_GPIO_UNUSED,
             .invert_flags = {
@@ -143,8 +111,8 @@ static esp_err_t init_i2s(void)
         .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_MONO),
         .gpio_cfg = {
             .mclk = I2S_GPIO_UNUSED,
-            .bclk = I2S_MIC_SCK,
-            .ws   = I2S_MIC_WS,
+            .bclk = I2S_AUDIO_SCK,
+            .ws   = I2S_AUDIO_WS,
             .dout = I2S_GPIO_UNUSED,
             .din  = I2S_MIC_SD,
             .invert_flags = {
@@ -326,6 +294,70 @@ static esp_err_t upload_image_to_gateway(const uint8_t *image_data, size_t image
     return err;
 }
 
+// --- BRING-UP TEST MODES ---
+#define BRINGUP_TEST_MODE 1
+
+#if BRINGUP_TEST_MODE
+static void run_bringup_tests(void) {
+    ESP_LOGI(TAG, "--- STARTING HARDWARE BRING-UP TESTS ---");
+
+    // 1. Status LED Test
+    ESP_LOGI(TAG, "Test 1: Blinking Status LED 3 times...");
+    gpio_reset_pin(STATUS_LED_PIN);
+    gpio_set_direction(STATUS_LED_PIN, GPIO_MODE_OUTPUT);
+    for (int i=0; i<3; i++) {
+        gpio_set_level(STATUS_LED_PIN, 1);
+        vTaskDelay(pdMS_TO_TICKS(500));
+        gpio_set_level(STATUS_LED_PIN, 0);
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+
+    // 2. Button State Test
+    ESP_LOGI(TAG, "Test 2: Reading Doorbell Button State...");
+    gpio_reset_pin(DOORBELL_BUTTON_PIN);
+    gpio_set_direction(DOORBELL_BUTTON_PIN, GPIO_MODE_INPUT);
+    gpio_pullup_en(DOORBELL_BUTTON_PIN);
+    int btn_state = gpio_get_level(DOORBELL_BUTTON_PIN);
+    ESP_LOGI(TAG, "Button State: %s (should be HIGH if unpressed)", btn_state ? "HIGH" : "LOW");
+
+    // 3. Camera Init Test
+    ESP_LOGI(TAG, "Test 3: Initializing Camera...");
+    if (init_camera() == ESP_OK) {
+        ESP_LOGI(TAG, "Camera Init OK. Capturing one JPEG...");
+        camera_fb_t *fb = esp_camera_fb_get();
+        if (fb) {
+            ESP_LOGI(TAG, "Capture OK: %zu bytes", fb->len);
+            esp_camera_fb_return(fb);
+        } else {
+            ESP_LOGE(TAG, "Capture Failed!");
+        }
+    }
+
+    // 4. I2S Audio Init Test
+    ESP_LOGI(TAG, "Test 4: Initializing I2S Audio...");
+    init_i2s();
+    
+    // 5. Short Mic Read Test
+    ESP_LOGI(TAG, "Test 5: Reading from ICS-43434 Mic...");
+    int16_t mic_buf[64];
+    size_t bytes_read = 0;
+    i2s_channel_read(rx_chan, mic_buf, sizeof(mic_buf), &bytes_read, pdMS_TO_TICKS(100));
+    ESP_LOGI(TAG, "Read %zu bytes from mic. First sample: %d", bytes_read, mic_buf[0]);
+
+    // 6. Short Speaker Tone Test
+    ESP_LOGI(TAG, "Test 6: Playing dummy tone on MAX98357A...");
+    size_t bytes_written = 0;
+    // Write the random mic noise to the speaker to test output
+    i2s_channel_write(tx_chan, mic_buf, bytes_read, &bytes_written, pdMS_TO_TICKS(100));
+    ESP_LOGI(TAG, "Wrote %zu bytes to speaker.", bytes_written);
+
+    ESP_LOGI(TAG, "--- BRING-UP TESTS COMPLETE ---");
+    ESP_LOGI(TAG, "Halting execution.");
+    while(1) { vTaskDelay(pdMS_TO_TICKS(1000)); }
+}
+#endif
+// ---------------------------
+
 void app_main(void)
 {
     // Initialize NVS (Required for WiFi)
@@ -337,6 +369,10 @@ void app_main(void)
     ESP_ERROR_CHECK(ret);
 
     ESP_LOGI(TAG, "Initializing Smart Doorbell System");
+
+#if BRINGUP_TEST_MODE
+    run_bringup_tests();
+#endif
 
     // 1. Determine wakeup cause
 #pragma GCC diagnostic push
@@ -375,6 +411,7 @@ void app_main(void)
     }
 
     ESP_LOGI(TAG, "Preparing to enter deep sleep...");
+    gpio_set_level(AMP_EN_PIN, 0);
 
     // 4. Configure wakeup source
     // Enable pullup on the button pin so it defaults to HIGH

@@ -42,4 +42,18 @@ public class MinioService {
 
         return key;
     }
+
+    public String getPresignedUrl(String key) {
+        if (key == null || key.isEmpty()) return null;
+        java.util.Date expiration = new java.util.Date();
+        long expTimeMillis = expiration.getTime();
+        expTimeMillis += 1000 * 60 * 60; // 1 hour expiration
+        expiration.setTime(expTimeMillis);
+        
+        com.amazonaws.services.s3.model.GeneratePresignedUrlRequest generatePresignedUrlRequest = 
+                new com.amazonaws.services.s3.model.GeneratePresignedUrlRequest(bucketName, key)
+                .withMethod(com.amazonaws.HttpMethod.GET)
+                .withExpiration(expiration);
+        return amazonS3.generatePresignedUrl(generatePresignedUrlRequest).toString();
+    }
 }

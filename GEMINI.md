@@ -39,16 +39,21 @@ This project uses a hybrid workflow. The user manages long-running development s
 - **JTAG Pins:** External hardware JTAG is NOT available. All programming and debugging occurs via native USB-Serial-JTAG.
 - **Strapping Pins:** Avoid using GPIO0, GPIO3, GPIO45, and GPIO46 for critical I/O during boot.
 - **Battery Monitoring:** Implemented via a 100k/100k voltage divider on **GPIO1** (ADC1_CH0).
-- **Amplifier Enable:** The MAX98357A `SD_MODE` is pulled down to GND via 100k resistor to save power and is enabled by driving **AMP_EN** HIGH.
+- **Amplifier Enable:** The MAX98357A `SD_MODE` is pulled down to GND via 100k resistor to save power and is enabled by driving **AMP_EN** HIGH on GPIO43.
 - **Camera Power:**
   - AVDD & AFVDD powered by 2.8V LDO (XC6206P282MR).
   - DVDD powered by 1.5V LDO (XC6206P152MR).
   - DOVDD powered by 3.3V main rail.
-- **Optimized Pinout (per Netlist v5):**
-  - **I2S Audio:** WS/LRCLK=GPIO4, SCK/BCLK=GPIO5, Mic SD=GPIO6, Amp DIN=GPIO7
-  - **Camera (Optimized for trace routing):**
-    - Data: D2=Pin 8, D1=Pin 9, D3=Pin 10, D0=Pin 11, D4=Pin 12, D5=Pin 18, D6=Pin 19, D7=Pin 21
-    - Control: PCLK=Pin 17, XCLK=Pin 20, HREF=Pin 22, PWDN=Pin 23, SDA=Pin 31, SCL=Pin 32, RST=Pin 33, VSYNC=Pin 34
+- **Routed Pinout (from `pcb/smart-doorbell/smart-doorbell.net`):**
+  - **Wake/Button:** DOORBELL_IN=GPIO2
+  - **Battery Monitor:** GPIO1
+  - **I2S Audio:** WS/LRCLK=GPIO4, SCK/BCLK=GPIO5, Mic SD=GPIO6, Amp DIN=GPIO7, AMP_EN=GPIO43
+  - **USB:** D-=GPIO19, D+=GPIO20; do not assign these to firmware peripherals.
+  - **Camera (OV5640 24-pin FPC):**
+    - Data: D0=GPIO18, D1=GPIO16, D2=GPIO15, D3=GPIO17, D4=GPIO8, D5=GPIO10, D6=GPIO11, D7=GPIO13
+    - Control: PCLK=GPIO9, XCLK=GPIO12, HREF=GPIO14, PWDN=GPIO21, SDA=GPIO38, SCL=GPIO39, RST=GPIO40, VSYNC=GPIO41
+  - **Other Board I/O:** PIR_OUT=GPIO3, STATUS_LED=GPIO47, BTN_LED=GPIO48
+  - Firmware pin constants live in `main/board_pins.h`; keep that header aligned with the routed netlist.
 
 ## Project Specific Rules
 

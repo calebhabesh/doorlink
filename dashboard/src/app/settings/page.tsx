@@ -47,7 +47,7 @@ export default function Settings() {
           </div>
           <div>
             <h1 className="text-2xl font-black tracking-tight text-white">System Settings</h1>
-            <p className="text-sm text-zinc-400 font-medium">Configure dashboard and device preferences</p>
+            <p className="text-sm text-zinc-400 font-medium">Configure dashboard and device preferences (UI Mockup)</p>
           </div>
         </div>
 

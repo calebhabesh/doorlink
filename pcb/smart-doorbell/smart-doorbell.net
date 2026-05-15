@@ -2,7 +2,7 @@
 	(version "E")
 	(design
 		(source "/home/ethioking/dev/smart-doorbell/pcb/smart-doorbell/smart-doorbell.kicad_sch")
-		(date "2026-05-13T03:00:37")
+		(date "2026-05-15T13:52:26")
 		(tool "Eeschema 10.0.2")
 		(sheet
 			(number "1")

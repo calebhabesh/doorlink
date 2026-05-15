@@ -14,7 +14,7 @@ export default function SystemHealth() {
           </div>
           <div>
             <h1 className="text-2xl font-black tracking-tight text-white">System Health</h1>
-            <p className="text-sm text-zinc-400 font-medium">Real-time infrastructure monitoring</p>
+            <p className="text-sm text-zinc-400 font-medium">Real-time infrastructure monitoring (UI Mockup)</p>
           </div>
         </div>
 
@@ -31,7 +31,7 @@ export default function SystemHealth() {
             </div>
             <h3 className="text-zinc-500 text-sm font-bold uppercase tracking-widest mb-1">Gateway Server</h3>
             <p className="text-3xl font-black text-white">14d 12h</p>
-            <p className="text-xs text-zinc-500 mt-2 font-mono">Uptime / Port 8080</p>
+            <p className="text-xs text-zinc-500 mt-2 font-mono">Uptime / Port 8080 (Mocked)</p>
           </div>
 
           {/* Firmware Status */}
@@ -61,7 +61,7 @@ export default function SystemHealth() {
             <div className="w-full bg-zinc-900 rounded-full h-1.5 mt-3">
               <div className="bg-purple-500 h-1.5 rounded-full" style={{ width: '42%' }}></div>
             </div>
-            <p className="text-xs text-zinc-500 mt-2 font-mono">12.6 GB / 30 GB Used</p>
+            <p className="text-xs text-zinc-500 mt-2 font-mono">12.6 GB / 30 GB Used (Mocked)</p>
           </div>
 
           {/* MQTT Broker */}
@@ -74,7 +74,7 @@ export default function SystemHealth() {
             </div>
             <h3 className="text-zinc-500 text-sm font-bold uppercase tracking-widest mb-1">MQTT Broker</h3>
             <p className="text-3xl font-black text-white">12</p>
-            <p className="text-xs text-zinc-500 mt-2 font-mono">Messages / sec</p>
+            <p className="text-xs text-zinc-500 mt-2 font-mono">Messages / sec (Mocked)</p>
           </div>
 
         </div>

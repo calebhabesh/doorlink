@@ -10,13 +10,22 @@
 
 - [GIF or short video of doorbell will go here]
 
+## Current Status
+
+**Note:** The software stack (Gateway, Dashboard, and Notification pipeline) is fully implemented and tested. The custom hardware PCB is currently in manufacturing. Firmware capabilities and battery life estimates are designed targets pending empirical hardware validation upon arrival.
+
 ## Features
 
-- Button-triggered image capture and visitor audio recording
-- Real-time push notifications to Android and iOS via ntfy
-- Two-way audio - reply to visitors from dashboard
-- Self-hosted gateway on Raspberry Pi 4 (no third-party cloud)
-- Low power deep sleep between events (~ 27 day battery life)
+**Implemented Software Stack:**
+- Real-time push notifications to Android and iOS via ntfy (using public ntfy.sh servers)
+- Self-hosted gateway on Raspberry Pi 4 (Spring Boot, Postgres, Mosquitto, MinIO)
+- High-density Next.js Dashboard for viewing historical events and active feeds
+- Local network media storage without third-party vendor cloud lock-in
+
+**Designed Hardware Capabilities (Pending PCB Arrival):**
+- Button-triggered image capture and visitor audio recording (OV5640 + ICS-43434)
+- Two-way audio - reply to visitors from dashboard via MQTT (MAX98357A)
+- Low power deep sleep between events (Target: ~27 day battery life)
 
 ## System Architecture
 
