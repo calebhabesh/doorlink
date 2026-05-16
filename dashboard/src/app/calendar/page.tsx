@@ -21,8 +21,7 @@ export default function CalendarView() {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const exitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-  const API_BASE_URL = `http://${hostname}:8080/api/events`;
+  const API_BASE_URL = `/api/events`;
 
   useEffect(() => {
     fetch(API_BASE_URL)
