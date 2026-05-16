@@ -401,10 +401,23 @@ void app_main(void)
         }
 
         // 5. Connect to MQTT Broker
-        init_mqtt();
+        esp_mqtt_client_handle_t mqtt_client = init_mqtt();
 
-        // Simulating the time it takes to handle a doorbell event
-        vTaskDelay(10000 / portTICK_PERIOD_MS);
+        // 6. Interactive Window (60 seconds)
+        ESP_LOGI(TAG, "Entering 60-second interactive window...");
+        gpio_set_level(STATUS_LED_PIN, 1); // Turn on LED to show active window
+
+        for (int i = 60; i > 0; i--) {
+            if (i % 10 == 0) {
+                ESP_LOGI(TAG, "Interactive window: %d seconds remaining", i);
+            }
+            vTaskDelay(pdMS_TO_TICKS(1000));
+        }
+
+        ESP_LOGI(TAG, "Interactive window expired.");
+        esp_mqtt_client_stop(mqtt_client);
+        esp_mqtt_client_destroy(mqtt_client);
+        gpio_set_level(STATUS_LED_PIN, 0);
 
     } else {
         ESP_LOGI(TAG, "Woke up from reset (cause: %d). Going to sleep immediately.", wakeup_cause);
@@ -419,6 +432,14 @@ void app_main(void)
     rtc_gpio_pulldown_dis(DOORBELL_BUTTON_PIN);
     
     // Configure EXT0 wakeup on LOW level (0) for the button press
+    esp_sleep_enable_ext0_wakeup(DOORBELL_BUTTON_PIN, 0);
+
+    ESP_LOGI(TAG, "Entering deep sleep now");
+    
+    // 5. Enter Deep Sleep
+    esp_deep_sleep_start();
+}
+ress
     esp_sleep_enable_ext0_wakeup(DOORBELL_BUTTON_PIN, 0);
 
     ESP_LOGI(TAG, "Entering deep sleep now");
