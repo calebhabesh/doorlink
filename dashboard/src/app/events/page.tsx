@@ -9,15 +9,17 @@ interface DoorbellEvent {
   timestamp: string;
   eventType: string;
   imageKey: string;
+  audioKey?: string | null;
 }
+
+const API_BASE_URL = `/api/events`;
 
 export default function EventLog() {
   const [events, setEvents] = useState<DoorbellEvent[]>([]);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
+  const [latestLiveEventId, setLatestLiveEventId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDate, setFilterDate] = useState<string>('');
-
-  const API_BASE_URL = `/api/events`;
 
   useEffect(() => {
     fetch(API_BASE_URL)
@@ -38,6 +40,22 @@ export default function EventLog() {
     // Fallback: if we receive the init event, we are definitely connected
     eventSource.addEventListener('init', () => {
       setConnectionStatus('connected');
+    });
+
+    eventSource.addEventListener('doorbell-event', (e) => {
+      setConnectionStatus('connected');
+      try {
+        const newEvent: DoorbellEvent = JSON.parse(e.data);
+        setEvents((prev) => {
+          if (prev.some((event) => event.id === newEvent.id)) {
+            return prev;
+          }
+          return [newEvent, ...prev];
+        });
+        setLatestLiveEventId(newEvent.id);
+      } catch (err) {
+        console.error("Failed to parse event", err);
+      }
     });
 
     return () => eventSource.close();
@@ -118,7 +136,7 @@ export default function EventLog() {
               </thead>
               <tbody className="divide-y divide-zinc-800/50">
                 {filteredEvents.map((evt) => (
-                  <tr key={evt.id} className="hover:bg-zinc-800/30 transition-all cursor-pointer group">
+                  <tr key={evt.id} className={`transition-all cursor-pointer group animate-slide-in ${latestLiveEventId === evt.id ? 'bg-emerald-500/[0.06] shadow-[inset_3px_0_0_rgba(16,185,129,0.9)]' : 'hover:bg-zinc-800/30'}`}>
                     <td className="px-8 py-6 font-mono text-zinc-300 text-base whitespace-nowrap">
                       {new Date(evt.timestamp).toLocaleString(undefined, {
                         year: 'numeric', month: 'short', day: 'numeric',

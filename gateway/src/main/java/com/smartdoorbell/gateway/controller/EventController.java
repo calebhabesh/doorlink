@@ -67,6 +67,7 @@ public class EventController {
             Event savedEvent = eventRepository.save(event);
             
             String payload = objectMapper.writeValueAsString(savedEvent);
+            broadcastDoorbellEvent(payload);
             mqttGateway.sendToMqtt(payload, eventsTopic);
             
             ntfyService.sendNotification(savedEvent);
@@ -140,12 +141,20 @@ public class EventController {
 
     @ServiceActivator(inputChannel = "mqttInputChannel")
     public void receiveMqttMessage(String payload) {
+        broadcastDoorbellEvent(payload);
+    }
+
+    private void broadcastDoorbellEvent(String payload) {
+        List<SseEmitter> deadEmitters = new ArrayList<>();
         for (SseEmitter emitter : emitters) {
             try {
-                emitter.send(SseEmitter.event().name("doorbell-event").data(payload));
-            } catch (IOException e) {
-                emitters.remove(emitter);
+                emitter.send(SseEmitter.event()
+                        .name("doorbell-event")
+                        .data(payload));
+            } catch (IOException | IllegalStateException e) {
+                deadEmitters.add(emitter);
             }
         }
+        emitters.removeAll(deadEmitters);
     }
 }

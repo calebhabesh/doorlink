@@ -12,10 +12,14 @@ interface DoorbellEvent {
   audioKey?: string | null;
 }
 
+const API_BASE_URL = `/api/events`;
+const MINIO_BASE_URL = `${API_BASE_URL}/media`;
+
 export default function Home() {
   const [events, setEvents] = useState<DoorbellEvent[]>([]);
   const [activeEvent, setActiveEvent] = useState<DoorbellEvent | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
+  const [latestLiveEventId, setLatestLiveEventId] = useState<number | null>(null);
   const [isAtBottom, setIsAtBottom] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -29,9 +33,6 @@ export default function Home() {
   useEffect(() => {
     handleScroll();
   }, [events]);
-
-  const API_BASE_URL = `/api/events`;
-  const MINIO_BASE_URL = `${API_BASE_URL}/media`;
 
   useEffect(() => {
     fetch(API_BASE_URL)
@@ -63,8 +64,14 @@ export default function Home() {
       setConnectionStatus('connected'); // Defensive: any data means we are connected
       try {
         const newEvent: DoorbellEvent = JSON.parse(e.data);
-        setEvents((prev) => [newEvent, ...prev]);
+        setEvents((prev) => {
+          if (prev.some((event) => event.id === newEvent.id)) {
+            return prev;
+          }
+          return [newEvent, ...prev];
+        });
         setActiveEvent(newEvent);
+        setLatestLiveEventId(newEvent.id);
       } catch (err) {
         console.error("Failed to parse event", err);
       }
@@ -160,10 +167,13 @@ export default function Home() {
               </h3>
               <div className="flex flex-col gap-4">
                 {events.map((evt) => (
-                  <button key={evt.id} onClick={() => setActiveEvent(evt)} className={`text-left bg-zinc-950 border rounded-2xl p-6 transition-all duration-300 animate-slide-in shrink-0 relative group overflow-hidden ${activeEvent.id === evt.id ? 'border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)] bg-emerald-500/[0.03]' : 'border-zinc-800 hover:border-zinc-600 hover:bg-zinc-900/50'}`}>
+                  <button key={evt.id} onClick={() => setActiveEvent(evt)} className={`text-left bg-zinc-950 border rounded-2xl p-6 transition-all duration-300 animate-slide-in shrink-0 relative group overflow-hidden ${activeEvent.id === evt.id ? 'border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)] bg-emerald-500/[0.03]' : latestLiveEventId === evt.id ? 'border-emerald-400/70 shadow-[0_0_24px_rgba(52,211,153,0.22)] bg-emerald-500/[0.05]' : 'border-zinc-800 hover:border-zinc-600 hover:bg-zinc-900/50'}`}>
                     <div className="flex items-center justify-between mb-3 relative z-10 text-left">
                       <span className="text-lg font-black text-zinc-100 tracking-tight">{formatTitleCase(evt.eventType)}</span>
-                      {evt.id === events[0]?.id && <span className="flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span></span>}
+                      <span className="flex items-center gap-3">
+                        {latestLiveEventId === evt.id && <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">New</span>}
+                        {evt.id === events[0]?.id && <span className="flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span></span>}
+                      </span>
                     </div>
                     <div className="text-sm text-zinc-400 font-bold uppercase tracking-wider mb-1 relative z-10 text-left">{new Date(evt.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                     <div className="text-xs font-mono text-zinc-500 tracking-widest relative z-10 text-left">{new Date(evt.timestamp).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', second: '2-digit' })}</div>

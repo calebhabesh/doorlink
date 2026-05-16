@@ -6,8 +6,8 @@ This file is the working guide for AI agents editing this repository. Treat the 
 
 - Development/editing happens on the Arch server at `/home/ethioking/dev/smart-doorbell`.
 - Runtime services are deployed on the Raspberry Pi gateway, not on the Arch development machine.
-- The Raspberry Pi runs persistent `tmux` panes for Spring Boot, Next.js, and the Docker Compose infrastructure.
-- Normal deployment flow: make edits on Arch, verify locally where possible, commit/push, then the user pulls the branch on the Raspberry Pi over SSH/tmux and restarts only the affected service.
+- The Raspberry Pi runs Spring Boot and Next.js through systemd service units tracked in `scripts/systemd/`; Docker Compose runs the infrastructure containers.
+- Normal deployment flow: make edits on Arch, verify locally where possible, commit/push, then the user pulls the branch on the Raspberry Pi over SSH and restarts only the affected systemd service.
 - Do not edit files directly on the Raspberry Pi unless explicitly asked. Treat the Arch checkout as the source working tree.
 - Do not start or stop persistent gateway services unless explicitly asked.
 - Do not run `./mvnw spring-boot:run`, `npm run dev`, or `docker compose up` from the Arch checkout by default.
@@ -16,7 +16,7 @@ This file is the working guide for AI agents editing this repository. Treat the 
 - For firmware verification, use ESP-IDF tooling when available and target `esp32s3`.
 - If a command fails with `EADDRINUSE`, assume the corresponding user-managed service may already be running.
 - Runtime endpoint checks should target the Raspberry Pi gateway IP from `docs/pi-deployment.md` when the user wants live-service verification.
-- Ask the user to restart server panes only after changes to `pom.xml`, `tailwind.config.ts`, `next.config.mjs`, firmware `sdkconfig`, or other startup-only configuration.
+- Ask the user to restart the affected Raspberry Pi systemd service only after changes that need runtime reload, such as backend/frontend code, `pom.xml`, `tailwind.config.ts`, `next.config.mjs`, firmware `sdkconfig`, or other startup-only configuration.
 
 ## Project Layout
 

@@ -11,6 +11,8 @@ interface DoorbellEvent {
   imageKey: string;
 }
 
+const API_BASE_URL = `/api/events`;
+
 export default function CalendarView() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isExiting, setIsExiting] = useState(false);
@@ -20,8 +22,6 @@ export default function CalendarView() {
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const exitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const API_BASE_URL = `/api/events`;
 
   useEffect(() => {
     fetch(API_BASE_URL)

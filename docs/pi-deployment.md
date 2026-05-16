@@ -19,7 +19,7 @@ This document outlines the deployment topology for the Smart Doorbell system on 
 
 ## Running the Services
 
-The deployment relies on a hybrid approach, using Docker Compose for infrastructure and persistent background processes for the application layers.
+The deployment relies on a hybrid approach: Docker Compose runs infrastructure containers, while systemd manages the Spring Boot gateway and Next.js dashboard services. The unit files are tracked in `scripts/systemd/`.
 
 ### 1. Infrastructure (Docker Compose)
 The database, message broker, and media storage are containerized.
@@ -29,20 +29,22 @@ docker-compose up -d
 ```
 
 ### 2. Backend Gateway
-The Spring Boot gateway is run using the Maven wrapper.
+The Spring Boot gateway is managed by `smart-doorbell-gateway.service`.
 ```bash
-cd /home/ethioking/dev/smart-doorbell/gateway
-./mvnw spring-boot:run
+sudo systemctl status smart-doorbell-gateway.service
+sudo systemctl restart smart-doorbell-gateway.service
+journalctl -u smart-doorbell-gateway.service -f
 ```
 
 ### 3. Frontend Dashboard
-The Next.js dashboard runs in development/production mode.
+The Next.js dashboard is managed by `smart-doorbell-dashboard.service`.
 ```bash
-cd /home/ethioking/dev/smart-doorbell/dashboard
-npm run dev # or npm start for a production build
+sudo systemctl status smart-doorbell-dashboard.service
+sudo systemctl restart smart-doorbell-dashboard.service
+journalctl -u smart-doorbell-dashboard.service -f
 ```
 
-*(Note: Currently, the Gateway and Dashboard are running in persistent `tmux` sessions on the Pi.)*
+After pulling new changes on the Pi, restart only the service affected by the change. Backend changes generally require restarting `smart-doorbell-gateway.service`; dashboard changes generally require restarting `smart-doorbell-dashboard.service`.
 
 ## Firmware Configuration (`config.h`)
 

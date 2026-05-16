@@ -79,7 +79,7 @@ The KiCad design, routed netlist, Gerbers, BOM exports, and assembly notes live 
 
 ## Development And Deployment Workflow
 
-Development happens from this Arch server checkout. The Raspberry Pi is the always-on gateway target running Docker infrastructure, the Spring Boot gateway, and the Next.js dashboard in persistent `tmux` panes.
+Development happens from this Arch server checkout. The Raspberry Pi is the always-on gateway target running Docker infrastructure, the Spring Boot gateway, and the Next.js dashboard. Spring Boot and Next.js are managed by systemd units tracked under `scripts/systemd/`.
 
 Normal workflow:
 
@@ -87,7 +87,7 @@ Normal workflow:
 2. Commit and push changes.
 3. SSH into the Raspberry Pi gateway.
 4. Pull the branch in the Pi checkout.
-5. Restart only the affected `tmux` service pane.
+5. Restart only the affected systemd service.
 
 See `docs/pi-deployment.md` for the current Pi topology and `docs/hardware-bringup.md` for the board bring-up checklist.
 
@@ -109,7 +109,7 @@ cd smart-doorbell
 docker compose up -d
 ```
 
-This starts PostgreSQL, Mosquitto, and MinIO. Spring Boot and Next.js are currently run in persistent `tmux` panes on the Pi; see `docs/pi-deployment.md`.
+This starts PostgreSQL, Mosquitto, and MinIO. Spring Boot and Next.js run as systemd services on the Pi; see `docs/pi-deployment.md`.
 
 ### Backend Verification
 
@@ -145,6 +145,7 @@ idf.py build flash monitor
 ├── dashboard/         # Next.js dashboard
 ├── pcb/               # KiCad project, Gerbers, production files, and PCB notes
 ├── docs/              # Pi deployment, Cloudflare tunnel, bring-up checklist, design notes
+├── scripts/           # Test assets, utility scripts, and Raspberry Pi systemd unit files
 ├── docker-compose.yml # PostgreSQL, Mosquitto, and MinIO infrastructure
 └── sdkconfig.defaults # ESP32-S3 firmware defaults
 ```
@@ -155,5 +156,4 @@ idf.py build flash monitor
 - Real OV5640 JPEG capture and ICS-43434 visitor audio recording
 - Push-to-talk audio delivery from dashboard to MAX98357A speaker path
 - Backend media proxy or presigned URLs for MinIO objects
-- systemd services for the Pi runtime after development stabilizes
 - Motion detection as secondary wakeup trigger

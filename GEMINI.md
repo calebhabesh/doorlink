@@ -4,14 +4,14 @@ This file contains the distilled workflows and commands for developing the Smart
 
 ## Local Development Workflow
 
-This project uses a hybrid development/deployment workflow. Source edits happen on the Arch development server at `/home/ethioking/dev/smart-doorbell`, while the always-on runtime stack runs on the Raspberry Pi gateway. The user manages long-running gateway services in dedicated `tmux` panes, while AI agents handle implementation, code generation, local verification, and documentation updates from the Arch checkout.
+This project uses a hybrid development/deployment workflow. Source edits happen on the Arch development server at `/home/ethioking/dev/smart-doorbell`, while the always-on runtime stack runs on the Raspberry Pi gateway. The Raspberry Pi runs the Spring Boot gateway and Next.js dashboard as systemd services defined under `scripts/systemd/`, while AI agents handle implementation, code generation, local verification, and documentation updates from the Arch checkout.
 
 ### Arch-to-Pi Deployment Flow
 
 1. Make code and documentation changes on the Arch development server.
 2. Run local non-disruptive verification where possible (`./mvnw compile`, `./mvnw test`, `npx tsc --noEmit`, `npm run lint`, ESP-IDF builds when available).
 3. Commit/push changes from the Arch checkout.
-4. The user SSHes into the Raspberry Pi, pulls the branch in the Pi checkout, and restarts only the affected `tmux` service pane.
+4. The user SSHes into the Raspberry Pi, pulls the branch in the Pi checkout, and restarts only the affected systemd service.
 5. Live endpoint checks should target the Raspberry Pi gateway IP documented in `docs/pi-deployment.md`.
 
 Agents should not edit files directly on the Raspberry Pi or start/stop Pi services unless explicitly instructed. Treat the Arch checkout as the source working tree.
@@ -24,6 +24,11 @@ Agents should not edit files directly on the Raspberry Pi or start/stop Pi servi
 - **Media Storage (MinIO):** Port `9000`
 - **PostgreSQL:** Port `5432`
 
+### Raspberry Pi Systemd Services
+
+- `scripts/systemd/smart-doorbell-gateway.service`: Spring Boot gateway on port `8080`.
+- `scripts/systemd/smart-doorbell-dashboard.service`: Next.js dashboard on port `3000`.
+
 ### AI Agent Rules of Engagement
 
 - **Server Management:** NEVER attempt to run `./mvnw spring-boot:run`, `npm run dev`, or `docker-compose up` from the Arch development checkout by default. Assume the live services are persistently running on the Raspberry Pi gateway.
@@ -33,7 +38,7 @@ Agents should not edit files directly on the Raspberry Pi or start/stop Pi servi
   - **Frontend:** Run `npx tsc --noEmit` (to check types) or `npm run lint`. NEVER run `npm run build` unless explicitly requested, as it interferes with the active dev cache.
   - **Firmware:** Use standard ESP-IDF build commands to verify C/C++ compilation.
 - **Port Conflicts:** If a verification command fails with `EADDRINUSE`, assume the user already has the service running properly.
-- **Restarts:** Rely on Next.js Hot Module Replacement and Spring Boot DevTools. Only instruct the user to manually restart their server panes if you modify `pom.xml`, `tailwind.config.ts`, `next.config.mjs`, or firmware `sdkconfig`.
+- **Restarts:** On the Pi, restart only the affected systemd unit. Backend changes usually require `smart-doorbell-gateway.service`; dashboard changes usually require `smart-doorbell-dashboard.service`.
 
 ## Hardware Target (Custom PCB)
 
