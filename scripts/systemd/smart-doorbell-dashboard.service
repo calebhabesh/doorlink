@@ -1,0 +1,19 @@
+[Unit]
+Description=Smart Doorbell Next.js Dashboard
+After=network.target smart-doorbell-gateway.service
+
+[Service]
+Type=simple
+User=ethioking
+WorkingDirectory=/home/ethioking/dev/smart-doorbell/dashboard
+# Run the Next.js server (ensure it runs on port 3000)
+ExecStart=/usr/bin/npm run dev
+Restart=always
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=smart-doorbell-dashboard
+Environment=NODE_ENV=development
+
+[Install]
+WantedBy=multi-user.target

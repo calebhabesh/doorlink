@@ -1,0 +1,19 @@
+[Unit]
+Description=Smart Doorbell Spring Boot Gateway
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=ethioking
+WorkingDirectory=/home/ethioking/dev/smart-doorbell/gateway
+# Use the Maven wrapper to run the application
+ExecStart=/home/ethioking/dev/smart-doorbell/gateway/mvnw spring-boot:run
+Restart=always
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=smart-doorbell-gateway
+
+[Install]
+WantedBy=multi-user.target
