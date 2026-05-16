@@ -107,12 +107,13 @@ public class EventController {
     }
 
     @GetMapping("/media/{key}")
-    public ResponseEntity<Void> getMediaUrl(@PathVariable String key) {
-        String presignedUrl = minioService.getPresignedUrl(key);
-        if (presignedUrl != null) {
-            return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)
-                    .location(java.net.URI.create(presignedUrl))
-                    .build();
+    public ResponseEntity<org.springframework.core.io.Resource> getMediaUrl(@PathVariable String key) {
+        com.amazonaws.services.s3.model.S3Object s3Object = minioService.getFile(key);
+        if (s3Object != null) {
+            org.springframework.core.io.InputStreamResource resource = new org.springframework.core.io.InputStreamResource(s3Object.getObjectContent());
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(s3Object.getObjectMetadata().getContentType()))
+                    .body(resource);
         }
         return ResponseEntity.notFound().build();
     }

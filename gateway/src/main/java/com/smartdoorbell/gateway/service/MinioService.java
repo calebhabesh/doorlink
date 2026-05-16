@@ -56,4 +56,13 @@ public class MinioService {
                 .withExpiration(expiration);
         return amazonS3.generatePresignedUrl(generatePresignedUrlRequest).toString();
     }
+
+    public com.amazonaws.services.s3.model.S3Object getFile(String key) {
+        if (key == null || key.isEmpty()) return null;
+        try {
+            return amazonS3.getObject(bucketName, key);
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }
