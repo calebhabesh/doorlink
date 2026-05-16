@@ -18,6 +18,7 @@ const MINIO_BASE_URL = `${API_BASE_URL}/media`;
 export default function Home() {
   const [events, setEvents] = useState<DoorbellEvent[]>([]);
   const [activeEvent, setActiveEvent] = useState<DoorbellEvent | null>(null);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
   const [latestLiveEventId, setLatestLiveEventId] = useState<number | null>(null);
   const [isAtBottom, setIsAtBottom] = useState(false);
@@ -29,6 +30,10 @@ export default function Home() {
       setIsAtBottom(scrollTop + clientHeight >= scrollHeight - 20);
     }
   };
+
+  useEffect(() => {
+    setIsImageLoaded(false);
+  }, [activeEvent?.id]);
 
   useEffect(() => {
     handleScroll();
