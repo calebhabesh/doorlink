@@ -85,7 +85,7 @@ public class EventController {
     }
 
     @GetMapping(path = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter streamEvents() {
+    public ResponseEntity<SseEmitter> streamEvents() {
         SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
         
         try {
@@ -96,14 +96,19 @@ public class EventController {
             
             this.emitters.add(emitter);
         } catch (IOException e) {
-            return null;
+            return ResponseEntity.internalServerError().build();
         }
 
         emitter.onCompletion(() -> this.emitters.remove(emitter));
         emitter.onTimeout(() -> this.emitters.remove(emitter));
         emitter.onError((ex) -> this.emitters.remove(emitter));
 
-        return emitter;
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        headers.add("Cache-Control", "no-cache, no-store, max-age=0, must-revalidate");
+        headers.add("X-Accel-Buffering", "no");
+        headers.add("Connection", "keep-alive");
+
+        return ResponseEntity.ok().headers(headers).body(emitter);
     }
 
     @GetMapping("/media/{key}")
