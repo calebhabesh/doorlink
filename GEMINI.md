@@ -4,7 +4,17 @@ This file contains the distilled workflows and commands for developing the Smart
 
 ## Local Development Workflow
 
-This project uses a hybrid workflow. The user manages long-running development servers in dedicated `tmux` panes, while the AI agent handles implementation, code generation, and terminal-based verification.
+This project uses a hybrid development/deployment workflow. Source edits happen on the Arch development server at `/home/ethioking/dev/smart-doorbell`, while the always-on runtime stack runs on the Raspberry Pi gateway. The user manages long-running gateway services in dedicated `tmux` panes, while AI agents handle implementation, code generation, local verification, and documentation updates from the Arch checkout.
+
+### Arch-to-Pi Deployment Flow
+
+1. Make code and documentation changes on the Arch development server.
+2. Run local non-disruptive verification where possible (`./mvnw compile`, `./mvnw test`, `npx tsc --noEmit`, `npm run lint`, ESP-IDF builds when available).
+3. Commit/push changes from the Arch checkout.
+4. The user SSHes into the Raspberry Pi, pulls the branch in the Pi checkout, and restarts only the affected `tmux` service pane.
+5. Live endpoint checks should target the Raspberry Pi gateway IP documented in `docs/pi-deployment.md`.
+
+Agents should not edit files directly on the Raspberry Pi or start/stop Pi services unless explicitly instructed. Treat the Arch checkout as the source working tree.
 
 ### Active Server Topology (Do Not Start/Stop These)
 
@@ -12,13 +22,14 @@ This project uses a hybrid workflow. The user manages long-running development s
 - **Dashboard (Next.js 14):** Port `3000`
 - **Message Broker (Mosquitto MQTT):** Port `1883`
 - **Media Storage (MinIO):** Port `9000`
+- **PostgreSQL:** Port `5432`
 
 ### AI Agent Rules of Engagement
 
-- **Server Management:** NEVER attempt to run `./mvnw spring-boot:run`, `npm run dev`, or `docker-compose up`. Assume these are persistently running in the background.
+- **Server Management:** NEVER attempt to run `./mvnw spring-boot:run`, `npm run dev`, or `docker-compose up` from the Arch development checkout by default. Assume the live services are persistently running on the Raspberry Pi gateway.
 - **Maven Wrapper:** Always strictly use `./mvnw` (not `mvn`) for any backend commands to ensure Java version consistency.
 - **Safe Verification:** To verify code changes without disrupting the user's running development servers:
-  - **Backend:** Run `./mvnw compile` or `./mvnw test`. You are authorized to use `curl` to test active REST endpoints on `localhost:8080`.
+  - **Backend:** Run `./mvnw compile` or `./mvnw test`. Use `curl` against the Raspberry Pi gateway IP for live REST endpoint checks only when requested.
   - **Frontend:** Run `npx tsc --noEmit` (to check types) or `npm run lint`. NEVER run `npm run build` unless explicitly requested, as it interferes with the active dev cache.
   - **Firmware:** Use standard ESP-IDF build commands to verify C/C++ compilation.
 - **Port Conflicts:** If a verification command fails with `EADDRINUSE`, assume the user already has the service running properly.
