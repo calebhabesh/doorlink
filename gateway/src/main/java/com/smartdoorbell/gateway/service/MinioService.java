@@ -65,4 +65,13 @@ public class MinioService {
             return null;
         }
     }
+
+    public void deleteFile(String key) {
+        if (key == null || key.isEmpty()) return;
+        try {
+            amazonS3.deleteObject(bucketName, key);
+        } catch (Exception e) {
+            System.err.println("Failed to delete file from MinIO: " + e.getMessage());
+        }
+    }
 }
