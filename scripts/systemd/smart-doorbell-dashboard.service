@@ -4,8 +4,8 @@ After=network.target smart-doorbell-gateway.service
 
 [Service]
 Type=simple
-User=ethioking
-WorkingDirectory=/home/ethioking/dev/smart-doorbell/dashboard
+User=ethioprince
+WorkingDirectory=/home/ethioprince/dev/smart-doorbell/dashboard
 # Run the Next.js server (ensure it runs on port 3000)
 ExecStart=/usr/bin/npm run dev
 Restart=always

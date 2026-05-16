@@ -5,10 +5,10 @@ Requires=docker.service
 
 [Service]
 Type=simple
-User=ethioking
-WorkingDirectory=/home/ethioking/dev/smart-doorbell/gateway
+User=ethioprince
+WorkingDirectory=/home/ethioprince/dev/smart-doorbell/gateway
 # Use the Maven wrapper to run the application
-ExecStart=/home/ethioking/dev/smart-doorbell/gateway/mvnw spring-boot:run
+ExecStart=/home/ethioprince/dev/smart-doorbell/gateway/mvnw spring-boot:run
 Restart=always
 RestartSec=10
 StandardOutput=syslog
