@@ -45,7 +45,7 @@ export default function Home() {
       })
       .catch((err) => console.error("Failed to fetch history", err));
 
-    const eventSource = new EventSource(`${API_BASE_URL}/stream`);
+    const eventSource = new EventSource(`/stream`);
     
     eventSource.onopen = () => {
       setConnectionStatus('connected');

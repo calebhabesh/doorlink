@@ -27,7 +27,7 @@ export default function EventLog() {
       .then((data) => setEvents(data))
       .catch((err) => console.error("Failed to fetch logs", err));
 
-    const eventSource = new EventSource(`${API_BASE_URL}/stream`);
+    const eventSource = new EventSource(`/stream`);
     
     eventSource.onopen = () => {
       setConnectionStatus('connected');
