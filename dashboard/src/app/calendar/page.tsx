@@ -24,7 +24,7 @@ export default function CalendarView() {
   const exitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    fetch(API_BASE_URL)
+    fetch(`${API_BASE_URL}?size=1000`)
       .then((res) => res.json())
       .then((data) => setEvents(data))
       .catch((err) => console.error("Failed to fetch events for calendar", err));

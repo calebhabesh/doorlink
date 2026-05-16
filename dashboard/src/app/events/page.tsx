@@ -22,7 +22,7 @@ export default function EventLog() {
   const [filterDate, setFilterDate] = useState<string>('');
 
   useEffect(() => {
-    fetch(API_BASE_URL)
+    fetch(`${API_BASE_URL}?size=1000`)
       .then((res) => res.json())
       .then((data) => setEvents(data))
       .catch((err) => console.error("Failed to fetch logs", err));
