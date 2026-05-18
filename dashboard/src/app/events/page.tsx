@@ -94,8 +94,8 @@ export default function EventLog() {
       <div className="w-full max-w-[1800px] mx-auto flex flex-col h-full overflow-hidden">
         
         {/* Action Toolbar */}
-        <div className="flex justify-between items-center mb-10 shrink-0 relative z-10">
-          <div className="relative w-96">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6 lg:mb-10 shrink-0 relative z-10 w-full">
+          <div className="relative w-full lg:w-96">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-4 text-zinc-500" />
             <input 
               type="text" 
@@ -105,25 +105,25 @@ export default function EventLog() {
               className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 pl-12 pr-6 text-base text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-inner"
             />
           </div>
-          <div className="flex gap-4">
-            <div className="relative">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full lg:w-auto">
+            <div className="relative w-fit self-start sm:self-auto">
               <input 
                 type="date"
                 value={filterDate}
                 onChange={(e) => setFilterDate(e.target.value)}
-                className="bg-zinc-950 border border-zinc-800 text-zinc-200 px-4 py-3 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors shadow-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 [color-scheme:dark] min-w-[200px]"
+                className="w-full sm:w-auto bg-zinc-950 border border-zinc-800 text-zinc-200 px-4 py-3 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors shadow-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 [color-scheme:dark] min-w-[200px]"
               />
               {filterDate && (
                 <button 
                   onClick={(e) => { e.preventDefault(); setFilterDate(''); }} 
-                  className="absolute right-10 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-200 p-1"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-200 p-1 bg-zinc-950"
                   title="Clear filter"
                 >
                   ✕
                 </button>
               )}
             </div>
-            <button className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 text-zinc-200 px-6 py-3 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors shadow-lg">
+            <button className="w-full sm:w-auto flex justify-center items-center gap-3 bg-zinc-950 border border-zinc-800 text-zinc-200 px-6 py-3 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors shadow-lg">
               <Download className="w-5 h-5 text-zinc-400" />
               Export CSV
             </button>

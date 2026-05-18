@@ -116,34 +116,30 @@ export default function CalendarView() {
           )}
 
           {/* Header */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 bg-zinc-950/50 backdrop-blur-md border border-zinc-800 p-6 rounded-2xl animate-flash-event">
-            <div className="flex items-center gap-4 flex-wrap">
-              <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-3">
-                <CalendarIcon className="w-6 h-6 text-emerald-500" />
-                {viewDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8 bg-zinc-950/50 backdrop-blur-md border border-zinc-800 p-6 rounded-2xl animate-flash-event">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full lg:w-auto">
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-3">
+                <CalendarIcon className="w-6 h-6 text-emerald-500 shrink-0" />
+                <span className="whitespace-nowrap">{viewDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</span>
               </h1>
               <input 
                 type="date"
                 title="Jump to date"
                 onChange={(e) => {
                   if (e.target.value) {
-                    // e.target.value is in YYYY-MM-DD format
                     const [y, m, d] = e.target.value.split('-');
                     setViewDate(new Date(parseInt(y), parseInt(m) - 1, 1));
-                    // Check if it has an event to pass to handleDayClick
                     const dayNum = parseInt(d);
                     const isFutureDay = isFuture(dayNum) && parseInt(m)-1 === new Date().getMonth() && parseInt(y) === new Date().getFullYear();
-                    
                     if (!isFutureDay) {
-                      // We can just set the selected day directly
                       setSelectedDay(dayNum);
                     }
                   }
                 }}
-                className="bg-zinc-900 border border-zinc-800 text-zinc-400 px-3 py-1.5 rounded-lg text-sm font-bold uppercase tracking-widest hover:text-zinc-200 transition-colors focus:outline-none focus:ring-1 focus:ring-emerald-500 [color-scheme:dark]"
+                className="w-fit sm:w-auto bg-zinc-900 border border-zinc-800 text-zinc-400 px-3 py-2 sm:py-1.5 rounded-lg text-sm font-bold uppercase tracking-widest hover:text-zinc-200 transition-colors focus:outline-none focus:ring-1 focus:ring-emerald-500 [color-scheme:dark]"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 w-full lg:w-auto justify-end">
               <button 
                 onClick={() => changeMonth(-1)}
                 className="p-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-lg text-zinc-400 transition-colors"

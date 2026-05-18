@@ -97,7 +97,7 @@ export default function MainLayout({
       </div>
 
       {/* Main Content Area */}
-      <main className="flex-1 bg-zinc-900 min-h-[calc(100vh-4rem)] lg:min-h-screen lg:my-3 lg:mr-4 lg:rounded-l-[2rem] border-l border-t border-b border-zinc-800 shadow-2xl relative flex flex-col">
+      <main className="flex-1 bg-zinc-900 min-h-[calc(100vh-4rem)] lg:min-h-screen lg:my-3 lg:mr-4 lg:rounded-l-[2rem] border-l border-t border-b border-zinc-800 shadow-2xl relative flex flex-col overflow-hidden">
         <div className="absolute inset-0 bg-grid opacity-[0.35] pointer-events-none z-0"></div>
         
         {/* Desktop Header */}
