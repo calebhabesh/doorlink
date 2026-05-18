@@ -4,7 +4,11 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { LayoutDashboard, Database, CalendarDays, Activity, Settings } from 'lucide-react';
 
-export default function Sidebar() {
+interface SidebarProps {
+  onNavigate?: () => void;
+}
+
+export default function Sidebar({ onNavigate }: SidebarProps) {
   const pathname = usePathname();
 
   const menuItems = [
@@ -16,9 +20,9 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="w-64 bg-zinc-950 flex flex-col h-screen shrink-0 z-20">
+    <aside className="w-full lg:w-64 bg-zinc-950 flex flex-col h-full lg:h-screen shrink-0 z-20">
       {/* Brand Header */}
-      <div className="h-20 flex items-center px-6 border-b border-zinc-800">
+      <div className="hidden lg:flex h-20 items-center px-6 border-b border-zinc-800 shrink-0">
         <div className="mr-3 w-12 h-12 bg-blue-600/10 rounded-lg border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)] flex items-center justify-center overflow-hidden">
 
           <svg version="1.1" xmlns="http://www.w3.org/2000/svg" className="w-10 h-10" viewBox="0 0 256 256">
