@@ -158,8 +158,13 @@ export default function EventLog() {
                       </div>
                     </td>
                     <td className="px-8 py-6 text-right">
-                       <button className="opacity-0 group-hover:opacity-100 transition-all p-3 hover:bg-zinc-700 bg-zinc-800/50 rounded-xl border border-zinc-700 shadow-lg">
-                          <Play className="w-5 h-5 text-emerald-500 fill-emerald-500/20" />
+                       <button 
+                         type="button"
+                         onClick={() => setSelectedEvent(evt)}
+                         aria-label={`Preview ${formatTitleCase(evt.eventType)} from ${new Date(evt.timestamp).toLocaleString()}`}
+                         className="opacity-100 lg:opacity-0 group-hover:opacity-100 transition-all p-3 hover:bg-zinc-700 bg-zinc-800/50 rounded-xl border border-zinc-700 shadow-lg"
+                       >
+                          <Eye className="w-5 h-5 text-emerald-500" />
                        </button>
                     </td>
                   </tr>
