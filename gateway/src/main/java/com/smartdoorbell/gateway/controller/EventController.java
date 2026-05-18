@@ -5,6 +5,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.smartdoorbell.gateway.config.MqttGateway;
 import com.smartdoorbell.gateway.entity.Event;
 import com.smartdoorbell.gateway.repository.EventRepository;
+import com.smartdoorbell.gateway.service.ChimeService;
 import com.smartdoorbell.gateway.service.MinioService;
 import com.smartdoorbell.gateway.service.NtfyService;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,17 +36,19 @@ public class EventController {
     private final EventRepository eventRepository;
     private final MqttGateway mqttGateway;
     private final NtfyService ntfyService;
+    private final ChimeService chimeService;
     private final ObjectMapper objectMapper;
     private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
 
     @Value("${mqtt.topic.events:doorbell/events}")
     private String eventsTopic;
 
-    public EventController(MinioService minioService, EventRepository eventRepository, MqttGateway mqttGateway, NtfyService ntfyService) {
+    public EventController(MinioService minioService, EventRepository eventRepository, MqttGateway mqttGateway, NtfyService ntfyService, ChimeService chimeService) {
         this.minioService = minioService;
         this.eventRepository = eventRepository;
         this.mqttGateway = mqttGateway;
         this.ntfyService = ntfyService;
+        this.chimeService = chimeService;
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
         this.objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
@@ -70,6 +73,7 @@ public class EventController {
             broadcastDoorbellEvent(payload);
             mqttGateway.sendToMqtt(payload, eventsTopic);
             
+            chimeService.ring(savedEvent);
             ntfyService.sendNotification(savedEvent);
             
             return ResponseEntity.ok("Event processed successfully with image key: " + imageKey);

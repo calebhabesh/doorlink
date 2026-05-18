@@ -3,6 +3,7 @@ package com.smartdoorbell.gateway.controller;
 import com.smartdoorbell.gateway.config.MqttGateway;
 import com.smartdoorbell.gateway.entity.Event;
 import com.smartdoorbell.gateway.repository.EventRepository;
+import com.smartdoorbell.gateway.service.ChimeService;
 import com.smartdoorbell.gateway.service.MinioService;
 import com.smartdoorbell.gateway.service.NtfyService;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,9 @@ public class EventControllerTest {
     @MockBean
     private NtfyService ntfyService;
 
+    @MockBean
+    private ChimeService chimeService;
+
     @Test
     public void testUploadEventWithAudio() throws Exception {
         MockMultipartFile imageFile = new MockMultipartFile(
@@ -70,3 +74,4 @@ public class EventControllerTest {
         verify(ntfyService).sendNotification(any(Event.class));
     }
 }
+
