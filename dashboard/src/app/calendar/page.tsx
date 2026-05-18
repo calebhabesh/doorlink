@@ -2,13 +2,15 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react';
 import MainLayout from '../../components/MainLayout';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import EventPreviewDrawer from '../../components/EventPreviewDrawer';
 
 interface DoorbellEvent {
   id: number;
   timestamp: string;
   eventType: string;
   imageKey: string;
+  audioKey?: string | null;
 }
 
 const API_BASE_URL = `/api/events`;
@@ -20,6 +22,7 @@ export default function CalendarView() {
   const [currentDate] = useState(new Date()); 
   const [viewDate, setViewDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1)); 
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<DoorbellEvent | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const exitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -113,11 +116,33 @@ export default function CalendarView() {
           )}
 
           {/* Header */}
-          <div className="flex justify-between items-center mb-8 bg-zinc-950/50 backdrop-blur-md border border-zinc-800 p-6 rounded-2xl animate-flash-event">
-            <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-3">
-              <CalendarIcon className="w-6 h-6 text-emerald-500" />
-              {viewDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
-            </h1>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 bg-zinc-950/50 backdrop-blur-md border border-zinc-800 p-6 rounded-2xl animate-flash-event">
+            <div className="flex items-center gap-4 flex-wrap">
+              <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-3">
+                <CalendarIcon className="w-6 h-6 text-emerald-500" />
+                {viewDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+              </h1>
+              <input 
+                type="date"
+                title="Jump to date"
+                onChange={(e) => {
+                  if (e.target.value) {
+                    // e.target.value is in YYYY-MM-DD format
+                    const [y, m, d] = e.target.value.split('-');
+                    setViewDate(new Date(parseInt(y), parseInt(m) - 1, 1));
+                    // Check if it has an event to pass to handleDayClick
+                    const dayNum = parseInt(d);
+                    const isFutureDay = isFuture(dayNum) && parseInt(m)-1 === new Date().getMonth() && parseInt(y) === new Date().getFullYear();
+                    
+                    if (!isFutureDay) {
+                      // We can just set the selected day directly
+                      setSelectedDay(dayNum);
+                    }
+                  }
+                }}
+                className="bg-zinc-900 border border-zinc-800 text-zinc-400 px-3 py-1.5 rounded-lg text-sm font-bold uppercase tracking-widest hover:text-zinc-200 transition-colors focus:outline-none focus:ring-1 focus:ring-emerald-500 [color-scheme:dark]"
+              />
+            </div>
             <div className="flex gap-2">
               <button 
                 onClick={() => changeMonth(-1)}
@@ -210,17 +235,27 @@ export default function CalendarView() {
             <div className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
               {selectedDayEvents.length > 0 ? (
                 selectedDayEvents.map(event => (
-                  <div key={event.id} className="bg-zinc-900/50 border border-zinc-800 p-4 rounded-xl hover:border-emerald-500/50 transition-colors group">
-                    <div className="flex justify-between items-start mb-2">
+                  <button 
+                    key={event.id} 
+                    onClick={() => setSelectedEvent(event)}
+                    className="w-full text-left bg-zinc-900/50 border border-zinc-800 p-4 rounded-xl hover:border-emerald-500/50 transition-colors group flex flex-col"
+                  >
+                    <div className="flex justify-between items-start mb-2 w-full">
                       <span className="text-emerald-500 text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded">
                         {event.eventType.replace('_', ' ')}
                       </span>
-                      <span className="text-zinc-500 font-mono text-[10px]">
-                        {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
+                      <div className="flex items-center gap-2">
+                         {event.audioKey && <span className="bg-zinc-800 px-1.5 py-0.5 rounded text-[9px] text-zinc-300 font-mono uppercase tracking-widest">Audio</span>}
+                         <span className="text-zinc-500 font-mono text-[10px]">
+                           {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                         </span>
+                      </div>
                     </div>
-                    <p className="text-zinc-400 text-xs font-mono truncate">{event.imageKey}</p>
-                  </div>
+                    <div className="flex justify-between items-center w-full">
+                      <p className="text-zinc-400 text-xs font-mono truncate max-w-[180px]">{event.imageKey}</p>
+                      <Eye className="w-4 h-4 text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  </button>
                 ))
               ) : (
                 <div className="flex flex-col items-center justify-center h-40 text-center">
@@ -231,6 +266,10 @@ export default function CalendarView() {
           </div>
         )}
       </div>
+      <EventPreviewDrawer 
+        event={selectedEvent} 
+        onClose={() => setSelectedEvent(null)} 
+      />
     </MainLayout>
   );
 }

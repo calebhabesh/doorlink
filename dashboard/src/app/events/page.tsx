@@ -131,7 +131,7 @@ export default function EventLog() {
         </div>
 
         {/* Data Table Container */}
-        <div className="w-full overflow-hidden rounded-3xl lg:border border-zinc-800 lg:bg-zinc-950/50 flex flex-col min-h-0 lg:shadow-2xl relative z-10 animate-flash-event">
+        <div className={`w-full overflow-hidden rounded-3xl lg:border border-zinc-800 lg:bg-zinc-950/50 flex flex-col min-h-0 lg:shadow-2xl relative z-10 ${!isLoading ? 'animate-flash-event' : ''}`}>
           
           {isLoading ? (
             <div className="flex-1 flex items-center justify-center min-h-[400px]">
