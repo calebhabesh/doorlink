@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Sidebar from './Sidebar';
 import { Menu, X } from 'lucide-react';
+import LogoIcon from './LogoIcon';
 
 export type ConnectionStatus = 'connected' | 'disconnected' | 'connecting';
 
@@ -55,15 +56,23 @@ export default function MainLayout({
           >
             <Menu className="w-6 h-6" />
           </button>
-          <span className="font-black text-lg tracking-tight text-zinc-100">Smart Doorbell</span>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-blue-600/10 rounded border border-blue-500/20 flex items-center justify-center overflow-hidden shrink-0">
+              <LogoIcon className="w-6 h-6" />
+            </div>
+            <span className="font-black text-lg tracking-tight text-zinc-100">Smart Doorbell</span>
+          </div>
         </div>
         
-        {/* Status Indicator (Compact) */}
+        {/* Status Indicator */}
         <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-full shadow-inner">
           <div className="relative flex h-2 w-2">
             {status !== 'disconnected' && <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${getPingColor()}`}></span>}
             <span className={`relative inline-flex rounded-full h-2 w-2 ${getDotColor()}`}></span>
           </div>
+          <span className={`text-[10px] font-bold uppercase tracking-widest ${getStatusColor()}`}>
+            {status === 'connected' ? 'System Live' : status === 'connecting' ? 'Connecting...' : 'Disconnected'}
+          </span>
         </div>
       </div>
 
