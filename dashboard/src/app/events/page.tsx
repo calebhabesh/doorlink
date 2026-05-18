@@ -140,7 +140,7 @@ export default function EventLog() {
               </thead>
               <tbody className="divide-y divide-zinc-800/50">
                 {filteredEvents.map((evt) => (
-                  <tr key={evt.id} className={`transition-all cursor-pointer group animate-slide-in ${latestLiveEventId === evt.id ? 'bg-emerald-500/[0.06] shadow-[inset_3px_0_0_rgba(16,185,129,0.9)]' : 'hover:bg-zinc-800/30'}`}>
+                  <tr key={evt.id} className={`transition-all cursor-pointer group ${latestLiveEventId === evt.id ? 'animate-slide-in bg-emerald-500/[0.06] shadow-[inset_3px_0_0_rgba(16,185,129,0.9)]' : 'hover:bg-zinc-800/30'}`}>
                     <td className="px-8 py-6 font-mono text-zinc-300 text-base whitespace-nowrap">
                       {new Date(evt.timestamp).toLocaleString(undefined, {
                         year: 'numeric', month: 'short', day: 'numeric',

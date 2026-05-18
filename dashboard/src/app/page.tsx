@@ -181,7 +181,7 @@ export default function Home() {
               </h3>
               <div className="flex flex-col gap-4">
                 {events.map((evt) => (
-                  <button key={evt.id} onClick={() => setActiveEvent(evt)} className={`text-left bg-zinc-950 border rounded-2xl p-6 transition-all duration-300 animate-slide-in shrink-0 relative group overflow-hidden ${activeEvent.id === evt.id ? 'border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)] bg-emerald-500/[0.03]' : latestLiveEventId === evt.id ? 'border-emerald-400/70 shadow-[0_0_24px_rgba(52,211,153,0.22)] bg-emerald-500/[0.05]' : 'border-zinc-800 hover:border-zinc-600 hover:bg-zinc-900/50'}`}>
+                  <button key={evt.id} onClick={() => setActiveEvent(evt)} className={`text-left bg-zinc-950 border rounded-2xl p-6 transition-all duration-300 shrink-0 relative group overflow-hidden ${latestLiveEventId === evt.id ? 'animate-slide-in ' : ''}${activeEvent.id === evt.id ? 'border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)] bg-emerald-500/[0.03]' : latestLiveEventId === evt.id ? 'border-emerald-400/70 shadow-[0_0_24px_rgba(52,211,153,0.22)] bg-emerald-500/[0.05]' : 'border-zinc-800 hover:border-zinc-600 hover:bg-zinc-900/50'}`}>
                     <div className="flex items-center justify-between mb-3 relative z-10 text-left">
                       <span className="text-lg font-black text-zinc-100 tracking-tight">{formatTitleCase(evt.eventType)}</span>
                       <span className="flex items-center gap-3">
