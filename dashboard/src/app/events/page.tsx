@@ -105,18 +105,18 @@ export default function EventLog() {
               className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 pl-12 pr-6 text-base text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-inner"
             />
           </div>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full lg:w-auto">
-            <div className="relative w-fit self-start sm:self-auto">
+          <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+            <div className="relative w-full sm:w-64 shrink-0">
               <input 
                 type="date"
                 value={filterDate}
                 onChange={(e) => setFilterDate(e.target.value)}
-                className="w-full sm:w-auto bg-zinc-950 border border-zinc-800 text-zinc-200 px-4 py-3 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors shadow-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 [color-scheme:dark] min-w-[200px]"
+                className="w-full bg-zinc-950 border border-zinc-800 text-zinc-200 px-4 pr-10 py-3 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors shadow-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 [color-scheme:dark]"
               />
               {filterDate && (
                 <button 
                   onClick={(e) => { e.preventDefault(); setFilterDate(''); }} 
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-200 p-1 bg-zinc-950"
+                  className="absolute right-10 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-200 p-1"
                   title="Clear filter"
                 >
                   ✕
