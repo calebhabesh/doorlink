@@ -47,6 +47,7 @@ export default function Sidebar() {
             <Link
               key={item.label}
               href={item.href}
+              onClick={onNavigate}
               className={`flex items-center px-6 py-4 transition-all border-l-4 ${
                 isActive
                   ? 'bg-emerald-500/10 border-emerald-500 text-emerald-500'

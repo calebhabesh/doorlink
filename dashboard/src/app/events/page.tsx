@@ -124,8 +124,10 @@ export default function EventLog() {
         </div>
 
         {/* Data Table Container */}
-        <div className="w-full overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950/50 flex flex-col min-h-0 shadow-2xl relative z-10 animate-flash-event">
-          <div className="overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
+        <div className="w-full overflow-hidden rounded-3xl lg:border border-zinc-800 lg:bg-zinc-950/50 flex flex-col min-h-0 lg:shadow-2xl relative z-10 animate-flash-event">
+          
+          {/* Desktop Table */}
+          <div className="hidden lg:block overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
             <table className="w-full border-collapse text-left">
               <thead className="bg-zinc-900/80 sticky top-0 z-20 backdrop-blur-md">
                 <tr className="border-b border-zinc-800">
@@ -175,8 +177,44 @@ export default function EventLog() {
             </table>
           </div>
 
+          {/* Mobile Cards */}
+          <div className="lg:hidden flex flex-col gap-4 overflow-y-auto pb-4">
+            {filteredEvents.map((evt) => (
+              <div 
+                key={evt.id} 
+                className={`bg-zinc-950 border border-zinc-800 rounded-2xl p-5 flex flex-col gap-4 ${latestLiveEventId === evt.id ? 'border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : ''}`}
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-500/20 mb-2 inline-block">
+                      {formatTitleCase(evt.eventType)}
+                    </span>
+                    <div className="font-mono text-zinc-300 text-sm">
+                      {new Date(evt.timestamp).toLocaleString(undefined, {
+                        month: 'short', day: 'numeric',
+                        hour: 'numeric', minute: '2-digit'
+                      })}
+                    </div>
+                  </div>
+                  <button 
+                     type="button"
+                     onClick={() => setSelectedEvent(evt)}
+                     aria-label={`Preview event`}
+                     className="p-3 bg-zinc-800/80 rounded-xl border border-zinc-700 active:scale-95 transition-transform"
+                   >
+                      <Eye className="w-5 h-5 text-emerald-500" />
+                   </button>
+                </div>
+                <div className="flex justify-between items-center text-xs font-mono text-zinc-500">
+                  <span className="truncate max-w-[150px]">{evt.imageKey}</span>
+                  {evt.audioKey && <span className="bg-zinc-800 px-2 py-0.5 rounded text-zinc-300">Audio</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+
           {/* Pagination Footer */}
-          <div className="px-6 py-4 border-t border-zinc-800 bg-zinc-900 flex justify-between items-center shrink-0">
+          <div className="px-6 py-4 lg:border-t border-zinc-800 lg:bg-zinc-900 bg-transparent flex justify-between items-center shrink-0">
             <p className="text-xs font-mono text-zinc-500 uppercase tracking-widest">
               Showing <span className="text-zinc-300">1</span> to <span className="text-zinc-300">{filteredEvents.length}</span> of <span className="text-zinc-300">{filteredEvents.length}</span> events
             </p>
