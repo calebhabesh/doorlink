@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import MainLayout from '../../components/MainLayout';
-import { Settings as SettingsIcon, Bell, HardDrive, Camera } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, HardDrive, Camera, ChevronDown } from 'lucide-react';
 
 export default function Settings() {
   const [notifications, setNotifications] = useState(true);
@@ -67,9 +67,9 @@ export default function Settings() {
               </div>
               <button 
                 onClick={handleToggle}
-                className={`w-12 h-6 rounded-full transition-colors relative inline-flex items-center p-1 shrink-0 ${notifications ? 'bg-emerald-500' : 'bg-zinc-800 border border-zinc-700'}`}
+                className={`w-12 h-6.5 rounded-full transition-colors relative flex items-center shrink-0 p-1 ${notifications ? 'bg-emerald-500' : 'bg-zinc-800 border border-zinc-700'}`}
               >
-                <div className={`w-4 h-4 bg-white rounded-full transition-transform shadow-sm transform ${notifications ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                <div className={`w-4.5 h-4.5 bg-white rounded-full transition-transform shadow-md transform ${notifications ? 'translate-x-[22px]' : 'translate-x-0'}`}></div>
               </button>
             </div>
           </div>
@@ -86,16 +86,19 @@ export default function Settings() {
                 <h3 className="font-bold text-zinc-200">Event Retention Policy</h3>
                 <p className="text-sm text-zinc-500 mt-1">How long to keep video/image events before auto-deleting.</p>
               </div>
-              <select 
-                value={retention}
-                onChange={(e) => handleSelect(setRetention, e.target.value)}
-                className="bg-zinc-900 border border-zinc-700 text-zinc-200 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-500 transition-colors"
-              >
-                <option value="7">7 Days</option>
-                <option value="30">30 Days</option>
-                <option value="90">90 Days</option>
-                <option value="forever">Forever</option>
-              </select>
+              <div className="relative">
+                <select 
+                  value={retention}
+                  onChange={(e) => handleSelect(setRetention, e.target.value)}
+                  className="appearance-none bg-zinc-900 border border-zinc-800 text-zinc-200 text-sm rounded-xl pl-5 pr-10 py-3 focus:outline-none focus:border-emerald-500 transition-colors shadow-inner cursor-pointer"
+                >
+                  <option value="7">7 Days</option>
+                  <option value="30">30 Days</option>
+                  <option value="90">90 Days</option>
+                  <option value="forever">Forever</option>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
+              </div>
             </div>
           </div>
 
@@ -111,14 +114,17 @@ export default function Settings() {
                 <h3 className="font-bold text-zinc-200">Camera Quality</h3>
                 <p className="text-sm text-zinc-500 mt-1">Resolution setting for snapshot captures.</p>
               </div>
-              <select 
-                value={quality}
-                onChange={(e) => handleSelect(setQuality, e.target.value)}
-                className="bg-zinc-900 border border-zinc-700 text-zinc-200 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-500 transition-colors"
-              >
-                <option value="720">720p (HD)</option>
-                <option value="1080">1080p (FHD)</option>
-              </select>
+              <div className="relative">
+                <select 
+                  value={quality}
+                  onChange={(e) => handleSelect(setQuality, e.target.value)}
+                  className="appearance-none bg-zinc-900 border border-zinc-800 text-zinc-200 text-sm rounded-xl pl-5 pr-10 py-3 focus:outline-none focus:border-emerald-500 transition-colors shadow-inner cursor-pointer"
+                >
+                  <option value="720">720p (HD)</option>
+                  <option value="1080">1080p (FHD)</option>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
+              </div>
             </div>
           </div>
 
