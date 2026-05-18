@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import MainLayout, { ConnectionStatus } from '../../components/MainLayout';
-import { Search, Download, ChevronLeft, ChevronRight, Play } from 'lucide-react';
+import { Search, Download, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import EventPreviewDrawer from '../../components/EventPreviewDrawer';
 
 interface DoorbellEvent {
   id: number;
@@ -20,6 +21,7 @@ export default function EventLog() {
   const [latestLiveEventId, setLatestLiveEventId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDate, setFilterDate] = useState<string>('');
+  const [selectedEvent, setSelectedEvent] = useState<DoorbellEvent | null>(null);
 
   useEffect(() => {
     fetch(`${API_BASE_URL}?size=1000`)
@@ -189,6 +191,10 @@ export default function EventLog() {
           </div>
         </div>
       </div>
+      <EventPreviewDrawer 
+        event={selectedEvent} 
+        onClose={() => setSelectedEvent(null)} 
+      />
     </MainLayout>
   );
 }

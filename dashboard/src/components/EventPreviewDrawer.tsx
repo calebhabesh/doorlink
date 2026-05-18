@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { X, Play } from 'lucide-react';
+import { X } from 'lucide-react';
 
 interface DoorbellEvent {
   id: number;

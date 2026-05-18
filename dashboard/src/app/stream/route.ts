@@ -19,7 +19,7 @@ export async function GET() {
         "X-Accel-Buffering": "no",
       },
     });
-  } catch (error) {
+  } catch {
     return new Response("Failed to connect to backend stream", { status: 502 });
   }
 }
