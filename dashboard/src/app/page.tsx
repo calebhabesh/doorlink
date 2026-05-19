@@ -179,7 +179,7 @@ export default function Home() {
             <div 
               ref={scrollRef}
               onScroll={handleScroll}
-              className={`flex-1 lg:absolute lg:top-20 lg:inset-x-0 lg:bottom-0 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent transition-[mask-image] duration-300 ${!isAtBottom ? '[mask-image:linear-gradient(to_bottom,transparent_0%,black_5%,black_90%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,black_5%,black_90%,transparent_100%)]' : '[mask-image:linear-gradient(to_bottom,transparent_0%,black_5%,black_100%)] [-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,black_5%,black_100%)]'}`}
+              className={`flex-1 lg:absolute lg:top-20 lg:inset-x-0 lg:bottom-0 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-zinc-950/40 transition-[mask-image] duration-300 ${!isAtBottom ? '[mask-image:linear-gradient(to_bottom,transparent_0%,black_5%,black_90%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,black_5%,black_90%,transparent_100%)]' : '[mask-image:linear-gradient(to_bottom,transparent_0%,black_5%,black_100%)] [-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,black_5%,black_100%)]'}`}
             >
               <div className="flex flex-col gap-4 pt-6">
                 {events.map((evt) => (

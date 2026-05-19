@@ -28,9 +28,16 @@ body {
 
 @layer base {
   /* ... existing scrollbar styles ... */
-  ::-webkit-calendar-picker-indicator {
-    margin-right: 20px;
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    background: transparent;
+    bottom: 0;
+    color: transparent;
     cursor: pointer;
-    filter: invert(0.5); /* Make it a bit more subtle on dark theme */
+    height: auto;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: auto;
   }
 }

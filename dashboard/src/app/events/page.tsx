@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import MainLayout, { ConnectionStatus } from '../../components/MainLayout';
-import { Search, Download, ChevronLeft, ChevronRight, Eye, CalendarDays, X } from 'lucide-react';
+import { Search, Download, ChevronLeft, ChevronRight, Eye, CalendarDays, X, ChevronDown } from 'lucide-react';
 import EventPreviewDrawer from '../../components/EventPreviewDrawer';
 
 interface DoorbellEvent {
@@ -106,21 +106,22 @@ export default function EventLog() {
             />
           </div>
           <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
-            <div className="relative w-full sm:w-auto min-w-[240px]">
+            <div className="relative w-fit">
               <input 
                 type="date"
                 value={filterDate}
                 onChange={(e) => setFilterDate(e.target.value)}
-                className="w-full bg-zinc-950 border border-zinc-800 text-zinc-200 px-10 pr-16 py-3.5 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors shadow-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 [color-scheme:dark]"
+                className="w-full sm:w-auto min-w-[200px] bg-zinc-950 border border-zinc-800 text-zinc-200 pl-10 pr-10 py-3.5 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors shadow-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 [color-scheme:dark] appearance-none"
               />
               <CalendarDays className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500 pointer-events-none" />
+              {!filterDate && <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />}
               {filterDate && (
                 <button 
                   onClick={(e) => { e.preventDefault(); setFilterDate(''); }} 
-                  className="absolute right-12 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-200 p-1 bg-zinc-950 rounded-full"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-200 p-1 bg-zinc-950 rounded-full z-10"
                   title="Clear filter"
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-4 h-4" />
                 </button>
               )}
             </div>
