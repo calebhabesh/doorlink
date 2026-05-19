@@ -60,8 +60,8 @@ export default function Settings() {
               <h2 className="text-lg font-bold text-white">Notifications</h2>
             </div>
             
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex items-center justify-between gap-8">
+              <div className="flex-1">
                 <h3 className="font-bold text-zinc-200">Browser Push Notifications</h3>
                 <p className="text-sm text-zinc-500 mt-1">Receive desktop alerts when the doorbell is pressed.</p>
               </div>
