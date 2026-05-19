@@ -179,9 +179,9 @@ export default function Home() {
             <div 
               ref={scrollRef}
               onScroll={handleScroll}
-              className={`flex-1 lg:absolute lg:top-20 lg:inset-x-0 lg:bottom-0 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent transition-[mask-image] duration-300 ${!isAtBottom ? '[mask-image:linear-gradient(to_bottom,transparent_0%,black_10%,black_85%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,black_10%,black_85%,transparent_100%)]' : '[mask-image:linear-gradient(to_bottom,transparent_0%,black_10%,black_100%)] [-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,black_10%,black_100%)]'}`}
+              className={`flex-1 lg:absolute lg:top-20 lg:inset-x-0 lg:bottom-0 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent transition-[mask-image] duration-300 ${!isAtBottom ? '[mask-image:linear-gradient(to_bottom,transparent_0%,black_5%,black_90%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,black_5%,black_90%,transparent_100%)]' : '[mask-image:linear-gradient(to_bottom,transparent_0%,black_5%,black_100%)] [-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,black_5%,black_100%)]'}`}
             >
-              <div className="flex flex-col gap-4 pt-2">
+              <div className="flex flex-col gap-4 pt-6">
                 {events.map((evt) => (
                   <button key={evt.id} onClick={() => setActiveEvent(evt)} className={`text-left bg-zinc-950 border rounded-2xl p-6 transition-all duration-300 shrink-0 relative group overflow-hidden ${latestLiveEventId === evt.id ? 'animate-slide-in ' : ''}${activeEvent.id === evt.id ? 'border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)] bg-emerald-500/[0.03]' : latestLiveEventId === evt.id ? 'border-emerald-400/70 shadow-[0_0_24px_rgba(52,211,153,0.22)] bg-emerald-500/[0.05]' : 'border-zinc-800 hover:border-zinc-600 hover:bg-zinc-900/50'}`}>
                     <div className="flex items-center justify-between mb-3 relative z-10 text-left">
