@@ -122,7 +122,7 @@ export default function CalendarView() {
                 <CalendarIcon className="w-6 h-6 text-emerald-500 shrink-0" />
                 <span className="whitespace-nowrap">{viewDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</span>
               </h1>
-              <div className="relative w-fit">
+              <div className="relative w-full sm:w-auto">
                 <input 
                   type="date"
                   title="Jump to date"
@@ -137,10 +137,10 @@ export default function CalendarView() {
                       }
                     }
                   }}
-                  className="w-full sm:w-auto min-w-[180px] bg-zinc-900 border border-zinc-800 text-zinc-400 pl-10 pr-10 py-2.5 rounded-lg text-sm font-bold uppercase tracking-widest hover:text-zinc-200 transition-colors focus:outline-none focus:ring-1 focus:ring-emerald-500 [color-scheme:dark] appearance-none"
+                  className="w-full min-w-[180px] sm:min-w-[200px] bg-zinc-900 border border-zinc-800 text-zinc-400 pl-12 pr-12 py-3 rounded-lg text-sm font-bold uppercase tracking-widest hover:text-zinc-200 transition-colors focus:outline-none focus:ring-1 focus:ring-emerald-500 [color-scheme:dark] appearance-none"
                 />
-                <CalendarIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500 pointer-events-none" />
-                <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
+                <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500 pointer-events-none" />
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500 pointer-events-none" />
               </div>
             </div>
             <div className="flex gap-2 w-full lg:w-auto justify-end">

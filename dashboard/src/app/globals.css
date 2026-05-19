@@ -27,7 +27,21 @@ body {
 }
 
 @layer base {
-  /* ... existing scrollbar styles ... */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #3f3f46; /* zinc-700 */
+    border-radius: 10px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #52525b; /* zinc-600 */
+  }
+
   input[type="date"]::-webkit-calendar-picker-indicator {
     background: transparent;
     bottom: 0;
