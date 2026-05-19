@@ -169,17 +169,19 @@ export default function Home() {
 
           {/* Right Wrapper (The Bounding Box) */}
           <div className="lg:col-span-4 lg:relative lg:h-full lg:self-stretch lg:min-h-[500px] flex flex-col h-[500px] lg:h-auto">
+            {/* Opaque Header outside of scroll area */}
+            <h3 className="text-xs font-mono text-zinc-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-3 shrink-0 px-2 font-black py-4 border-b border-zinc-800/50 bg-transparent relative z-20">
+              <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+              Recent Log
+            </h3>
+
             {/* The Scrolling List (The Inner Content) */}
             <div 
               ref={scrollRef}
               onScroll={handleScroll}
-              className={`flex-1 lg:absolute lg:inset-0 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent transition-[mask-image] duration-300 ${!isAtBottom ? '[mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)]' : ''}`}
+              className={`flex-1 lg:absolute lg:top-20 lg:inset-x-0 lg:bottom-0 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent transition-[mask-image] duration-300 ${!isAtBottom ? '[mask-image:linear-gradient(to_bottom,transparent_0%,black_10%,black_85%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,black_10%,black_85%,transparent_100%)]' : '[mask-image:linear-gradient(to_bottom,transparent_0%,black_10%,black_100%)] [-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,black_10%,black_100%)]'}`}
             >
-              <h3 className="text-xs font-mono text-zinc-500 uppercase tracking-[0.2em] mb-5 flex items-center gap-3 shrink-0 px-2 font-black sticky top-0 bg-zinc-900 py-4 z-10 border-b border-zinc-800/50">
-                <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
-                Recent Log
-              </h3>
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 pt-2">
                 {events.map((evt) => (
                   <button key={evt.id} onClick={() => setActiveEvent(evt)} className={`text-left bg-zinc-950 border rounded-2xl p-6 transition-all duration-300 shrink-0 relative group overflow-hidden ${latestLiveEventId === evt.id ? 'animate-slide-in ' : ''}${activeEvent.id === evt.id ? 'border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)] bg-emerald-500/[0.03]' : latestLiveEventId === evt.id ? 'border-emerald-400/70 shadow-[0_0_24px_rgba(52,211,153,0.22)] bg-emerald-500/[0.05]' : 'border-zinc-800 hover:border-zinc-600 hover:bg-zinc-900/50'}`}>
                     <div className="flex items-center justify-between mb-3 relative z-10 text-left">
