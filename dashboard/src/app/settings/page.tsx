@@ -67,9 +67,9 @@ export default function Settings() {
               </div>
               <button 
                 onClick={handleToggle}
-                className={`w-12 h-6.5 rounded-full transition-colors relative flex items-center shrink-0 p-1 ${notifications ? 'bg-emerald-500' : 'bg-zinc-800 border border-zinc-700'}`}
+                className={`w-14 h-7 rounded-full transition-colors relative flex items-center px-1 ${notifications ? 'bg-emerald-500' : 'bg-zinc-800 border border-zinc-700'}`}
               >
-                <div className={`w-4.5 h-4.5 bg-white rounded-full transition-transform shadow-md transform ${notifications ? 'translate-x-[22px]' : 'translate-x-0'}`}></div>
+                <div className={`w-5 h-5 bg-white rounded-full transition-transform shadow-sm ${notifications ? 'translate-x-7' : 'translate-x-0'}`}></div>
               </button>
             </div>
           </div>

@@ -136,7 +136,7 @@ export default function CalendarView() {
                     }
                   }
                 }}
-                className="w-full sm:w-48 bg-zinc-900 border border-zinc-800 text-zinc-400 px-4 pr-10 py-2 sm:py-1.5 rounded-lg text-sm font-bold uppercase tracking-widest hover:text-zinc-200 transition-colors focus:outline-none focus:ring-1 focus:ring-emerald-500 [color-scheme:dark]"
+                className="w-fit bg-zinc-900 border border-zinc-800 text-zinc-400 px-4 py-2 sm:py-1.5 rounded-lg text-sm font-bold uppercase tracking-widest hover:text-zinc-200 transition-colors focus:outline-none focus:ring-1 focus:ring-emerald-500 [color-scheme:dark]"
               />
             </div>
             <div className="flex gap-2 w-full lg:w-auto justify-end">
