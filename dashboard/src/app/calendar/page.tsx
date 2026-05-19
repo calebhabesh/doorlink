@@ -137,7 +137,7 @@ export default function CalendarView() {
                       }
                     }
                   }}
-                  className="w-full bg-zinc-900 border border-zinc-800 text-zinc-400 px-10 pr-14 py-2.5 rounded-lg text-sm font-bold uppercase tracking-widest hover:text-zinc-200 transition-colors focus:outline-none focus:ring-1 focus:ring-emerald-500 [color-scheme:dark]"
+                  className="w-full bg-zinc-900 border border-zinc-800 text-zinc-400 px-10 pr-16 py-2.5 rounded-lg text-sm font-bold uppercase tracking-widest hover:text-zinc-200 transition-colors focus:outline-none focus:ring-1 focus:ring-emerald-500 [color-scheme:dark]"
                 />
                 <CalendarIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500 pointer-events-none" />
               </div>

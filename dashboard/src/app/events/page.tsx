@@ -111,7 +111,7 @@ export default function EventLog() {
                 type="date"
                 value={filterDate}
                 onChange={(e) => setFilterDate(e.target.value)}
-                className="w-full bg-zinc-950 border border-zinc-800 text-zinc-200 px-10 pr-14 py-3.5 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors shadow-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 [color-scheme:dark]"
+                className="w-full bg-zinc-950 border border-zinc-800 text-zinc-200 px-10 pr-16 py-3.5 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors shadow-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 [color-scheme:dark]"
               />
               <CalendarDays className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500 pointer-events-none" />
               {filterDate && (

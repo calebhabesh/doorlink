@@ -29,7 +29,7 @@ body {
 @layer base {
   /* ... existing scrollbar styles ... */
   ::-webkit-calendar-picker-indicator {
-    margin-right: 8px;
+    margin-right: 20px;
     cursor: pointer;
     filter: invert(0.5); /* Make it a bit more subtle on dark theme */
   }
