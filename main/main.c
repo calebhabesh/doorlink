@@ -139,6 +139,10 @@ static esp_err_t init_i2s(void)
 #define WIFI_CONNECTED_BIT BIT0
 
 static EventGroupHandle_t s_wifi_event_group;
+static int s_retry_num = 0;
+#ifndef WIFI_MAX_RETRY
+#define WIFI_MAX_RETRY 5
+#endif
 
 static void wifi_event_handler(void* arg, esp_event_base_t event_base,
                                 int32_t event_id, void* event_data)
@@ -146,17 +150,25 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
-        esp_wifi_connect();
-        ESP_LOGI(TAG, "retry to connect to the AP");
+        if (s_retry_num < WIFI_MAX_RETRY) {
+            esp_wifi_connect();
+            s_retry_num++;
+            ESP_LOGI(TAG, "retry to connect to the AP (%d/%d)", s_retry_num, WIFI_MAX_RETRY);
+        } else {
+            xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT); // Give up and let the main task handle it
+            ESP_LOGE(TAG, "Failed to connect to WiFi after %d retries", WIFI_MAX_RETRY);
+        }
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
         ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
+        s_retry_num = 0;
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
     }
 }
 
-static void init_wifi(void)
+static esp_err_t init_wifi(void)
 {
+    s_retry_num = 0;
     s_wifi_event_group = xEventGroupCreate();
 
     ESP_ERROR_CHECK(esp_netif_init());
@@ -169,15 +181,15 @@ static void init_wifi(void)
     esp_event_handler_instance_t instance_any_id;
     esp_event_handler_instance_t instance_got_ip;
     ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
-                                                        ESP_EVENT_ANY_ID,
-                                                        &wifi_event_handler,
-                                                        NULL,
-                                                        &instance_any_id));
+                                                         ESP_EVENT_ANY_ID,
+                                                         &wifi_event_handler,
+                                                         NULL,
+                                                         &instance_any_id));
     ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
-                                                        IP_EVENT_STA_GOT_IP,
-                                                        &wifi_event_handler,
-                                                        NULL,
-                                                        &instance_got_ip));
+                                                         IP_EVENT_STA_GOT_IP,
+                                                         &wifi_event_handler,
+                                                         NULL,
+                                                         &instance_got_ip));
 
     wifi_config_t wifi_config = {
         .sta = {
@@ -192,8 +204,18 @@ static void init_wifi(void)
 
     ESP_LOGI(TAG, "wifi_init_sta finished. Waiting for connection...");
 
-    // Wait until connection is established
-    xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
+    // Wait until connection is established or timeout (15 seconds)
+    EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT, pdFALSE, pdFALSE, pdMS_TO_TICKS(15000));
+    
+    if (bits & WIFI_CONNECTED_BIT) {
+        if (s_retry_num >= WIFI_MAX_RETRY) {
+            return ESP_FAIL;
+        }
+        return ESP_OK;
+    } else {
+        ESP_LOGE(TAG, "WiFi connection timeout");
+        return ESP_ERR_TIMEOUT;
+    }
 }
 
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
@@ -233,14 +255,14 @@ static esp_mqtt_client_handle_t init_mqtt(void)
     return client;
 }
 
-static esp_err_t upload_image_to_gateway(const uint8_t *image_data, size_t image_len)
+static esp_err_t upload_event_to_gateway(const uint8_t *image_data, size_t image_len, const int16_t *audio_data, size_t audio_len)
 {
     esp_err_t err = ESP_OK;
     
     esp_http_client_config_t config = {
         .url = GATEWAY_API_URL,
         .method = HTTP_METHOD_POST,
-        .timeout_ms = 10000,
+        .timeout_ms = 15000, // Increased timeout for dual payload
     };
 
     esp_http_client_handle_t client = esp_http_client_init(&config);
@@ -254,20 +276,36 @@ static esp_err_t upload_image_to_gateway(const uint8_t *image_data, size_t image
     char content_type[128];
     snprintf(content_type, sizeof(content_type), "multipart/form-data; boundary=%s", boundary);
     esp_http_client_set_header(client, "Content-Type", content_type);
+#ifdef GATEWAY_API_KEY
+    esp_http_client_set_header(client, "X-API-Key", GATEWAY_API_KEY);
+#endif
 
-    // Build the multipart body
-    const char *part1 = 
+    // Part 1: eventType
+    const char *part_type = 
         "------SmartDoorbellBoundary123456789\r\n"
         "Content-Disposition: form-data; name=\"eventType\"\r\n\r\n"
-        "DOORBELL_PRESS\r\n"
+        "DOORBELL_PRESS\r\n";
+
+    // Part 2: image
+    const char *part_img_head = 
         "------SmartDoorbellBoundary123456789\r\n"
-        "Content-Disposition: form-data; name=\"image\"; filename=\"dummy.jpg\"\r\n"
+        "Content-Disposition: form-data; name=\"image\"; filename=\"capture.jpg\"\r\n"
         "Content-Type: image/jpeg\r\n\r\n";
     
-    const char *part2 = "\r\n------SmartDoorbellBoundary123456789--\r\n";
+    // Part 3: audio (if present)
+    const char *part_aud_head = 
+        "\r\n------SmartDoorbellBoundary123456789\r\n"
+        "Content-Disposition: form-data; name=\"audio\"; filename=\"record.raw\"\r\n"
+        "Content-Type: audio/l16;rate=16000;channels=1\r\n\r\n";
+
+    const char *terminator = "\r\n------SmartDoorbellBoundary123456789--\r\n";
 
     // Calculate total content length
-    int total_len = strlen(part1) + image_len + strlen(part2);
+    size_t total_len = strlen(part_type) + strlen(part_img_head) + image_len;
+    if (audio_data && audio_len > 0) {
+        total_len += strlen(part_aud_head) + audio_len;
+    }
+    total_len += strlen(terminator);
     
     // Open connection
     err = esp_http_client_open(client, total_len);
@@ -278,9 +316,16 @@ static esp_err_t upload_image_to_gateway(const uint8_t *image_data, size_t image
     }
 
     // Write parts
-    esp_http_client_write(client, part1, strlen(part1));
+    esp_http_client_write(client, part_type, strlen(part_type));
+    esp_http_client_write(client, part_img_head, strlen(part_img_head));
     esp_http_client_write(client, (const char *)image_data, image_len);
-    esp_http_client_write(client, part2, strlen(part2));
+    
+    if (audio_data && audio_len > 0) {
+        esp_http_client_write(client, part_aud_head, strlen(part_aud_head));
+        esp_http_client_write(client, (const char *)audio_data, audio_len);
+    }
+    
+    esp_http_client_write(client, terminator, strlen(terminator));
 
     // Fetch response
     int content_length = esp_http_client_fetch_headers(client);
@@ -288,12 +333,7 @@ static esp_err_t upload_image_to_gateway(const uint8_t *image_data, size_t image
     ESP_LOGI(TAG, "HTTP POST Status = %d, content_length = %d", status_code, content_length);
     
     if (status_code == 200) {
-        ESP_LOGI(TAG, "Image uploaded successfully!");
-        char response_buf[256] = {0};
-        int read_len = esp_http_client_read(client, response_buf, sizeof(response_buf) - 1);
-        if (read_len > 0) {
-            ESP_LOGI(TAG, "Gateway Response: %s", response_buf);
-        }
+        ESP_LOGI(TAG, "Event uploaded successfully!");
     } else {
         ESP_LOGE(TAG, "Upload failed with status %d", status_code);
         err = ESP_FAIL;
@@ -305,7 +345,7 @@ static esp_err_t upload_image_to_gateway(const uint8_t *image_data, size_t image
 }
 
 // --- BRING-UP TEST MODES ---
-#define BRINGUP_TEST_MODE 1
+#define BRINGUP_TEST_MODE 0
 
 #if BRINGUP_TEST_MODE
 static void run_bringup_tests(void) {
@@ -394,28 +434,51 @@ void app_main(void)
     if (wakeup_cause == ESP_SLEEP_WAKEUP_EXT0 || wakeup_cause == ESP_SLEEP_WAKEUP_UNDEFINED) {
         ESP_LOGI(TAG, "Woke up from deep sleep (or normal boot). Starting network flow.");
         
-        // 2. Initialize WiFi Station
-        init_wifi();
-
-        // 3. Dummy Image Generation & Upload
-        ESP_LOGI(TAG, "Generating dummy image data...");
-        const uint8_t dummy_image[] = "This is a fake JPEG payload to test the gateway.";
-        size_t dummy_len = sizeof(dummy_image);
+        // 2. Initialize Hardware Peripherals
+        init_camera();
+        init_i2s();
         
-        ESP_LOGI(TAG, "Uploading dummy image...");
-        upload_image_to_gateway(dummy_image, dummy_len);
-
-        // 4. Initialize I2S (INMP441 & MAX98357A)
-        if (init_i2s() == ESP_OK) {
-            ESP_LOGI(TAG, "Audio peripherals ready for streaming");
+        // 3. Capture Photo
+        ESP_LOGI(TAG, "Capturing real-time JPEG...");
+        camera_fb_t *fb = esp_camera_fb_get();
+        if (!fb) {
+            ESP_LOGE(TAG, "Camera capture failed");
+            // Fallback to empty if needed, but here we just continue
         }
 
-        // 5. Connect to MQTT Broker
+        // 4. Record Audio (5 seconds)
+        ESP_LOGI(TAG, "Recording audio for %d seconds...", AUDIO_RECORD_TIME_SEC);
+        size_t audio_samples = 16000 * AUDIO_RECORD_TIME_SEC;
+        int16_t *audio_buf = malloc(audio_samples * sizeof(int16_t));
+        size_t bytes_read = 0;
+        if (audio_buf) {
+            i2s_channel_read(rx_chan, audio_buf, audio_samples * sizeof(int16_t), &bytes_read, pdMS_TO_TICKS(AUDIO_RECORD_TIME_SEC * 1000 + 500));
+            ESP_LOGI(TAG, "Recorded %zu bytes of audio", bytes_read);
+        }
+
+        // 5. Initialize WiFi Station
+        if (init_wifi() == ESP_OK) {
+            // 6. Upload Event
+            if (fb) {
+                ESP_LOGI(TAG, "Uploading event (Image: %zu bytes, Audio: %zu bytes)...", fb->len, bytes_read);
+                upload_event_to_gateway(fb->buf, fb->len, audio_buf, bytes_read);
+                esp_camera_fb_return(fb);
+            } else {
+                ESP_LOGW(TAG, "Skipping upload due to camera failure");
+            }
+        } else {
+            ESP_LOGE(TAG, "Skipping upload due to WiFi failure");
+            if (fb) esp_camera_fb_return(fb);
+        }
+        
+        if (audio_buf) free(audio_buf);
+
+        // 7. Connect to MQTT Broker for Interactive Window
         esp_mqtt_client_handle_t mqtt_client = init_mqtt();
 
-        // 6. Interactive Window (60 seconds)
+        // 8. Interactive Window (60 seconds)
         ESP_LOGI(TAG, "Entering 60-second interactive window...");
-        gpio_set_level(STATUS_LED_PIN, 1); // Turn on LED to show active window
+        gpio_set_level(STATUS_LED_PIN, 1); 
 
         for (int i = 60; i > 0; i--) {
             if (i % 10 == 0) {
