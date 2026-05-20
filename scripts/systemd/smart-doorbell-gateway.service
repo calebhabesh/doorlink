@@ -8,7 +8,7 @@ Type=simple
 User=ethioprince
 WorkingDirectory=/home/ethioprince/dev/smart-doorbell/gateway
 # Load environment variables from the shared .env file
-EnvironmentFile=-/home/ethioprince/dev/smart-doorbell/.env
+EnvironmentFile=/home/ethioprince/dev/smart-doorbell/.env
 # Use the Maven wrapper to run the application
 ExecStart=/home/ethioprince/dev/smart-doorbell/gateway/mvnw spring-boot:run
 Restart=always
