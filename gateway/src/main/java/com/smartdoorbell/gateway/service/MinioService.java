@@ -74,4 +74,12 @@ public class MinioService {
             System.err.println("Failed to delete file from MinIO: " + e.getMessage());
         }
     }
+
+    public boolean isAvailable() {
+        try {
+            return amazonS3.doesBucketExistV2(bucketName);
+        } catch (Exception e) {
+            return false;
+        }
+    }
 }
