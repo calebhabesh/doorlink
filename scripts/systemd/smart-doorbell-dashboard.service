@@ -6,6 +6,8 @@ After=network.target smart-doorbell-gateway.service
 Type=simple
 User=ethioprince
 WorkingDirectory=/home/ethioprince/dev/smart-doorbell/dashboard
+# Load environment variables from the shared .env file
+EnvironmentFile=-/home/ethioprince/dev/smart-doorbell/.env
 # Run the Next.js server (ensure it runs on port 3000)
 ExecStart=/usr/bin/npm run dev
 Restart=always

@@ -103,3 +103,10 @@ netlist_report*.txt
 parse_netlist*.py
 get_component_groups.py
 check_status_led.py
+
+# Local Environment Secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
