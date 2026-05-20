@@ -26,6 +26,13 @@ public class MqttConfig {
     @Value("${mqtt.topic.events:doorbell/events}")
     private String eventsTopic;
 
+    @Value("${mqtt.topic.ptt-audio:doorbell/commands/audio}")
+    private String pttAudioTopic;
+
+    public String getPttAudioTopic() {
+        return pttAudioTopic;
+    }
+
     @Bean
     public MqttPahoClientFactory mqttClientFactory() {
         DefaultMqttPahoClientFactory factory = new DefaultMqttPahoClientFactory();

@@ -82,6 +82,26 @@ public class EventController {
         }
     }
 
+    @GetMapping("/export")
+    public ResponseEntity<String> exportEventsCsv() {
+        List<Event> events = eventRepository.findAll(Sort.by(Sort.Direction.DESC, "timestamp"));
+        StringBuilder csv = new StringBuilder();
+        csv.append("ID,Timestamp,Event Type,Image Key,Audio Key\n");
+        
+        for (Event event : events) {
+            csv.append(event.getId()).append(",")
+               .append(event.getTimestamp()).append(",")
+               .append(event.getEventType()).append(",")
+               .append(event.getImageKey()).append(",")
+               .append(event.getAudioKey() != null ? event.getAudioKey() : "").append("\n");
+        }
+        
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=doorbell_events.csv")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(csv.toString());
+    }
+
     @GetMapping
     public ResponseEntity<List<Event>> getRecentEvents(@RequestParam(defaultValue = "0") int page, 
                                                        @RequestParam(defaultValue = "10") int size) {

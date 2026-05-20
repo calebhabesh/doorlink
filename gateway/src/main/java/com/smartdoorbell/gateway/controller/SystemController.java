@@ -1,5 +1,6 @@
 package com.smartdoorbell.gateway.controller;
 
+import com.smartdoorbell.gateway.config.MqttGateway;
 import com.smartdoorbell.gateway.entity.SystemSettings;
 import com.smartdoorbell.gateway.repository.EventRepository;
 import com.smartdoorbell.gateway.repository.SystemSettingsRepository;
@@ -7,6 +8,7 @@ import com.smartdoorbell.gateway.service.MinioService;
 import com.smartdoorbell.gateway.service.MqttConnectionMonitor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -19,15 +21,32 @@ public class SystemController {
     private final MinioService minioService;
     private final MqttConnectionMonitor mqttMonitor;
     private final EventRepository eventRepository;
+    private final MqttGateway mqttGateway;
+    private final com.smartdoorbell.gateway.config.MqttConfig mqttConfig;
 
     public SystemController(SystemSettingsRepository settingsRepository, 
                             MinioService minioService, 
                             MqttConnectionMonitor mqttMonitor,
-                            EventRepository eventRepository) {
+                            EventRepository eventRepository,
+                            MqttGateway mqttGateway,
+                            com.smartdoorbell.gateway.config.MqttConfig mqttConfig) {
         this.settingsRepository = settingsRepository;
         this.minioService = minioService;
         this.mqttMonitor = mqttMonitor;
         this.eventRepository = eventRepository;
+        this.mqttGateway = mqttGateway;
+        this.mqttConfig = mqttConfig;
+    }
+
+    @PostMapping("/ptt")
+    public ResponseEntity<String> handlePttAudio(@RequestParam("audio") MultipartFile audio) {
+        try {
+            byte[] audioData = audio.getBytes();
+            mqttGateway.sendToMqtt(audioData, mqttConfig.getPttAudioTopic());
+            return ResponseEntity.ok("PTT audio published to MQTT");
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Failed to publish PTT audio: " + e.getMessage());
+        }
     }
 
     @GetMapping("/health")

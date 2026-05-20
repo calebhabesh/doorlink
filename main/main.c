@@ -198,20 +198,29 @@ static void init_wifi(void)
 
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
-    // esp_mqtt_event_handle_t event = event_data;
+    esp_mqtt_event_handle_t event = event_data;
     switch ((esp_mqtt_event_id_t)event_id) {
     case MQTT_EVENT_CONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
+        // Subscribe to PTT audio topic
+        esp_mqtt_client_subscribe(event->client, "doorbell/commands/audio", 1);
         break;
     case MQTT_EVENT_DISCONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
+        break;
+    case MQTT_EVENT_DATA:
+        if (strncmp(event->topic, "doorbell/commands/audio", event->topic_len) == 0) {
+            ESP_LOGI(TAG, "Received PTT audio data: %d bytes", event->data_len);
+            // In a real implementation, we would write this to the I2S tx_chan
+            // i2s_channel_write(tx_chan, event->data, event->data_len, &bytes_written, portMAX_DELAY);
+        }
         break;
     default:
         break;
     }
 }
 
-static void init_mqtt(void)
+static esp_mqtt_client_handle_t init_mqtt(void)
 {
     esp_mqtt_client_config_t mqtt_cfg = {
         .broker.address.uri = MQTT_BROKER_URI,
@@ -221,6 +230,7 @@ static void init_mqtt(void)
     esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
     esp_mqtt_client_start(client);
     ESP_LOGI(TAG, "MQTT Init Succeeded");
+    return client;
 }
 
 static esp_err_t upload_image_to_gateway(const uint8_t *image_data, size_t image_len)
@@ -432,14 +442,6 @@ void app_main(void)
     rtc_gpio_pulldown_dis(DOORBELL_BUTTON_PIN);
     
     // Configure EXT0 wakeup on LOW level (0) for the button press
-    esp_sleep_enable_ext0_wakeup(DOORBELL_BUTTON_PIN, 0);
-
-    ESP_LOGI(TAG, "Entering deep sleep now");
-    
-    // 5. Enter Deep Sleep
-    esp_deep_sleep_start();
-}
-ress
     esp_sleep_enable_ext0_wakeup(DOORBELL_BUTTON_PIN, 0);
 
     ESP_LOGI(TAG, "Entering deep sleep now");

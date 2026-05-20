@@ -89,6 +89,32 @@ export default function EventLog() {
     });
   }, [events, searchQuery, filterDate]);
 
+  const exportToCsv = () => {
+    const headers = ["ID", "Timestamp", "Event Type", "Image Key", "Audio Key"];
+    const rows = filteredEvents.map(e => [
+      e.id,
+      e.timestamp,
+      e.eventType,
+      e.imageKey,
+      e.audioKey || ""
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `doorbell_events_${filterDate || 'all'}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <MainLayout status={connectionStatus} breadcrumbs={[{ label: 'Dashboard' }, { label: 'Event Log', active: true }]}>
       <div className="w-full max-w-[1800px] mx-auto flex flex-col h-full overflow-hidden">
@@ -114,7 +140,7 @@ export default function EventLog() {
                 className="w-full min-w-[200px] sm:min-w-[240px] bg-zinc-950 border border-zinc-800 text-zinc-200 pl-12 pr-12 py-3.5 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors shadow-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 [color-scheme:dark] appearance-none"
               />
               <CalendarDays className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500 pointer-events-none" />
-              {!filterDate && <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500 pointer-events-none" />}
+              {!filterDate && <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-4 text-zinc-500 pointer-events-none" />}
               {filterDate && (
                 <button 
                   onClick={(e) => { e.preventDefault(); setFilterDate(''); }} 
@@ -125,8 +151,11 @@ export default function EventLog() {
                 </button>
               )}
             </div>
-            <button className="w-full sm:w-auto flex justify-center items-center gap-3 bg-zinc-950 border border-zinc-800 text-zinc-200 px-6 py-3 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors shadow-lg">
-              <Download className="w-5 h-5 text-zinc-400" />
+            <button 
+              onClick={exportToCsv}
+              className="w-full sm:w-auto flex justify-center items-center gap-3 bg-zinc-950 border border-zinc-800 text-zinc-200 px-6 py-3 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors shadow-lg group"
+            >
+              <Download className="w-5 h-5 text-zinc-400 group-hover:text-emerald-400 transition-colors" />
               Export CSV
             </button>
           </div>
