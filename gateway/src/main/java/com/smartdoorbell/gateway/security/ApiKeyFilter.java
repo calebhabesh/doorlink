@@ -20,11 +20,12 @@ public class ApiKeyFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        // Only enforce API Key on POST/PUT requests to /api/events
         String path = request.getRequestURI();
         String method = request.getMethod();
 
-        if (path.startsWith("/api/events") && (method.equalsIgnoreCase("POST") || method.equalsIgnoreCase("PUT"))) {
+        // Enforce API Key on events, settings updates, and PTT write operations
+        if ((path.startsWith("/api/events") || path.startsWith("/api/system/settings") || path.startsWith("/api/system/ptt"))
+                && (method.equalsIgnoreCase("POST") || method.equalsIgnoreCase("PUT") || method.equalsIgnoreCase("DELETE"))) {
             
             // If apiKey is not configured, allow all (for initial setup)
             if (apiKey == null || apiKey.trim().isEmpty()) {

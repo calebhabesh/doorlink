@@ -13,11 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @ExtendWith(SpringExtension.class)
-@DataJpaTest(properties = {
-    "spring.datasource.url=jdbc:postgresql://localhost:5432/smartdoorbell",
-    "spring.datasource.username=user",
-    "spring.datasource.password=password"
-})
+@DataJpaTest
 public class EventRepositoryTest {
 
     @Autowired

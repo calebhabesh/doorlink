@@ -77,7 +77,8 @@ public class MinioService {
 
     public boolean isAvailable() {
         try {
-            return amazonS3.doesBucketExistV2(bucketName);
+            amazonS3.listBuckets();
+            return true;
         } catch (Exception e) {
             return false;
         }

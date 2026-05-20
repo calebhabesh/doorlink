@@ -21,7 +21,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(EventController.class)
+@WebMvcTest(controllers = EventController.class, properties = "gateway.api.key=test-api-key")
 public class EventControllerTest {
 
     @Autowired
@@ -65,7 +65,8 @@ public class EventControllerTest {
         mockMvc.perform(multipart("/api/events")
                 .file(imageFile)
                 .file(audioFile)
-                .param("eventType", "DOORBELL_PRESS"))
+                .param("eventType", "DOORBELL_PRESS")
+                .header("X-API-Key", "test-api-key"))
                 .andExpect(status().isOk());
 
         verify(minioService).uploadFile(imageFile);

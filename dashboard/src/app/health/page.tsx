@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import MainLayout from '../../components/MainLayout';
-import { Activity, Server, Cpu, Database, Wifi } from 'lucide-react';
+import { Activity, Server, Database, Wifi } from 'lucide-react';
 
 interface SystemHealthData {
   database: 'UP' | 'DOWN';
