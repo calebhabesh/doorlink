@@ -196,7 +196,7 @@ export default function EventLog() {
                         year: 'numeric', month: 'short', day: 'numeric',
                         hour: 'numeric', minute: '2-digit', second: '2-digit',
                         hour12: true
-                      })}
+                      }).toUpperCase()}
                     </td>
                     <td className="px-8 py-6">
                       <span className="bg-emerald-500/10 text-emerald-500 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]">
@@ -245,7 +245,7 @@ export default function EventLog() {
                         month: 'short', day: 'numeric',
                         hour: 'numeric', minute: '2-digit',
                         hour12: true
-                      })}
+                      }).toUpperCase()}
                     </div>
                   </div>
                   <button 

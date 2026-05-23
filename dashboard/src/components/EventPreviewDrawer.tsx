@@ -111,7 +111,7 @@ export default function EventPreviewDrawer({ event, onClose }: EventPreviewDrawe
                   weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
                   hour: 'numeric', minute: '2-digit', second: '2-digit',
                   hour12: true
-                })}
+                }).toUpperCase()}
               </p>
             </div>
             <div>

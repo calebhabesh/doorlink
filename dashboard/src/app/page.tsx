@@ -95,7 +95,7 @@ export default function Home() {
     const weekday = date.toLocaleDateString(undefined, { weekday: 'short' });
     const day = date.toLocaleDateString(undefined, { day: 'numeric' });
     const month = date.toLocaleDateString(undefined, { month: 'short' });
-    const time = date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
+    const time = date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true }).toUpperCase();
     return `${weekday}, ${day} ${month}, ${time}`;
   };
 
@@ -162,9 +162,9 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="flex gap-3 sm:gap-4 shrink-0 justify-center w-full sm:w-auto">
-                  <button onClick={playAudio} disabled={!activeEvent.audioKey} className={`flex items-center gap-2.5 px-6 py-4 sm:px-8 sm:py-4.5 rounded-2xl text-base sm:text-lg font-bold uppercase tracking-widest transition-all border ${activeEvent.audioKey ? 'bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-100 shadow-lg' : 'bg-zinc-900 border-zinc-800 text-zinc-600 cursor-not-allowed opacity-50'}`}>
+                  <button onClick={playAudio} disabled={!activeEvent.audioKey} className={`flex flex-col items-center justify-center gap-2 px-6 py-4.5 sm:px-8 sm:py-5.5 rounded-2xl text-sm sm:text-base font-bold uppercase tracking-widest transition-all border ${activeEvent.audioKey ? 'bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-100 shadow-lg' : 'bg-zinc-900 border-zinc-800 text-zinc-600 cursor-not-allowed opacity-50'}`}>
                     <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    Play Audio
+                    <span>Play Audio</span>
                   </button>
                   {isMostRecent && <PttButton />}
                 </div>
