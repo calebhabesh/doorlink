@@ -194,7 +194,8 @@ export default function EventLog() {
                     <td className="px-8 py-6 font-mono text-zinc-300 text-base whitespace-nowrap">
                       {new Date(evt.timestamp).toLocaleString(undefined, {
                         year: 'numeric', month: 'short', day: 'numeric',
-                        hour: 'numeric', minute: '2-digit', second: '2-digit'
+                        hour: 'numeric', minute: '2-digit', second: '2-digit',
+                        hour12: true
                       })}
                     </td>
                     <td className="px-8 py-6">
@@ -242,7 +243,8 @@ export default function EventLog() {
                     <div className="font-mono text-zinc-300 text-sm">
                       {new Date(evt.timestamp).toLocaleString(undefined, {
                         month: 'short', day: 'numeric',
-                        hour: 'numeric', minute: '2-digit'
+                        hour: 'numeric', minute: '2-digit',
+                        hour12: true
                       })}
                     </div>
                   </div>
