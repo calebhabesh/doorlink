@@ -132,7 +132,7 @@ export default function PttButton() {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchCancel}
-      className={`select-none touch-none flex flex-col items-center justify-center gap-2 px-6 py-4.5 sm:px-8 sm:py-5.5 rounded-2xl text-sm sm:text-base font-bold uppercase tracking-widest transition-all shadow-xl border ${
+      className={`select-none touch-none flex flex-col items-center justify-center gap-2 flex-1 sm:flex-initial w-full sm:w-40 h-24 sm:h-28 rounded-2xl text-sm sm:text-base font-bold uppercase tracking-widest transition-all shadow-xl border ${
         isRecording
           ? 'bg-rose-600 hover:bg-rose-500 text-white border-rose-500 shadow-rose-900/40 scale-95'
           : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-emerald-900/40'
