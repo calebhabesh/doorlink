@@ -132,7 +132,7 @@ export default function PttButton() {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchCancel}
-      className={`select-none touch-none flex flex-col items-center justify-center gap-2 flex-1 sm:flex-initial w-full sm:w-40 h-24 sm:h-28 rounded-2xl text-sm sm:text-base font-bold uppercase tracking-widest transition-all shadow-xl border ${
+      className={`select-none touch-none flex flex-col sm:flex-row items-center justify-center gap-2 flex-1 sm:flex-initial w-full sm:w-auto h-24 sm:h-auto sm:px-6 sm:py-3.5 rounded-2xl sm:rounded-xl text-sm font-bold uppercase tracking-widest transition-all shadow-xl border ${
         isRecording
           ? 'bg-rose-600 hover:bg-rose-500 text-white border-rose-500 shadow-rose-900/40 scale-95'
           : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-emerald-900/40'
@@ -140,12 +140,12 @@ export default function PttButton() {
     >
       {isRecording ? (
         <>
-          <Square className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" fill="currentColor" />
+          <Square className="w-5 h-5 animate-pulse" fill="currentColor" />
           <span>Recording...</span>
         </>
       ) : (
         <>
-          <Mic className="w-5 h-5 sm:w-6 sm:h-6" />
+          <Mic className="w-5 h-5" />
           <span>Push to Talk</span>
         </>
       )}

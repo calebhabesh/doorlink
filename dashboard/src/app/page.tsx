@@ -162,8 +162,8 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="flex gap-3 sm:gap-4 shrink-0 justify-center w-full sm:w-auto">
-                  <button onClick={playAudio} disabled={!activeEvent.audioKey} className={`flex flex-col items-center justify-center gap-2 flex-1 sm:flex-initial w-full sm:w-40 h-24 sm:h-28 rounded-2xl text-sm sm:text-base font-bold uppercase tracking-widest transition-all border ${activeEvent.audioKey ? 'bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-100 shadow-lg' : 'bg-zinc-900 border-zinc-800 text-zinc-600 cursor-not-allowed opacity-50'}`}>
-                    <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  <button onClick={playAudio} disabled={!activeEvent.audioKey} className={`flex flex-col sm:flex-row items-center justify-center gap-2 flex-1 sm:flex-initial w-full sm:w-auto h-24 sm:h-auto sm:px-6 sm:py-3.5 rounded-2xl sm:rounded-xl text-sm font-bold uppercase tracking-widest transition-all border ${activeEvent.audioKey ? 'bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-100 shadow-lg' : 'bg-zinc-900 border-zinc-800 text-zinc-600 cursor-not-allowed opacity-50'}`}>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     <span>Play Audio</span>
                   </button>
                   {isMostRecent && <PttButton />}
