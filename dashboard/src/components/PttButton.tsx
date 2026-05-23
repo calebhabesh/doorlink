@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, TouchEvent } from 'react';
 import { Mic, Square } from 'lucide-react';
 
 export default function PttButton() {
   const [isRecording, setIsRecording] = useState(false);
+  const isRecordingRef = useRef(false);
   const streamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
@@ -12,7 +13,17 @@ export default function PttButton() {
 
   const startRecording = async () => {
     try {
+      isRecordingRef.current = true;
+      setIsRecording(true);
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      // Check if user released the button while stream acquisition was pending
+      if (!isRecordingRef.current) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
+
       streamRef.current = stream;
       chunksRef.current = [];
 
@@ -40,27 +51,36 @@ export default function PttButton() {
 
       source.connect(processor);
       processor.connect(audioContext.destination);
-      setIsRecording(true);
     } catch (error) {
       console.error('Error accessing microphone:', error);
       alert('Could not access microphone. Please ensure permissions are granted.');
+      isRecordingRef.current = false;
+      setIsRecording(false);
     }
   };
 
   const stopRecording = async () => {
-    if (processorRef.current && audioContextRef.current && isRecording) {
+    // Immediately clear state and ref
+    isRecordingRef.current = false;
+    setIsRecording(false);
+
+    if (processorRef.current && audioContextRef.current) {
       // Disconnect and close the AudioContext
       processorRef.current.disconnect();
+      processorRef.current = null;
       if (audioContextRef.current.state !== 'closed') {
         await audioContextRef.current.close();
       }
+      audioContextRef.current = null;
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
       }
-      setIsRecording(false);
 
       // Concatenate all Int16Array chunks into a single ArrayBuffer
       const totalSamples = chunksRef.current.reduce((acc, chunk) => acc + chunk.length, 0);
+      if (totalSamples === 0) return;
+
       const pttBuffer = new Int16Array(totalSamples);
       let offset = 0;
       for (const chunk of chunksRef.current) {
@@ -89,14 +109,30 @@ export default function PttButton() {
     }
   };
 
+  const handleTouchStart = (e: TouchEvent) => {
+    e.preventDefault();
+    startRecording();
+  };
+
+  const handleTouchEnd = (e: TouchEvent) => {
+    e.preventDefault();
+    stopRecording();
+  };
+
+  const handleTouchCancel = (e: TouchEvent) => {
+    e.preventDefault();
+    stopRecording();
+  };
+
   return (
     <button
       onMouseDown={startRecording}
       onMouseUp={stopRecording}
       onMouseLeave={stopRecording} // Stop if mouse leaves button while holding
-      onTouchStart={startRecording}
-      onTouchEnd={stopRecording}
-      className={`flex items-center gap-2 px-6 py-3.5 rounded-xl text-sm font-bold uppercase tracking-widest transition-all shadow-xl border ${
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchCancel}
+      className={`touch-none flex items-center gap-2 px-6 py-3.5 rounded-xl text-sm font-bold uppercase tracking-widest transition-all shadow-xl border ${
         isRecording
           ? 'bg-rose-600 hover:bg-rose-500 text-white border-rose-500 shadow-rose-900/40 scale-95'
           : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-emerald-900/40'
