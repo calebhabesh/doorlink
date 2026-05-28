@@ -4,6 +4,10 @@ import { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
 import MainLayout, { ConnectionStatus } from '../components/MainLayout';
 import PttButton from '../components/PttButton';
+import ClockGlobeCard from '../components/ClockGlobeCard';
+import BatteryCard from '../components/BatteryCard';
+import ShipmentsCard from '../components/ShipmentsCard';
+import QuickResponsesCard from '../components/QuickResponsesCard';
 
 interface DoorbellEvent {
   id: number;
@@ -22,23 +26,11 @@ export default function Home() {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
   const [latestLiveEventId, setLatestLiveEventId] = useState<number | null>(null);
-  const [isAtBottom, setIsAtBottom] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  const handleScroll = () => {
-    if (scrollRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-      setIsAtBottom(scrollTop + clientHeight >= scrollHeight - 20);
-    }
-  };
 
   useEffect(() => {
     setIsImageLoaded(false);
   }, [activeEvent?.id]);
-
-  useEffect(() => {
-    handleScroll();
-  }, [events]);
 
   useEffect(() => {
     fetch(API_BASE_URL)
@@ -123,9 +115,11 @@ export default function Home() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start w-full max-w-[1350px] mx-auto">
           
-          {/* Left Column: Media Card (The Anchor) */}
-          <div className="lg:col-span-8 h-fit flex flex-col">
-            <div key={activeEvent.id} className="w-full bg-zinc-950 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-flash-event h-fit">
+          {/* Left Column: Media Card & Quick Responses */}
+          <div className="lg:col-span-8 flex flex-col gap-6">
+            
+            {/* The Main Media Card */}
+            <div key={activeEvent.id} className="w-full bg-zinc-950 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-flash-event">
               
               {/* Image Container - Strict 4:3 Aspect Ratio */}
               <div className="relative w-full aspect-[4/3] bg-zinc-900 flex items-center justify-center border-b border-zinc-800 group overflow-hidden">
@@ -155,7 +149,7 @@ export default function Home() {
 
               {/* Event Metadata & Audio Interface */}
               <div className="p-4 sm:p-8 flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-8 bg-zinc-900/40 shrink-0 text-center sm:text-left">
-                <div className="flex-1 w-full">
+                <div className="flex-1 w-full text-left">
                   <h2 className="text-xl sm:text-3xl font-black text-zinc-100 tracking-tight">{formatTitleCase(activeEvent.eventType)}</h2>
                   <p className="text-xs sm:text-lg font-mono text-zinc-400 mt-1 sm:mt-2 tracking-widest leading-relaxed">
                     {formatEventDate(activeEvent.timestamp)}
@@ -170,51 +164,67 @@ export default function Home() {
                 </div>
               </div>
             </div>
+
+            {/* Quick Audio Preset Card (Only visible when active event is the most recent) */}
+            {isMostRecent && <QuickResponsesCard />}
           </div>
 
-          {/* Right Wrapper (The Bounding Box) */}
-          <div className="lg:col-span-4 lg:relative lg:h-full lg:self-stretch lg:min-h-[500px] flex flex-col h-[500px] lg:h-auto">
-            {/* Opaque Header outside of scroll area */}
-            <div className="flex items-center justify-between mb-4 pr-2 border-b border-zinc-800/50 py-4 bg-transparent shrink-0">
-              <h3 className="text-xs font-mono text-zinc-500 uppercase tracking-[0.2em] flex items-center gap-3 font-black">
-                <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
-                Recent Log
-              </h3>
-              <button 
-                onClick={() => window.open(`${API_BASE_URL}/export`, '_blank')}
-                className="text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-emerald-400 transition-colors flex items-center gap-2 group"
-              >
-                <svg className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                Export CSV
-              </button>
-            </div>
+          {/* Right Column: Clock, Battery, Shipments, and Log */}
+          <div className="lg:col-span-4 flex flex-col gap-6 w-full">
+            
+            {/* Clock / Globe Widget */}
+            <ClockGlobeCard />
 
-            {/* The Scrolling List (The Inner Content) */}
-            <div 
-              ref={scrollRef}
-              onScroll={handleScroll}
-              className={`flex-1 lg:absolute lg:top-20 lg:inset-x-0 lg:bottom-0 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-zinc-950/40 transition-[mask-image] duration-300 ${!isAtBottom ? '[mask-image:linear-gradient(to_bottom,transparent_0%,black_5%,black_90%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,black_5%,black_90%,transparent_100%)]' : '[mask-image:linear-gradient(to_bottom,transparent_0%,black_5%,black_100%)] [-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,black_5%,black_100%)]'}`}
-            >
-              <div className="flex flex-col gap-4 pt-6">
-                {events.map((evt) => (
-                  <button key={evt.id} onClick={() => setActiveEvent(evt)} className={`text-left bg-zinc-950 border rounded-2xl p-6 transition-all duration-300 shrink-0 relative group overflow-hidden ${latestLiveEventId === evt.id ? 'animate-slide-in ' : ''}${activeEvent.id === evt.id ? 'border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)] bg-emerald-500/[0.03]' : latestLiveEventId === evt.id ? 'border-emerald-400/70 shadow-[0_0_24px_rgba(52,211,153,0.22)] bg-emerald-500/[0.05]' : 'border-zinc-800 hover:border-zinc-600 hover:bg-zinc-900/50'}`}>
-                    <div className="flex items-center justify-between mb-3 relative z-10 text-left">
-                      <span className="text-lg font-black text-zinc-100 tracking-tight">{formatTitleCase(evt.eventType)}</span>
-                      <span className="flex items-center gap-3">
-                        {latestLiveEventId === evt.id && <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">New</span>}
-                        {evt.id === events[0]?.id && <span className="flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span></span>}
-                      </span>
-                    </div>
-                    <div className="text-sm text-zinc-400 font-bold uppercase tracking-wider mb-1 relative z-10 text-left">{new Date(evt.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</div>
-                    <div className="text-xs font-mono text-zinc-500 tracking-widest relative z-10 text-left">{new Date(evt.timestamp).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}</div>
-                    {activeEvent.id === evt.id && <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500 shadow-[2px_0_10px_rgba(16,185,129,0.5)]"></div>}
-                  </button>
-                ))}
+            {/* Battery Indicator Card */}
+            <BatteryCard initialPercentage={85} voltage={4.02} />
+
+            {/* Shipment Tracking Card */}
+            <ShipmentsCard />
+
+            {/* Recent Log Card */}
+            <div className="bg-zinc-950/50 backdrop-blur-md border border-zinc-800 p-6 rounded-3xl flex flex-col hover:border-zinc-700 transition-all duration-300 shadow-lg">
+              <div className="flex items-center justify-between mb-4 border-b border-zinc-800/50 pb-4 bg-transparent shrink-0">
+                <h3 className="text-xs font-mono text-zinc-500 uppercase tracking-[0.2em] flex items-center gap-3 font-black text-left">
+                  <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+                  Recent Log
+                </h3>
+                <button 
+                  onClick={() => window.open(`${API_BASE_URL}/export`, '_blank')}
+                  className="text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-emerald-400 transition-colors flex items-center gap-2 group"
+                >
+                  <svg className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                  Export CSV
+                </button>
+              </div>
+
+              {/* Scrolling Event List */}
+              <div 
+                ref={scrollRef}
+                className="overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-zinc-950/40 max-h-[350px]"
+              >
+                <div className="flex flex-col gap-3">
+                  {events.map((evt) => (
+                    <button key={evt.id} onClick={() => setActiveEvent(evt)} className={`text-left bg-zinc-950 border rounded-2xl p-5 transition-all duration-300 shrink-0 relative group overflow-hidden ${latestLiveEventId === evt.id ? 'animate-slide-in ' : ''}${activeEvent.id === evt.id ? 'border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)] bg-emerald-500/[0.03]' : latestLiveEventId === evt.id ? 'border-emerald-400/70 shadow-[0_0_24px_rgba(52,211,153,0.22)] bg-emerald-500/[0.05]' : 'border-zinc-850 hover:border-zinc-700 hover:bg-zinc-900/50'}`}>
+                      <div className="flex items-center justify-between mb-2 relative z-10 text-left">
+                        <span className="text-md font-black text-zinc-155 tracking-tight">{formatTitleCase(evt.eventType)}</span>
+                        <span className="flex items-center gap-3">
+                          {latestLiveEventId === evt.id && <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">New</span>}
+                          {evt.id === events[0]?.id && <span className="flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span></span>}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-zinc-400 font-bold uppercase tracking-wider mb-1 relative z-10 text-left">{new Date(evt.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                      <div className="text-[10px] font-mono text-zinc-500 tracking-widest relative z-10 text-left">{new Date(evt.timestamp).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}</div>
+                      {activeEvent.id === evt.id && <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500 shadow-[2px_0_10px_rgba(16,185,129,0.5)]"></div>}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
+
           </div>
         </div>
       )}
     </MainLayout>
   );
 }
+
