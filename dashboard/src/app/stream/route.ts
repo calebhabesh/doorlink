@@ -1,7 +1,8 @@
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const backendUrl = "http://127.0.0.1:8080/api/events/stream";
+  const gatewayUrl = process.env.GATEWAY_URL || 'http://127.0.0.1:8080';
+  const backendUrl = `${gatewayUrl}/api/events/stream`;
 
   try {
     const response = await fetch(backendUrl, {

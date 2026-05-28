@@ -9,14 +9,41 @@ This file is the working guide for AI agents editing this repository. Treat the 
 - The Raspberry Pi runs Spring Boot and Next.js through systemd service units tracked in `scripts/systemd/`; Docker Compose runs the infrastructure containers.
 - Normal deployment flow: make edits on Arch, verify locally where possible, commit/push, then the user pulls the branch on the Raspberry Pi over SSH and restarts only the affected systemd service.
 - Do not edit files directly on the Raspberry Pi unless explicitly asked. Treat the Arch checkout as the source working tree.
-- Do not start or stop persistent gateway services unless explicitly asked.
-- Do not run `./mvnw spring-boot:run`, `npm run dev`, or `docker compose up` from the Arch checkout by default.
-- For backend verification, use the Maven wrapper from `gateway/`: `./mvnw compile` or `./mvnw test`.
-- For frontend verification, use `npx tsc --noEmit` or `npm run lint` from `dashboard/`.
-- For firmware verification, use ESP-IDF tooling when available and target `esp32s3`.
-- If a command fails with `EADDRINUSE`, assume the corresponding user-managed service may already be running.
-- Runtime endpoint checks should target the Raspberry Pi gateway IP from `docs/pi-deployment.md` when the user wants live-service verification.
-- Ask the user to restart the affected Raspberry Pi systemd service only after changes that need runtime reload, such as backend/frontend code, `pom.xml`, `tailwind.config.ts`, `next.config.mjs`, firmware `sdkconfig`, or other startup-only configuration.
+- Do not start or stop persistent gateway services on the Pi unless explicitly asked.
+- **Rules of Engagement Exception:** Running local dev servers and local docker compose on Arch is permitted *only* when explicitly requested or doing local verification in "Local Dev Mode". To avoid conflict with other local projects like Fintrak, always use the isolated port configurations detailed below.
+
+### Local Dev Mode on Arch (Isolated Stack)
+
+To run a fully isolated local development stack on Arch without clashing with Fintrak or production Pi services, you can boot everything concurrently in a single terminal pane:
+
+```bash
+./scripts/run-dev.sh
+```
+
+This single script starts your Docker infrastructure (`.env.dev`), starts the Spring Boot gateway (dev profile, port 8081), runs the Next.js dashboard (port 3001), and cleanly shuts down all background processes and containers when you hit `Ctrl+C`.
+
+Alternatively, you can run them manually in separate panes:
+
+1. **Start Local Infra:** Run Docker Compose with the dev environment file:
+   ```bash
+   docker compose --env-file .env.dev up -d
+   ```
+   This starts Postgres (port 5433), Mosquitto (port 1884), and MinIO (ports 9002/9003) bound strictly to `127.0.0.1`.
+2. **Start Backend Gateway:** Run Spring Boot under the `dev` profile (port 8081):
+   ```bash
+   cd gateway && SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run
+   ```
+3. **Start Dashboard Frontend:** Run the Next.js dev server on port 3001:
+   ```bash
+   cd dashboard && npm run dev -- -p 3001
+   ```
+
+### Arch-to-Pi Deployment Loop
+
+- Commit and push changes from the Arch checkout.
+- SSH into Raspberry Pi, pull latest changes, and restart the affected service:
+  - Gateway: `sudo systemctl restart smart-doorbell-gateway.service`
+  - Dashboard: `sudo systemctl restart smart-doorbell-dashboard.service`
 
 ## Project Layout
 

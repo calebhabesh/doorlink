@@ -6,23 +6,39 @@ This file contains the distilled workflows and commands for developing the Smart
 
 This project uses a hybrid development/deployment workflow. Source edits happen on the Arch development server at `/home/ethioking/dev/smart-doorbell`, while the always-on runtime stack runs on the Raspberry Pi gateway. The Raspberry Pi runs the Spring Boot gateway and Next.js dashboard as systemd services defined under `scripts/systemd/`, while AI agents handle implementation, code generation, local verification, and documentation updates from the Arch checkout.
 
-### Arch-to-Pi Deployment Flow
+### Development Modes
 
-1. Make code and documentation changes on the Arch development server.
-2. Run local non-disruptive verification where possible (`./mvnw compile`, `./mvnw test`, `npx tsc --noEmit`, `npm run lint`, ESP-IDF builds when available).
-3. Commit/push changes from the Arch checkout.
-4. The user SSHes into the Raspberry Pi, pulls the branch in the Pi checkout, and restarts only the affected systemd service.
-5. Live endpoint checks should target the Raspberry Pi gateway IP documented in `docs/pi-deployment.md`.
+#### 1. Local Dev Mode on Arch (Isolated Stack)
 
-Agents should not edit files directly on the Raspberry Pi or start/stop Pi services unless explicitly instructed. Treat the Arch checkout as the source working tree.
+Used for rapid frontend/backend iteration.
+- Run infrastructure, backend, and frontend concurrently in a single pane: `./scripts/run-dev.sh`.
+- Alternatively, run manually in separate panes:
+  - Run infrastructure locally on Arch with Docker Compose: `docker compose --env-file .env.dev up -d` (Postgres on 5433, Mosquitto on 1884, MinIO on 9002/9003 bound strictly to `127.0.0.1`).
+  - Run Spring Boot locally with: `cd gateway && SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run` (runs on port 8081).
+  - Run the dashboard locally with: `cd dashboard && npm run dev -- -p 3001` (runs on port 3001).
+- This mode is allowed only when explicitly requested or during local dev task execution.
 
-### Active Server Topology (Do Not Start/Stop These)
+#### 2. Pi Deployment Mode
 
-- **Gateway (Spring Boot):** Port `8080`
-- **Dashboard (Next.js 14):** Port `3000`
-- **Message Broker (Mosquitto MQTT):** Port `1883`
-- **Media Storage (MinIO):** Port `9000`
-- **PostgreSQL:** Port `5432`
+Used for the real always-on doorbell system.
+- Commit and push changes from Arch.
+- SSH into Raspberry Pi, pull latest changes, and restart the affected service:
+  - `sudo systemctl restart smart-doorbell-gateway.service` for backend.
+  - `sudo systemctl restart smart-doorbell-dashboard.service` for frontend.
+
+#### 3. Frontend-Only Against Pi Backend
+
+Used when only changing UI and wanting real Pi data.
+- Run dashboard locally on Arch on port 3001.
+- Set `GATEWAY_URL` in `.env` to the Pi's gateway IP (`http://192.168.1.10:8080`).
+
+### Active Server Topology
+
+- **Gateway (Spring Boot):** Port `8080` (Pi) / Port `8081` (Local Arch Dev)
+- **Dashboard (Next.js 14):** Port `3000` (Pi) / Port `3001` (Local Arch Dev)
+- **Message Broker (Mosquitto MQTT):** Port `1883` (Pi) / Port `1884` (Local Arch Dev)
+- **Media Storage (MinIO):** Port `9000` (Pi) / Port `9002` (Local Arch Dev)
+- **PostgreSQL:** Port `5432` (Pi) / Port `5433` (Local Arch Dev)
 
 ### Raspberry Pi Systemd Services
 
@@ -31,13 +47,13 @@ Agents should not edit files directly on the Raspberry Pi or start/stop Pi servi
 
 ### AI Agent Rules of Engagement
 
-- **Server Management:** NEVER attempt to run `./mvnw spring-boot:run`, `npm run dev`, or `docker-compose up` from the Arch development checkout by default. Assume the live services are persistently running on the Raspberry Pi gateway.
+- **Server Management:** NEVER attempt to run `./mvnw spring-boot:run`, `npm run dev`, or `docker compose up` targeting the production Pi configuration from the Arch development checkout by default. Running local dev mode using the dev-specific profiles and files (`.env.dev`, `application-dev.properties`, ports 8081/3001/5433) is explicitly permitted.
 - **Maven Wrapper:** Always strictly use `./mvnw` (not `mvn`) for any backend commands to ensure Java version consistency.
 - **Safe Verification:** To verify code changes without disrupting the user's running development servers:
   - **Backend:** Run `./mvnw compile` or `./mvnw test`. Use `curl` against the Raspberry Pi gateway IP for live REST endpoint checks only when requested.
   - **Frontend:** Run `npx tsc --noEmit` (to check types) or `npm run lint`. NEVER run `npm run build` unless explicitly requested, as it interferes with the active dev cache.
   - **Firmware:** Use standard ESP-IDF build commands to verify C/C++ compilation.
-- **Port Conflicts:** If a verification command fails with `EADDRINUSE`, assume the user already has the service running properly.
+- **Port Conflicts:** If a verification command fails with `EADDRINUSE`, check if there's an active dev server or if the port is in use by another project (like Fintrak).
 - **Restarts:** On the Pi, restart only the affected systemd unit. Backend changes usually require `smart-doorbell-gateway.service`; dashboard changes usually require `smart-doorbell-dashboard.service`.
 
 ## Hardware Target (Custom PCB)
