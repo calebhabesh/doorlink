@@ -115,8 +115,13 @@ export default function Home() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start w-full max-w-[1350px] mx-auto">
           
-          {/* Left Column: Media Card & Quick Responses */}
-          <div className="lg:col-span-8 flex flex-col gap-6">
+          {/* Mobile Clock: Visible only on mobile/tablet above media */}
+          <div className="block lg:hidden w-full">
+            <ClockGlobeCard />
+          </div>
+          
+          {/* Left Column: Media Card & Quick Responses + Battery */}
+          <div className="lg:col-span-8 flex flex-col gap-6 w-full">
             
             {/* The Main Media Card */}
             <div key={activeEvent.id} className="w-full bg-zinc-950 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-flash-event">
@@ -165,24 +170,25 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Quick Audio Preset Card (Only visible when active event is the most recent) */}
-            {isMostRecent && <QuickResponsesCard />}
+            {/* Quick Responses & Battery Card (Device Power) - combined under the media window */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+              {isMostRecent && <QuickResponsesCard />}
+              <div className={`hidden md:block ${isMostRecent ? "" : "md:col-span-2"}`}>
+                <BatteryCard initialPercentage={85} voltage={4.02} />
+              </div>
+            </div>
           </div>
 
-          {/* Right Column: Clock, Battery, Shipments, and Log */}
+          {/* Right Column: Clock, Log, and Shipments */}
           <div className="lg:col-span-4 flex flex-col gap-6 w-full">
             
-            {/* Clock / Globe Widget */}
-            <ClockGlobeCard />
+            {/* Desktop Clock / Globe Widget - Hidden on mobile */}
+            <div className="hidden lg:block w-full">
+              <ClockGlobeCard />
+            </div>
 
-            {/* Battery Indicator Card */}
-            <BatteryCard initialPercentage={85} voltage={4.02} />
-
-            {/* Shipment Tracking Card */}
-            <ShipmentsCard />
-
-            {/* Recent Log Card */}
-            <div className="bg-zinc-950/50 backdrop-blur-md border border-zinc-800 p-6 rounded-3xl flex flex-col hover:border-zinc-700 transition-all duration-300 shadow-lg">
+            {/* Recent Log Card (Under the local time widget) */}
+            <div className="bg-zinc-950/50 backdrop-blur-md border border-zinc-800 p-6 rounded-3xl flex flex-col hover:border-zinc-700 transition-all duration-300 shadow-lg w-full">
               <div className="flex items-center justify-between mb-4 border-b border-zinc-800/50 pb-4 bg-transparent shrink-0">
                 <h3 className="text-xs font-mono text-zinc-500 uppercase tracking-[0.2em] flex items-center gap-3 font-black text-left">
                   <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
@@ -221,10 +227,14 @@ export default function Home() {
               </div>
             </div>
 
+            {/* Household Deliveries Card (Under the recent log, hidden on mobile) */}
+            <div className="hidden md:block w-full">
+              <ShipmentsCard />
+            </div>
+
           </div>
         </div>
       )}
     </MainLayout>
   );
 }
-
