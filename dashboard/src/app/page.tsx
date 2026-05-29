@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
 import MainLayout, { ConnectionStatus } from '../components/MainLayout';
 import PttButton from '../components/PttButton';
+import { Battery, Wifi } from 'lucide-react';
 import ClockGlobeCard from '../components/ClockGlobeCard';
 import BatteryCard from '../components/BatteryCard';
 import ShipmentsCard from '../components/ShipmentsCard';
@@ -101,7 +102,7 @@ export default function Home() {
   };
 
   return (
-    <MainLayout status={connectionStatus} breadcrumbs={[{ label: 'Dashboard' }, { label: 'Active Event', active: true }]}>
+    <MainLayout status={connectionStatus} batteryPercentage={85} breadcrumbs={[{ label: 'Dashboard' }, { label: 'Active Event', active: true }]}>
       {!activeEvent ? (
         <div className="flex-1 flex items-center justify-center relative">
           <div className="flex flex-col items-center gap-4 relative z-10">
@@ -115,9 +116,32 @@ export default function Home() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch w-full max-w-[1350px] mx-auto lg:h-[calc(100vh-140px)] lg:min-h-[720px]">
           
-          {/* Mobile Clock: Visible only on mobile/tablet above media */}
-          <div className="block lg:hidden w-full">
+          {/* Mobile Clock & Status: Visible only on mobile/tablet above media */}
+          <div className="block lg:hidden w-full flex flex-col gap-4">
             <ClockGlobeCard />
+            <div className="grid grid-cols-2 gap-4">
+              {/* Mini Battery Widget */}
+              <div className="bg-zinc-950/50 backdrop-blur-md border border-zinc-800 p-4 rounded-2xl flex items-center justify-between shadow-md hover:border-zinc-700 transition-all duration-300">
+                <div className="flex flex-col text-left">
+                  <span className="text-[9px] font-black tracking-widest text-zinc-500 uppercase">Battery</span>
+                  <span className="text-sm font-black text-zinc-100 font-mono">85%</span>
+                  <div className="w-14 h-1.5 bg-zinc-900 border border-zinc-850 rounded-full mt-1.5 overflow-hidden p-[0.5px]">
+                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: '85%' }} />
+                  </div>
+                </div>
+                <Battery className="w-6 h-6 text-emerald-500 shrink-0 opacity-80" />
+              </div>
+
+              {/* Mini WiFi Widget */}
+              <div className="bg-zinc-950/50 backdrop-blur-md border border-zinc-800 p-4 rounded-2xl flex items-center justify-between shadow-md hover:border-zinc-700 transition-all duration-300">
+                <div className="flex flex-col text-left">
+                  <span className="text-[9px] font-black tracking-widest text-zinc-500 uppercase">WiFi Signal</span>
+                  <span className="text-sm font-black text-zinc-100">Excellent</span>
+                  <span className="text-[9px] font-mono tracking-widest text-emerald-500 mt-1 select-none font-bold uppercase">Online</span>
+                </div>
+                <Wifi className="w-6 h-6 text-emerald-500 shrink-0 opacity-80" />
+              </div>
+            </div>
           </div>
           
           {/* Left Column: Media Card & Quick Responses + Battery */}

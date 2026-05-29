@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Sidebar from './Sidebar';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Battery } from 'lucide-react';
 import LogoIcon from './LogoIcon';
 
 export type ConnectionStatus = 'connected' | 'disconnected' | 'connecting';
@@ -10,11 +10,13 @@ export type ConnectionStatus = 'connected' | 'disconnected' | 'connecting';
 export default function MainLayout({ 
   children, 
   breadcrumbs, 
-  status = 'disconnected'
+  status = 'disconnected',
+  batteryPercentage = 85
 }: { 
   children: React.ReactNode;
   breadcrumbs: { label: string; active?: boolean }[];
   status?: ConnectionStatus;
+  batteryPercentage?: number;
 }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -44,6 +46,12 @@ export default function MainLayout({
     }
   };
 
+  const getBatteryColor = (pct: number) => {
+    if (pct > 50) return 'text-emerald-500';
+    if (pct > 20) return 'text-amber-500';
+    return 'text-rose-500';
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 lg:flex font-sans">
       
@@ -64,15 +72,24 @@ export default function MainLayout({
           </div>
         </div>
         
-        {/* Status Indicator */}
-        <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-full shadow-inner">
-          <div className="relative flex h-2 w-2">
-            {status !== 'disconnected' && <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${getPingColor()}`}></span>}
-            <span className={`relative inline-flex rounded-full h-2 w-2 ${getDotColor()}`}></span>
+        {/* Status & Battery Indicators */}
+        <div className="flex items-center gap-2">
+          {batteryPercentage !== undefined && (
+            <div className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 px-2.5 py-1.5 rounded-full shadow-inner text-[10px] font-black tracking-wider select-none text-zinc-400">
+              <Battery className={`w-3.5 h-3.5 ${getBatteryColor(batteryPercentage)}`} />
+              <span className="text-zinc-100 font-mono">{batteryPercentage}%</span>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-full shadow-inner">
+            <div className="relative flex h-2 w-2">
+              {status !== 'disconnected' && <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${getPingColor()}`}></span>}
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${getDotColor()}`}></span>
+            </div>
+            <span className={`text-[10px] font-bold uppercase tracking-widest ${getStatusColor()}`}>
+              {status === 'connected' ? 'System Live' : status === 'connecting' ? 'Connecting...' : 'Disconnected'}
+            </span>
           </div>
-          <span className={`text-[10px] font-bold uppercase tracking-widest ${getStatusColor()}`}>
-            {status === 'connected' ? 'System Live' : status === 'connecting' ? 'Connecting...' : 'Disconnected'}
-          </span>
         </div>
       </div>
 
