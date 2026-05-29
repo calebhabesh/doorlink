@@ -113,7 +113,7 @@ export default function Home() {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start w-full max-w-[1350px] mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch w-full max-w-[1350px] mx-auto lg:h-[calc(100vh-140px)] lg:min-h-[720px]">
           
           {/* Mobile Clock: Visible only on mobile/tablet above media */}
           <div className="block lg:hidden w-full">
@@ -121,7 +121,7 @@ export default function Home() {
           </div>
           
           {/* Left Column: Media Card & Quick Responses + Battery */}
-          <div className="lg:col-span-8 flex flex-col gap-6 w-full">
+          <div className="lg:col-span-8 flex flex-col gap-6 w-full lg:h-full">
             
             {/* The Main Media Card */}
             <div key={activeEvent.id} className="w-full bg-zinc-950 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-flash-event">
@@ -170,17 +170,17 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Quick Responses & Battery Card (Device Power) - combined under the media window */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-              {isMostRecent && <QuickResponsesCard />}
-              <div className={`hidden md:block ${isMostRecent ? "" : "md:col-span-2"}`}>
+            {/* Battery Card (Device Power) & Quick Responses - combined under the media window */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full lg:flex-1 lg:min-h-0">
+              <div className={`hidden md:flex flex-col ${isMostRecent ? "" : "md:col-span-2"} h-full`}>
                 <BatteryCard initialPercentage={85} voltage={4.02} />
               </div>
+              {isMostRecent && <QuickResponsesCard />}
             </div>
           </div>
 
           {/* Right Column: Clock, Log, and Shipments */}
-          <div className="lg:col-span-4 flex flex-col gap-6 w-full">
+          <div className="lg:col-span-4 flex flex-col gap-6 w-full lg:h-full lg:min-h-0">
             
             {/* Desktop Clock / Globe Widget - Hidden on mobile */}
             <div className="hidden lg:block w-full">
@@ -227,10 +227,11 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Household Deliveries Card (Under the recent log, hidden on mobile) */}
-            <div className="hidden md:block w-full">
+            {/* Household Deliveries Card (Under the recent log, hidden on mobile, height-matched to remaining space on desktop) */}
+            <div className="hidden md:flex flex-col w-full lg:flex-1 lg:min-h-0">
               <ShipmentsCard />
             </div>
+
 
           </div>
         </div>

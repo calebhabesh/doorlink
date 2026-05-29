@@ -55,7 +55,7 @@ export default function QuickResponsesCard() {
   };
 
   return (
-    <div className="bg-zinc-950/50 backdrop-blur-md border border-zinc-800 p-6 rounded-3xl flex flex-col hover:border-zinc-700 transition-all duration-300 shadow-lg group relative overflow-hidden animate-flash-event">
+    <div className="bg-zinc-950/50 backdrop-blur-md border border-zinc-800 p-6 rounded-3xl flex flex-col hover:border-zinc-700 transition-all duration-300 shadow-lg group relative overflow-hidden animate-flash-event h-full">
       <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.01] via-transparent to-transparent pointer-events-none" />
 
       {/* Header */}

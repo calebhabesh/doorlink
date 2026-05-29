@@ -94,7 +94,7 @@ export default function ShipmentsCard() {
   const hasDeliveryToday = shipments.some(s => s.status === 'Out for Delivery');
 
   return (
-    <div className="bg-zinc-950/50 backdrop-blur-md border border-zinc-800 p-6 rounded-3xl flex flex-col hover:border-zinc-700 transition-all duration-300 shadow-lg group relative overflow-hidden animate-flash-event">
+    <div className="bg-zinc-950/50 backdrop-blur-md border border-zinc-800 p-6 rounded-3xl flex flex-col hover:border-zinc-700 transition-all duration-300 shadow-lg group relative overflow-hidden animate-flash-event h-full lg:min-h-0">
       <div className="absolute inset-0 bg-gradient-to-br from-blue-500/[0.01] via-transparent to-transparent pointer-events-none" />
 
       {/* Header */}
@@ -144,7 +144,7 @@ export default function ShipmentsCard() {
       )}
 
       {/* Deliveries List */}
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 flex-1 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
         {shipments.map((pkg) => (
           <div key={pkg.id} className="bg-zinc-900/20 border border-zinc-850 rounded-2xl p-4 flex flex-col text-left hover:bg-zinc-900/40 transition-colors">
             <div className="flex justify-between items-start mb-2">
