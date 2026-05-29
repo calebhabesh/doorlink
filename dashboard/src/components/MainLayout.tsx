@@ -75,18 +75,18 @@ export default function MainLayout({
         {/* Status & Battery Indicators */}
         <div className="flex items-center gap-2">
           {batteryPercentage !== undefined && (
-            <div className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 px-2.5 py-1.5 rounded-full shadow-inner text-[10px] font-black tracking-wider select-none text-zinc-400">
+            <div className="flex items-center justify-center gap-1.5 bg-zinc-900 border border-zinc-800 h-7 px-2.5 rounded-full shadow-inner text-[10px] font-black tracking-wider select-none text-zinc-400">
               <Battery className={`w-3.5 h-3.5 ${getBatteryColor(batteryPercentage)}`} />
-              <span className="text-zinc-100 font-mono">{batteryPercentage}%</span>
+              <span className="text-zinc-100 font-mono leading-none">{batteryPercentage}%</span>
             </div>
           )}
 
-          <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-full shadow-inner">
-            <div className="relative flex h-2 w-2">
+          <div className="flex items-center justify-center gap-2 bg-zinc-900 border border-zinc-800 h-7 px-3 rounded-full shadow-inner">
+            <div className="relative flex h-2 w-2 shrink-0">
               {status !== 'disconnected' && <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${getPingColor()}`}></span>}
               <span className={`relative inline-flex rounded-full h-2 w-2 ${getDotColor()}`}></span>
             </div>
-            <span className={`text-[10px] font-bold uppercase tracking-widest ${getStatusColor()}`}>
+            <span className={`text-[10px] font-bold uppercase tracking-widest leading-none ${getStatusColor()}`}>
               {status === 'connected' ? 'System Live' : status === 'connecting' ? 'Connecting...' : 'Disconnected'}
             </span>
           </div>
@@ -138,12 +138,12 @@ export default function MainLayout({
               </span>
             ))}
           </div>
-          <div className="flex items-center gap-4 bg-zinc-950 border border-zinc-800 px-5 py-2.5 rounded-lg shadow-inner font-mono tracking-wider text-sm">
-            <div className="relative flex h-3 w-3">
+          <div className="flex items-center justify-center gap-3 bg-zinc-950 border border-zinc-800 h-10 px-5 rounded-lg shadow-inner font-mono tracking-wider text-sm">
+            <div className="relative flex h-3 w-3 shrink-0">
               {status !== 'disconnected' && <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${getPingColor()}`}></span>}
               <span className={`relative inline-flex rounded-full h-3 w-3 ${getDotColor()}`}></span>
             </div>
-            <span className={`font-bold uppercase ${getStatusColor()}`}>
+            <span className={`font-bold uppercase leading-none ${getStatusColor()}`}>
               {status === 'connected' ? 'SYSTEM LIVE' : status === 'connecting' ? 'CONNECTING...' : 'DISCONNECTED'}
             </span>
           </div>
