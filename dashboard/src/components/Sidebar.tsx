@@ -24,8 +24,11 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
     <aside className="w-full lg:w-64 bg-zinc-950 flex flex-col h-full lg:h-screen shrink-0 z-20">
       {/* Brand Header */}
       <div className="hidden lg:flex h-20 items-center px-6 border-b border-zinc-800 shrink-0">
-        <div className="mr-3 w-12 h-12 bg-blue-600/10 rounded-lg border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)] flex items-center justify-center overflow-hidden">
-          <LogoIcon className="w-10 h-10" />
+        <div className="relative mr-3 w-12 h-12 flex items-center justify-center shrink-0">
+          {/* Radial gradient glow behind the logo */}
+          <div className="absolute inset-0 bg-blue-500/20 blur-lg rounded-full pointer-events-none scale-110 animate-pulse" />
+          {/* Logo with drop-shadow glow */}
+          <LogoIcon className="w-11 h-11 relative z-10 filter drop-shadow-[0_0_12px_rgba(59,130,246,0.7)] hover:scale-105 transition-transform duration-300" />
         </div>
         <span className="font-black text-xl tracking-tight text-zinc-100">Smart Doorbell</span>
       </div>

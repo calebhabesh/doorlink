@@ -65,8 +65,11 @@ export default function MainLayout({
             <Menu className="w-6 h-6" />
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-blue-600/10 rounded border border-blue-500/20 flex items-center justify-center overflow-hidden shrink-0">
-              <LogoIcon className="w-6 h-6" />
+            <div className="relative w-8 h-8 flex items-center justify-center shrink-0">
+              {/* Radial gradient glow behind the logo */}
+              <div className="absolute inset-0 bg-blue-500/25 blur-md rounded-full pointer-events-none scale-110 animate-pulse" />
+              {/* Logo with drop-shadow glow */}
+              <LogoIcon className="w-7 h-7 relative z-10 filter drop-shadow-[0_0_8px_rgba(59,130,246,0.65)] hover:scale-110 transition-transform duration-300" />
             </div>
             <span className="font-black text-lg tracking-tight text-zinc-100">Smart Doorbell</span>
           </div>
