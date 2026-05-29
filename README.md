@@ -1,10 +1,10 @@
-# Smart Doorbell
+# Doorlink
 
 ## About The Project
 
 - Living in an apartment without a concierge, you're often left guessing who's at the door, and asking questions like "did my package arrive?". Providing an interface for visitors to communicate in real-time to notify me of package deliveries and general presence would be really convenient.
 
-- This is a self-hosted IoT smart doorbell built around a custom ESP32-S3-WROOM-1-N16R8 PCB, a Raspberry Pi gateway, local media storage, and real-time mobile notifications. The project is designed for image capture, visitor audio recording, and half-duplex reply audio without a proprietary smart-doorbell subscription cloud.
+- Doorlink is a self-hosted IoT smart doorbell built around a custom ESP32-S3-WROOM-1-N16R8 PCB, a Raspberry Pi gateway, local media storage, and real-time mobile notifications. The project is designed for image capture, visitor audio recording, and half-duplex reply audio without a proprietary subscription cloud.
 
 ## Demo
 

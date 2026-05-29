@@ -71,7 +71,7 @@ export default function MainLayout({
               {/* Logo with drop-shadow glow */}
               <LogoIcon className="w-7 h-7 relative z-10 filter drop-shadow-[0_0_8px_rgba(59,130,246,0.65)] hover:scale-110 transition-transform duration-300" />
             </div>
-            <span className="font-sora font-semibold text-lg tracking-tight text-zinc-100">Smart Doorbell</span>
+            <span className="font-sora font-semibold text-lg tracking-tight text-zinc-100">Doorlink</span>
           </div>
         </div>
         

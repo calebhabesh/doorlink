@@ -22,11 +22,11 @@ const sora = Sora({
 
 export const metadata: Metadata = {
   title: {
-    default: "Smart Doorbell",
-    template: "%s | Smart Doorbell",
+    default: "Doorlink",
+    template: "%s | Doorlink",
   },
-  description: "Smart Doorbell event dashboard",
-  applicationName: "Smart Doorbell",
+  description: "Doorlink event dashboard",
+  applicationName: "Doorlink",
   icons: {
     icon: "/icon.svg",
   },
