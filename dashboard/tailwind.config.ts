@@ -10,7 +10,7 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sora: ["var(--font-sora)", "sans-serif"],
+        grotesk: ["var(--font-space-grotesk)", "sans-serif"],
       },
       colors: {
         background: "var(--background)",

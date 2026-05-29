@@ -30,7 +30,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
           {/* Logo with drop-shadow glow */}
           <LogoIcon className="w-11 h-11 relative z-10 filter drop-shadow-[0_0_12px_rgba(59,130,246,0.7)] hover:scale-105 transition-transform duration-300" />
         </div>
-        <span className="font-sora font-semibold text-xl tracking-tight text-zinc-100">Doorlink</span>
+        <span className="font-grotesk font-semibold text-4xl tracking-tight text-zinc-100">Doorlink</span>
       </div>
       <nav className="flex-1 py-6 flex flex-col gap-2">
         {menuItems.map((item) => {
