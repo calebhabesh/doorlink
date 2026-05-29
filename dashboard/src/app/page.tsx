@@ -28,9 +28,16 @@ export default function Home() {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
   const [latestLiveEventId, setLatestLiveEventId] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     setIsImageLoaded(false);
+    // Pause any playing audio when switching events
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
+    }
   }, [activeEvent?.id]);
 
   useEffect(() => {
@@ -96,8 +103,14 @@ export default function Home() {
 
   const playAudio = () => {
     if (activeEvent?.audioKey) {
-      const audio = new Audio(`${MINIO_BASE_URL}/${activeEvent.audioKey}`);
-      audio.play().catch(err => console.error("Audio play failed:", err));
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+      const audioUrl = `${MINIO_BASE_URL}/${activeEvent.audioKey}`;
+      const newAudio = new Audio(audioUrl);
+      audioRef.current = newAudio;
+      newAudio.play().catch(err => console.error("Audio play failed:", err));
     }
   };
 
