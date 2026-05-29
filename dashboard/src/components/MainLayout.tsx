@@ -86,7 +86,7 @@ export default function MainLayout({
               {status !== 'disconnected' && <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${getPingColor()}`}></span>}
               <span className={`relative inline-flex rounded-full h-2 w-2 ${getDotColor()}`}></span>
             </div>
-            <span className={`text-[10px] font-bold uppercase tracking-widest leading-none ${getStatusColor()}`}>
+            <span className={`text-[10px] font-bold uppercase tracking-widest leading-none whitespace-nowrap ${getStatusColor()}`}>
               {status === 'connected' ? 'System Live' : status === 'connecting' ? 'Connecting...' : 'Disconnected'}
             </span>
           </div>
@@ -143,7 +143,7 @@ export default function MainLayout({
               {status !== 'disconnected' && <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${getPingColor()}`}></span>}
               <span className={`relative inline-flex rounded-full h-3 w-3 ${getDotColor()}`}></span>
             </div>
-            <span className={`font-bold uppercase leading-none ${getStatusColor()}`}>
+            <span className={`font-bold uppercase leading-none whitespace-nowrap ${getStatusColor()}`}>
               {status === 'connected' ? 'SYSTEM LIVE' : status === 'connecting' ? 'CONNECTING...' : 'DISCONNECTED'}
             </span>
           </div>
