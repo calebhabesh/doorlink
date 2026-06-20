@@ -49,17 +49,15 @@ assert_not_contains() {
 
 assert_contains "$GATEWAY_SERVICE" '^ExecStart=/usr/bin/java .*-jar /home/ethioprince/dev/smart-doorbell/gateway/target/gateway-[^/]+\.jar$' "gateway service runs the packaged Spring Boot jar"
 assert_not_contains "$GATEWAY_SERVICE" 'spring-boot:run|/mvnw|maven' "gateway service does not run Maven or spring-boot:run"
-assert_contains "$GATEWAY_SERVICE" '^CPUQuota=' "gateway service has a CPU quota"
-assert_contains "$GATEWAY_SERVICE" '^MemoryMax=' "gateway service has a memory cap"
 assert_contains "$GATEWAY_SERVICE" '^Nice=' "gateway service lowers scheduler priority"
+assert_not_contains "$GATEWAY_SERVICE" '^(CPUQuota|CPUWeight|MemoryHigh|MemoryMax|ProtectSystem|ProtectHome|ReadWritePaths|PrivateTmp|NoNewPrivileges)=' "gateway service avoids Pi-incompatible resource/sandbox directives"
 
 assert_contains "$DASHBOARD_SERVICE" '^ExecStart=/usr/bin/npm run start -- -p 3000$' "dashboard service runs Next.js production start"
 assert_contains "$DASHBOARD_SERVICE" '^Environment=NODE_ENV=production$' "dashboard service uses production NODE_ENV"
 assert_contains "$DASHBOARD_SERVICE" '^Environment=NEXT_TELEMETRY_DISABLED=1$' "dashboard service disables Next.js telemetry"
 assert_not_contains "$DASHBOARD_SERVICE" 'npm run dev|next dev|NODE_ENV=development' "dashboard service does not run the Next.js dev server"
-assert_contains "$DASHBOARD_SERVICE" '^CPUQuota=' "dashboard service has a CPU quota"
-assert_contains "$DASHBOARD_SERVICE" '^MemoryMax=' "dashboard service has a memory cap"
 assert_contains "$DASHBOARD_SERVICE" '^Nice=' "dashboard service lowers scheduler priority"
+assert_not_contains "$DASHBOARD_SERVICE" '^(CPUQuota|CPUWeight|MemoryHigh|MemoryMax|ProtectSystem|ProtectHome|ReadWritePaths|PrivateTmp|NoNewPrivileges)=' "dashboard service avoids Pi-incompatible resource/sandbox directives"
 
 assert_contains "$PI_BUILD_SCRIPT" '^\s*run_low_priority npm ci$' "Pi build script installs dashboard dependencies reproducibly"
 assert_contains "$PI_BUILD_SCRIPT" '^\s*NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS=--max-old-space-size=768 run_low_priority npm run build$' "Pi build script creates the Next.js production build at reduced priority"
