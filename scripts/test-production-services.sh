@@ -75,7 +75,8 @@ assert_not_contains "$DASHBOARD_SERVICE" '^ExecStartPre=' "dashboard service avo
 assert_contains "$DASHBOARD_SERVICE" '^Nice=' "dashboard service lowers scheduler priority"
 assert_not_contains "$DASHBOARD_SERVICE" '^(CPUQuota|CPUWeight|MemoryHigh|MemoryMax|ProtectSystem|ProtectHome|ReadWritePaths|PrivateTmp|NoNewPrivileges)=' "dashboard service avoids Pi-incompatible resource/sandbox directives"
 
-assert_contains "$PI_BUILD_SCRIPT" '^\s*run_low_priority npm ci$' "Pi build script installs dashboard dependencies reproducibly"
+assert_contains "$PI_BUILD_SCRIPT" '^\s*run_low_priority npm ci --include=dev$' "Pi build script installs dashboard build and runtime dependencies reproducibly"
+assert_contains "$PI_BUILD_SCRIPT" 'node_modules/\.bin/next' "Pi build script verifies the Next.js runtime binary is installed"
 assert_contains "$PI_BUILD_SCRIPT" '^\s*NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS=--max-old-space-size=768 run_low_priority npm run build$' "Pi build script creates the Next.js production build at reduced priority"
 assert_contains "$PI_BUILD_SCRIPT" '^\s*MAVEN_OPTS="-Xmx768m -XX:ActiveProcessorCount=2" run_low_priority ./mvnw -DskipTests package$' "Pi build script packages the gateway jar at reduced priority"
 assert_not_contains "$DASHBOARD_LAYOUT" 'next/font/google' "dashboard production build does not fetch Google fonts"

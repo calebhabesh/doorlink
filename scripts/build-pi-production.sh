@@ -21,7 +21,12 @@ MAVEN_OPTS="-Xmx768m -XX:ActiveProcessorCount=2" run_low_priority ./mvnw -DskipT
 echo
 echo "[2/2] Building Next.js dashboard..."
 cd "$ROOT_DIR/dashboard"
-run_low_priority npm ci
+run_low_priority npm ci --include=dev
+if [[ ! -x node_modules/.bin/next ]]; then
+  echo "ERROR: dashboard/node_modules/.bin/next is missing after npm ci."
+  echo "Remove dashboard/node_modules and rerun this script if npm left a stale install."
+  exit 1
+fi
 NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS=--max-old-space-size=768 run_low_priority npm run build
 
 echo
