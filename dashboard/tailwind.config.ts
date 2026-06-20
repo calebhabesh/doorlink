@@ -10,7 +10,7 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        grotesk: ["var(--font-space-grotesk)", "sans-serif"],
+        grotesk: ["var(--font-geist-sans)", "sans-serif"],
       },
       colors: {
         background: "var(--background)",

@@ -1,6 +1,7 @@
 [Unit]
 Description=Smart Doorbell Next.js Dashboard
-After=network.target smart-doorbell-gateway.service
+Wants=network-online.target
+After=network-online.target smart-doorbell-gateway.service
 
 [Service]
 Type=simple
@@ -8,14 +9,27 @@ User=ethioprince
 WorkingDirectory=/home/ethioprince/dev/smart-doorbell/dashboard
 # Load environment variables from the shared .env file
 EnvironmentFile=/home/ethioprince/dev/smart-doorbell/.env
-# Run the Next.js server (ensure it runs on port 3000)
-ExecStart=/usr/bin/npm run dev
-Restart=always
+# Run the prebuilt Next.js production server. Build it with scripts/build-pi-production.sh after pulling changes.
+Environment=NODE_ENV=production
+Environment=NEXT_TELEMETRY_DISABLED=1
+Environment=NODE_OPTIONS=--max-old-space-size=256
+ExecStartPre=/usr/bin/test -d /home/ethioprince/dev/smart-doorbell/dashboard/.next
+ExecStart=/usr/bin/npm run start -- -p 3000
+Restart=on-failure
 RestartSec=10
-StandardOutput=syslog
-StandardError=syslog
+Nice=5
+CPUWeight=50
+CPUQuota=100%
+MemoryHigh=256M
+MemoryMax=384M
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/home/ethioprince/dev/smart-doorbell
+StandardOutput=journal
+StandardError=journal
 SyslogIdentifier=smart-doorbell-dashboard
-Environment=NODE_ENV=development
 
 [Install]
 WantedBy=multi-user.target

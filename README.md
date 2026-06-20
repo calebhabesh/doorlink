@@ -87,7 +87,8 @@ Normal workflow:
 2. Commit and push changes.
 3. SSH into the Raspberry Pi gateway.
 4. Pull the branch in the Pi checkout.
-5. Restart only the affected systemd service.
+5. Run `./scripts/build-pi-production.sh` if gateway or dashboard code changed.
+6. Restart only the affected systemd service.
 
 See `docs/pi-deployment.md` for the current Pi topology and `docs/hardware-bringup.md` for the board bring-up checklist.
 
@@ -107,6 +108,7 @@ See `docs/pi-deployment.md` for the current Pi topology and `docs/hardware-bring
 git clone https://github.com/calebhabesh/smart-doorbell
 cd smart-doorbell
 docker compose up -d
+./scripts/build-pi-production.sh
 ```
 
 This starts PostgreSQL, Mosquitto, and MinIO. Spring Boot and Next.js run as systemd services on the Pi; see `docs/pi-deployment.md`.

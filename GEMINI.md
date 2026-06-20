@@ -22,7 +22,8 @@ Used for rapid frontend/backend iteration.
 
 Used for the real always-on doorbell system.
 - Commit and push changes from Arch.
-- SSH into Raspberry Pi, pull latest changes, and restart the affected service:
+- SSH into Raspberry Pi, pull latest changes, and run `./scripts/build-pi-production.sh` if gateway or dashboard code changed.
+- Restart the affected service:
   - `sudo systemctl restart smart-doorbell-gateway.service` for backend.
   - `sudo systemctl restart smart-doorbell-dashboard.service` for frontend.
 
@@ -54,7 +55,7 @@ Used when only changing UI and wanting real Pi data.
   - **Frontend:** Run `npx tsc --noEmit` (to check types) or `npm run lint`. NEVER run `npm run build` unless explicitly requested, as it interferes with the active dev cache.
   - **Firmware:** Use standard ESP-IDF build commands to verify C/C++ compilation.
 - **Port Conflicts:** If a verification command fails with `EADDRINUSE`, check if there's an active dev server or if the port is in use by another project (like Fintrak).
-- **Restarts:** On the Pi, restart only the affected systemd unit. Backend changes usually require `smart-doorbell-gateway.service`; dashboard changes usually require `smart-doorbell-dashboard.service`.
+- **Restarts:** On the Pi, run `./scripts/build-pi-production.sh` after pulling gateway/dashboard changes, then restart only the affected systemd unit. Backend changes usually require `smart-doorbell-gateway.service`; dashboard changes usually require `smart-doorbell-dashboard.service`.
 
 ## Hardware Target (Custom PCB)
 

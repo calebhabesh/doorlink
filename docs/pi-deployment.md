@@ -24,11 +24,40 @@ The deployment relies on a hybrid approach: Docker Compose runs infrastructure c
 ### 1. Infrastructure (Docker Compose)
 The database, message broker, and media storage are containerized.
 ```bash
-cd /home/ethioking/dev/smart-doorbell
-docker-compose up -d
+cd /home/ethioprince/dev/smart-doorbell
+docker compose up -d
 ```
 
-### 2. Backend Gateway
+### 2. Build Production Artifacts
+
+The Raspberry Pi systemd services are production runtime services. They must not run `./mvnw spring-boot:run` or `npm run dev`; those commands keep build/watch tooling alive and can cause large CPU spikes on the Pi.
+
+After pulling gateway or dashboard changes on the Pi, build the runtime artifacts once:
+
+```bash
+cd /home/ethioprince/dev/smart-doorbell
+./scripts/build-pi-production.sh
+```
+
+This creates:
+
+- `gateway/target/gateway-0.0.1-SNAPSHOT.jar`
+- `dashboard/.next`
+
+The build script runs Maven, npm, and Next.js under reduced CPU/IO priority so the Pi remains more responsive during deployment.
+
+### 3. Install Or Refresh Systemd Units
+
+After changing files under `scripts/systemd/`, copy them into systemd and reload:
+
+```bash
+cd /home/ethioprince/dev/smart-doorbell
+sudo cp scripts/systemd/smart-doorbell-gateway.service /etc/systemd/system/
+sudo cp scripts/systemd/smart-doorbell-dashboard.service /etc/systemd/system/
+sudo systemctl daemon-reload
+```
+
+### 4. Backend Gateway
 The Spring Boot gateway is managed by `smart-doorbell-gateway.service`.
 ```bash
 sudo systemctl status smart-doorbell-gateway.service
@@ -36,7 +65,7 @@ sudo systemctl restart smart-doorbell-gateway.service
 journalctl -u smart-doorbell-gateway.service -f
 ```
 
-### 3. Frontend Dashboard
+### 5. Frontend Dashboard
 The Next.js dashboard is managed by `smart-doorbell-dashboard.service`.
 ```bash
 sudo systemctl status smart-doorbell-dashboard.service
@@ -44,7 +73,32 @@ sudo systemctl restart smart-doorbell-dashboard.service
 journalctl -u smart-doorbell-dashboard.service -f
 ```
 
-After pulling new changes on the Pi, restart only the service affected by the change. Backend changes generally require restarting `smart-doorbell-gateway.service`; dashboard changes generally require restarting `smart-doorbell-dashboard.service`.
+After pulling new changes on the Pi, run `./scripts/build-pi-production.sh`, then restart only the service affected by the change. Backend changes generally require restarting `smart-doorbell-gateway.service`; dashboard changes generally require restarting `smart-doorbell-dashboard.service`.
+
+## Emergency CPU Recovery
+
+If SSH or the local TTY is already sluggish because the old dev-mode services are consuming CPU, stop the app services first, then build and restart them with the production units:
+
+```bash
+sudo systemctl stop smart-doorbell-dashboard.service smart-doorbell-gateway.service
+cd /home/ethioprince/dev/smart-doorbell
+git pull
+./scripts/build-pi-production.sh
+sudo cp scripts/systemd/smart-doorbell-gateway.service /etc/systemd/system/
+sudo cp scripts/systemd/smart-doorbell-dashboard.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl restart smart-doorbell-gateway.service
+sudo systemctl restart smart-doorbell-dashboard.service
+```
+
+If CPU spikes persist after this, capture evidence while the spike is happening:
+
+```bash
+cd /home/ethioprince/dev/smart-doorbell
+./scripts/pi-cpu-snapshot.sh
+```
+
+The script prints the path to a log under `/tmp/smart-doorbell-diagnostics/` with process CPU usage, memory pressure, Docker stats, and recent service logs.
 
 ## Firmware Configuration (`config.h`)
 
