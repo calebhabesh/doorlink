@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 GATEWAY_SERVICE="$ROOT_DIR/scripts/systemd/smart-doorbell-gateway.service"
 DASHBOARD_SERVICE="$ROOT_DIR/scripts/systemd/smart-doorbell-dashboard.service"
+INFRA_SERVICE="$ROOT_DIR/scripts/systemd/smart-doorbell-infra.service"
 PI_BUILD_SCRIPT="$ROOT_DIR/scripts/build-pi-production.sh"
 DASHBOARD_LAYOUT="$ROOT_DIR/dashboard/src/app/layout.tsx"
 
@@ -47,7 +48,18 @@ assert_not_contains() {
   fi
 }
 
+assert_contains "$INFRA_SERVICE" '^Type=oneshot$' "infra service is a oneshot compose bootstrap"
+assert_contains "$INFRA_SERVICE" '^WorkingDirectory=/home/ethioprince/dev/smart-doorbell$' "infra service runs from the Pi checkout"
+assert_contains "$INFRA_SERVICE" '^ExecStart=/usr/bin/docker compose up -d$' "infra service starts compose containers"
+assert_contains "$INFRA_SERVICE" '^RemainAfterExit=yes$' "infra service stays active after compose bootstrap"
+assert_contains "$INFRA_SERVICE" '^Requires=docker.service$' "infra service requires Docker"
+assert_contains "$INFRA_SERVICE" '^After=.*docker\.service' "infra service starts after Docker"
+assert_contains "$INFRA_SERVICE" '^WantedBy=multi-user\.target$' "infra service is enabled for normal headless boot"
+
 assert_contains "$GATEWAY_SERVICE" '^ExecStart=/usr/bin/java .*-jar /home/ethioprince/dev/smart-doorbell/gateway/target/gateway-[^/]+\.jar$' "gateway service runs the packaged Spring Boot jar"
+assert_contains "$GATEWAY_SERVICE" '^Requires=smart-doorbell-infra\.service$' "gateway service requires the compose infra bootstrap"
+assert_contains "$GATEWAY_SERVICE" '^After=.*smart-doorbell-infra\.service' "gateway service starts after the compose infra bootstrap"
+assert_not_contains "$GATEWAY_SERVICE" '^Requires=docker\.service$' "gateway service does not depend directly on raw Docker"
 assert_contains "$GATEWAY_SERVICE" '^EnvironmentFile=-/home/ethioprince/dev/smart-doorbell/\.env$' "gateway service treats the shared environment file as optional"
 assert_not_contains "$GATEWAY_SERVICE" 'spring-boot:run|/mvnw|maven' "gateway service does not run Maven or spring-boot:run"
 assert_not_contains "$GATEWAY_SERVICE" '^ExecStartPre=' "gateway service avoids brittle external start-pre checks"

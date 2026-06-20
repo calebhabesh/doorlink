@@ -1,8 +1,8 @@
 [Unit]
 Description=Smart Doorbell Spring Boot Gateway
 Wants=network-online.target
-After=network-online.target docker.service
-Requires=docker.service
+After=network-online.target smart-doorbell-infra.service
+Requires=smart-doorbell-infra.service
 
 [Service]
 Type=simple

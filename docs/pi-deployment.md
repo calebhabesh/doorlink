@@ -22,7 +22,10 @@ This document outlines the deployment topology for the Smart Doorbell system on 
 The deployment relies on a hybrid approach: Docker Compose runs infrastructure containers, while systemd manages the Spring Boot gateway and Next.js dashboard services. The unit files are tracked in `scripts/systemd/`.
 
 ### 1. Infrastructure (Docker Compose)
-The database, message broker, and media storage are containerized.
+The database, message broker, and media storage are containerized. On the Pi, systemd runs `smart-doorbell-infra.service` at boot to execute `docker compose up -d` from the repository root before the gateway starts.
+
+Manual command:
+
 ```bash
 cd /home/ethioprince/dev/smart-doorbell
 docker compose up -d
@@ -54,10 +57,20 @@ After changing files under `scripts/systemd/`, copy them into systemd and reload
 cd /home/ethioprince/dev/smart-doorbell
 sudo cp scripts/systemd/smart-doorbell-gateway.service /etc/systemd/system/
 sudo cp scripts/systemd/smart-doorbell-dashboard.service /etc/systemd/system/
+sudo cp scripts/systemd/smart-doorbell-infra.service /etc/systemd/system/
 sudo systemctl daemon-reload
+sudo systemctl enable smart-doorbell-infra.service
 ```
 
-### 4. Backend Gateway
+### 4. Infrastructure Service
+The Docker Compose bootstrap is managed by `smart-doorbell-infra.service`.
+```bash
+sudo systemctl status smart-doorbell-infra.service
+sudo systemctl restart smart-doorbell-infra.service
+journalctl -u smart-doorbell-infra.service -f
+```
+
+### 5. Backend Gateway
 The Spring Boot gateway is managed by `smart-doorbell-gateway.service`.
 ```bash
 sudo systemctl status smart-doorbell-gateway.service
@@ -65,7 +78,7 @@ sudo systemctl restart smart-doorbell-gateway.service
 journalctl -u smart-doorbell-gateway.service -f
 ```
 
-### 5. Frontend Dashboard
+### 6. Frontend Dashboard
 The Next.js dashboard is managed by `smart-doorbell-dashboard.service`.
 ```bash
 sudo systemctl status smart-doorbell-dashboard.service
@@ -86,7 +99,10 @@ git pull
 ./scripts/build-pi-production.sh
 sudo cp scripts/systemd/smart-doorbell-gateway.service /etc/systemd/system/
 sudo cp scripts/systemd/smart-doorbell-dashboard.service /etc/systemd/system/
+sudo cp scripts/systemd/smart-doorbell-infra.service /etc/systemd/system/
 sudo systemctl daemon-reload
+sudo systemctl enable smart-doorbell-infra.service
+sudo systemctl restart smart-doorbell-infra.service
 sudo systemctl restart smart-doorbell-gateway.service
 sudo systemctl restart smart-doorbell-dashboard.service
 ```

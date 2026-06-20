@@ -4,7 +4,7 @@ This file contains the distilled workflows and commands for developing the Smart
 
 ## Local Development Workflow
 
-This project uses a hybrid development/deployment workflow. Source edits happen on the Arch development server at `/home/ethioking/dev/smart-doorbell`, while the always-on runtime stack runs on the Raspberry Pi gateway. The Raspberry Pi runs the Spring Boot gateway and Next.js dashboard as systemd services defined under `scripts/systemd/`, while AI agents handle implementation, code generation, local verification, and documentation updates from the Arch checkout.
+This project uses a hybrid development/deployment workflow. Source edits happen on the Arch development server at `/home/ethioking/dev/smart-doorbell`, while the always-on runtime stack runs on the Raspberry Pi gateway. The Raspberry Pi runs Docker Compose infrastructure, the Spring Boot gateway, and the Next.js dashboard as systemd services defined under `scripts/systemd/`, while AI agents handle implementation, code generation, local verification, and documentation updates from the Arch checkout.
 
 ### Development Modes
 
@@ -24,6 +24,7 @@ Used for the real always-on doorbell system.
 - Commit and push changes from Arch.
 - SSH into Raspberry Pi, pull latest changes, and run `./scripts/build-pi-production.sh` if gateway or dashboard code changed.
 - Restart the affected service:
+  - `sudo systemctl restart smart-doorbell-infra.service` for Docker Compose infrastructure.
   - `sudo systemctl restart smart-doorbell-gateway.service` for backend.
   - `sudo systemctl restart smart-doorbell-dashboard.service` for frontend.
 
@@ -43,6 +44,7 @@ Used when only changing UI and wanting real Pi data.
 
 ### Raspberry Pi Systemd Services
 
+- `scripts/systemd/smart-doorbell-infra.service`: Docker Compose bootstrap for PostgreSQL, Mosquitto, and MinIO.
 - `scripts/systemd/smart-doorbell-gateway.service`: Spring Boot gateway on port `8080`.
 - `scripts/systemd/smart-doorbell-dashboard.service`: Next.js dashboard on port `3000`.
 

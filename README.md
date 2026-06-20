@@ -111,7 +111,7 @@ docker compose up -d
 ./scripts/build-pi-production.sh
 ```
 
-This starts PostgreSQL, Mosquitto, and MinIO. Spring Boot and Next.js run as systemd services on the Pi; see `docs/pi-deployment.md`.
+This starts PostgreSQL, Mosquitto, and MinIO. On the Pi, `smart-doorbell-infra.service` runs the same compose bootstrap during boot before the gateway starts. Spring Boot and Next.js run as separate systemd services; see `docs/pi-deployment.md`.
 
 ### Backend Verification
 
