@@ -44,7 +44,7 @@ This creates:
 - `gateway/target/gateway-0.0.1-SNAPSHOT.jar`
 - `dashboard/.next`
 
-The build script runs Maven, npm, and Next.js under reduced CPU/IO priority so the Pi remains more responsive during deployment. The runtime services also run at a lower scheduler priority while avoiding cgroup and sandbox directives that can fail service startup on some Raspberry Pi OS/systemd combinations.
+The build script runs Maven, npm, and Next.js under reduced CPU/IO priority so the Pi remains more responsive during deployment. The runtime services also run at a lower scheduler priority while avoiding cgroup, sandbox, and external pre-start checks that can fail service startup on some Raspberry Pi OS/systemd combinations.
 
 ### 3. Install Or Refresh Systemd Units
 

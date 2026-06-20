@@ -48,14 +48,18 @@ assert_not_contains() {
 }
 
 assert_contains "$GATEWAY_SERVICE" '^ExecStart=/usr/bin/java .*-jar /home/ethioprince/dev/smart-doorbell/gateway/target/gateway-[^/]+\.jar$' "gateway service runs the packaged Spring Boot jar"
+assert_contains "$GATEWAY_SERVICE" '^EnvironmentFile=-/home/ethioprince/dev/smart-doorbell/\.env$' "gateway service treats the shared environment file as optional"
 assert_not_contains "$GATEWAY_SERVICE" 'spring-boot:run|/mvnw|maven' "gateway service does not run Maven or spring-boot:run"
+assert_not_contains "$GATEWAY_SERVICE" '^ExecStartPre=' "gateway service avoids brittle external start-pre checks"
 assert_contains "$GATEWAY_SERVICE" '^Nice=' "gateway service lowers scheduler priority"
 assert_not_contains "$GATEWAY_SERVICE" '^(CPUQuota|CPUWeight|MemoryHigh|MemoryMax|ProtectSystem|ProtectHome|ReadWritePaths|PrivateTmp|NoNewPrivileges)=' "gateway service avoids Pi-incompatible resource/sandbox directives"
 
 assert_contains "$DASHBOARD_SERVICE" '^ExecStart=/usr/bin/npm run start -- -p 3000$' "dashboard service runs Next.js production start"
+assert_contains "$DASHBOARD_SERVICE" '^EnvironmentFile=-/home/ethioprince/dev/smart-doorbell/\.env$' "dashboard service treats the shared environment file as optional"
 assert_contains "$DASHBOARD_SERVICE" '^Environment=NODE_ENV=production$' "dashboard service uses production NODE_ENV"
 assert_contains "$DASHBOARD_SERVICE" '^Environment=NEXT_TELEMETRY_DISABLED=1$' "dashboard service disables Next.js telemetry"
 assert_not_contains "$DASHBOARD_SERVICE" 'npm run dev|next dev|NODE_ENV=development' "dashboard service does not run the Next.js dev server"
+assert_not_contains "$DASHBOARD_SERVICE" '^ExecStartPre=' "dashboard service avoids brittle external start-pre checks"
 assert_contains "$DASHBOARD_SERVICE" '^Nice=' "dashboard service lowers scheduler priority"
 assert_not_contains "$DASHBOARD_SERVICE" '^(CPUQuota|CPUWeight|MemoryHigh|MemoryMax|ProtectSystem|ProtectHome|ReadWritePaths|PrivateTmp|NoNewPrivileges)=' "dashboard service avoids Pi-incompatible resource/sandbox directives"
 
