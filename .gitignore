@@ -110,3 +110,7 @@ check_status_led.py
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Tasks/Notes
+TODO.md
+
