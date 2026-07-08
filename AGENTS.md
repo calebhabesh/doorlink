@@ -66,9 +66,9 @@ Confirmed routed net assignments from `pcb/smart-doorbell/smart-doorbell.net`:
 - Battery monitor: `GPIO1` via 100k/100k divider.
 - I2S audio shared clocks: LRCLK/WS GPIO4, BCLK/SCK GPIO5.
 - I2S microphone: ICS-43434 SD on GPIO6.
-- I2S amplifier: MAX98357A DIN on GPIO7, `AMP_EN` on GPIO43.
+- I2S amplifier: MAX98357A DIN on GPIO7, `AMP_EN` on GPIO44.
 - USB-C native USB: D- GPIO19, D+ GPIO20, protected by SRV05-4.
-- Optional PIR header: `PIR_OUT` on GPIO3.
+- Optional PIR header: `PIR_OUT` on GPIO42.
 - Status LED: GPIO47.
 - Button LED: GPIO48.
 

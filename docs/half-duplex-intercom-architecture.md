@@ -90,7 +90,7 @@ Upon receiving this payload, the ESP32-S3 pulls the WAV audio data via standard 
 2. **Send**: Releasing the button stops recording and HTTP POSTs the recorded audio to the gateway.
 3. **Relay**: The gateway saves this audio clip and broadcasts the command payload to the ESP32-S3 via MQTT.
 4. **Speak**: The ESP32-S3 receives the MQTT payload:
-   - It pulls **AMP_EN** (GPIO43) HIGH to enable the **MAX98357A** amplifier.
+   - It pulls **AMP_EN** (GPIO44) HIGH to enable the **MAX98357A** amplifier.
    - It streams the audio file over I2S to the speaker.
    - **Echo Elimination**: During speaker playback, the microphone recording loop is completely disabled. This guarantees **zero acoustic echo feedback** without needing an AEC chip.
    - Once playback finishes, it pulls **AMP_EN** LOW to conserve power and goes back to waiting.

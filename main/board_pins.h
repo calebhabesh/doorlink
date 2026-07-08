@@ -11,12 +11,12 @@
 // Wake/button and indicators
 #define DOORBELL_BUTTON_PIN GPIO_NUM_2   // /DOORBELL_IN
 #define BATTERY_ADC_PIN     GPIO_NUM_1   // /GPIO1, 100k/100k divider
-#define PIR_OUT_PIN         GPIO_NUM_3   // /PIR_OUT optional header
+#define PIR_OUT_PIN         GPIO_NUM_42  // /PIR_OUT optional header
 #define STATUS_LED_PIN      GPIO_NUM_47  // /STATUS_LED
 #define BUTTON_LED_PIN      GPIO_NUM_48  // /BTN_LED
 
 // MAX98357A amplifier control
-#define AMP_EN_PIN          GPIO_NUM_43  // /AMP_EN -> MAX98357A SD_MODE
+#define AMP_EN_PIN          GPIO_NUM_44  // /AMP_EN -> MAX98357A SD_MODE
 
 // OV5640 camera on 24-pin FPC J3
 #define CAM_PIN_D0          18           // /CAM_D0

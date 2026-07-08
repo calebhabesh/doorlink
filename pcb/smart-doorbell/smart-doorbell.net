@@ -2,8 +2,8 @@
 	(version "E")
 	(design
 		(source "/home/ethioking/dev/smart-doorbell/pcb/smart-doorbell/smart-doorbell.kicad_sch")
-		(date "2026-05-20T17:27:47")
-		(tool "Eeschema 10.0.3")
+		(date "2026-07-08T07:11:57")
+		(tool "Eeschema 10.0.4")
 		(sheet
 			(number "1")
 			(name "/")
@@ -2637,6 +2637,330 @@
 			)
 		)
 		(comp
+			(ref "R15")
+			(value "680")
+			(footprint "Resistor_SMD:R_0603_1608Metric")
+			(description "Resistor, US symbol")
+			(fields
+				(field
+					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Resistor, US symbol")
+			)
+			(libsource
+				(lib "Device")
+				(part "R_US")
+				(description "Resistor, US symbol")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "c83b1dab-e8ae-4cea-88b4-da7ee43f7262")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R16")
+			(value "3.9k")
+			(footprint "Resistor_SMD:R_0603_1608Metric")
+			(description "Resistor, US symbol")
+			(fields
+				(field
+					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Resistor, US symbol")
+			)
+			(libsource
+				(lib "Device")
+				(part "R_US")
+				(description "Resistor, US symbol")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "efffad33-ba28-4469-a451-985c51369bd0")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R17")
+			(value "10k")
+			(footprint "Resistor_SMD:R_0603_1608Metric")
+			(description "Resistor, US symbol")
+			(fields
+				(field
+					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Resistor, US symbol")
+			)
+			(libsource
+				(lib "Device")
+				(part "R_US")
+				(description "Resistor, US symbol")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "017fa631-e511-4b98-acd8-d4255ff93fdb")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R18")
+			(value "56k")
+			(footprint "Resistor_SMD:R_0603_1608Metric")
+			(description "Resistor, US symbol")
+			(fields
+				(field
+					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Resistor, US symbol")
+			)
+			(libsource
+				(lib "Device")
+				(part "R_US")
+				(description "Resistor, US symbol")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "b8eb9289-e9b8-454e-bd41-5029b83e5b47")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R19")
+			(value "10k")
+			(footprint "Resistor_SMD:R_0603_1608Metric")
+			(description "Resistor, US symbol")
+			(fields
+				(field
+					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Resistor, US symbol")
+			)
+			(libsource
+				(lib "Device")
+				(part "R_US")
+				(description "Resistor, US symbol")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "6c7e5200-1a2a-4135-b7d3-5aec650a6a18")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R20")
+			(value "56k")
+			(footprint "Resistor_SMD:R_0603_1608Metric")
+			(description "Resistor, US symbol")
+			(fields
+				(field
+					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Resistor, US symbol")
+			)
+			(libsource
+				(lib "Device")
+				(part "R_US")
+				(description "Resistor, US symbol")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "75575df3-dfd3-48e3-9e01-666989550c5d")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
 			(ref "RESET1")
 			(value "SW_SPST")
 			(footprint "Button_Switch_SMD:SW_SPST_B3U-1000P")
@@ -2688,22 +3012,22 @@
 		)
 		(comp
 			(ref "U1")
-			(value "ESP32-S3-WROOM-2")
-			(footprint "RF_Module:ESP32-S3-WROOM-2")
-			(datasheet "https://www.espressif.com/sites/default/files/documentation/esp32-s3-wroom-2_datasheet_en.pdf")
-			(description "RF Module, 2.4 GHz, Wi­-Fi, Bluetooth, BLE, ESP32­-S3R8V")
+			(value "ESP32-S3-WROOM-1")
+			(footprint "RF_Module:ESP32-S3-WROOM-1")
+			(datasheet "https://www.espressif.com/sites/default/files/documentation/esp32-s3-wroom-1_wroom-1u_datasheet_en.pdf")
+			(description "RF Module, ESP32-S3 SoC, Wi-Fi 802.11b/g/n, Bluetooth, BLE, 32-bit, 3.3V, onboard antenna, SMD")
 			(fields
 				(field
-					(name "Footprint") "RF_Module:ESP32-S3-WROOM-2")
+					(name "Footprint") "RF_Module:ESP32-S3-WROOM-1")
 				(field
-					(name "Datasheet") "https://www.espressif.com/sites/default/files/documentation/esp32-s3-wroom-2_datasheet_en.pdf")
+					(name "Datasheet") "https://www.espressif.com/sites/default/files/documentation/esp32-s3-wroom-1_wroom-1u_datasheet_en.pdf")
 				(field
-					(name "Description") "RF Module, 2.4 GHz, Wi­-Fi, Bluetooth, BLE, ESP32­-S3R8V")
+					(name "Description") "RF Module, ESP32-S3 SoC, Wi-Fi 802.11b/g/n, Bluetooth, BLE, 32-bit, 3.3V, onboard antenna, SMD")
 			)
 			(libsource
 				(lib "RF_Module")
-				(part "ESP32-S3-WROOM-2")
-				(description "RF Module, 2.4 GHz, Wi­-Fi, Bluetooth, BLE, ESP32­-S3R8V")
+				(part "ESP32-S3-WROOM-1")
+				(description "RF Module, ESP32-S3 SoC, Wi-Fi 802.11b/g/n, Bluetooth, BLE, 32-bit, 3.3V, onboard antenna, SMD")
 			)
 			(property
 				(name "Sheetname")
@@ -2715,44 +3039,23 @@
 			)
 			(property
 				(name "ki_keywords")
-				(value "Bluetooth WiFi Wi-Fi ESP WROOM")
+				(value "RF Radio BT ESP ESP32-S3 Espressif onboard PCB antenna")
 			)
 			(property
 				(name "ki_fp_filters")
-				(value "ESP32?S3?WROOM?2*")
+				(value "ESP32?S3?WROOM?1*")
 			)
 			(sheetpath
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "58feb4ba-b88e-4592-9927-24843b079d07")
+			(tstamps "2f9a5214-5ffb-4d23-89eb-926cd3964361")
 			(units
 				(unit
 					(name "A")
 					(pins
 						(pin
 							(num "3")
-						)
-						(pin
-							(num "28")
-						)
-						(pin
-							(num "29")
-						)
-						(pin
-							(num "30")
-						)
-						(pin
-							(num "2")
-						)
-						(pin
-							(num "41")
-						)
-						(pin
-							(num "1")
-						)
-						(pin
-							(num "40")
 						)
 						(pin
 							(num "27")
@@ -2806,6 +3109,24 @@
 							(num "9")
 						)
 						(pin
+							(num "2")
+						)
+						(pin
+							(num "41")
+						)
+						(pin
+							(num "40")
+						)
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "37")
+						)
+						(pin
+							(num "36")
+						)
+						(pin
 							(num "10")
 						)
 						(pin
@@ -2821,6 +3142,15 @@
 							(num "23")
 						)
 						(pin
+							(num "28")
+						)
+						(pin
+							(num "29")
+						)
+						(pin
+							(num "30")
+						)
+						(pin
 							(num "31")
 						)
 						(pin
@@ -2834,12 +3164,6 @@
 						)
 						(pin
 							(num "35")
-						)
-						(pin
-							(num "37")
-						)
-						(pin
-							(num "36")
 						)
 						(pin
 							(num "26")
@@ -3404,7 +3728,7 @@
 				(pin
 					(num "17")
 					(name "PAD")
-					(type "unspecified")
+					(type "passive")
 				)
 			)
 		)
@@ -4041,23 +4365,23 @@
 		)
 		(libpart
 			(lib "RF_Module")
-			(part "ESP32-S3-WROOM-2")
-			(description "RF Module, 2.4 GHz, Wi­-Fi, Bluetooth, BLE, ESP32­-S3R8V")
-			(docs "https://www.espressif.com/sites/default/files/documentation/esp32-s3-wroom-2_datasheet_en.pdf")
+			(part "ESP32-S3-WROOM-1")
+			(description "RF Module, ESP32-S3 SoC, Wi-Fi 802.11b/g/n, Bluetooth, BLE, 32-bit, 3.3V, onboard antenna, SMD")
+			(docs "https://www.espressif.com/sites/default/files/documentation/esp32-s3-wroom-1_wroom-1u_datasheet_en.pdf")
 			(footprints
-				(fp "ESP32?S3?WROOM?2*")
+				(fp "ESP32?S3?WROOM?1*")
 			)
 			(fields
 				(field
 					(name "Reference") "U")
 				(field
-					(name "Value") "ESP32-S3-WROOM-2")
+					(name "Value") "ESP32-S3-WROOM-1")
 				(field
-					(name "Footprint") "RF_Module:ESP32-S3-WROOM-2")
+					(name "Footprint") "RF_Module:ESP32-S3-WROOM-1")
 				(field
-					(name "Datasheet") "https://www.espressif.com/sites/default/files/documentation/esp32-s3-wroom-2_datasheet_en.pdf")
+					(name "Datasheet") "https://www.espressif.com/sites/default/files/documentation/esp32-s3-wroom-1_wroom-1u_datasheet_en.pdf")
 				(field
-					(name "Description") "RF Module, 2.4 GHz, Wi­-Fi, Bluetooth, BLE, ESP32­-S3R8V")
+					(name "Description") "RF Module, ESP32-S3 SoC, Wi-Fi 802.11b/g/n, Bluetooth, BLE, 32-bit, 3.3V, onboard antenna, SMD")
 			)
 			(pins
 				(pin
@@ -4122,12 +4446,12 @@
 				)
 				(pin
 					(num "13")
-					(name "USB_D-/IO19")
+					(name "USB_D-")
 					(type "bidirectional")
 				)
 				(pin
 					(num "14")
-					(name "USB_D+/IO20")
+					(name "USB_D+")
 					(type "bidirectional")
 				)
 				(pin
@@ -4197,18 +4521,18 @@
 				)
 				(pin
 					(num "28")
-					(name "NC")
-					(type "no_connect")
+					(name "IO35")
+					(type "bidirectional")
 				)
 				(pin
 					(num "29")
-					(name "NC")
-					(type "no_connect")
+					(name "IO36")
+					(type "bidirectional")
 				)
 				(pin
 					(num "30")
-					(name "NC")
-					(type "no_connect")
+					(name "IO37")
+					(type "bidirectional")
 				)
 				(pin
 					(num "31")
@@ -4217,32 +4541,32 @@
 				)
 				(pin
 					(num "32")
-					(name "MTCK/IO39")
+					(name "IO39")
 					(type "bidirectional")
 				)
 				(pin
 					(num "33")
-					(name "MTDO/IO40")
+					(name "IO40")
 					(type "bidirectional")
 				)
 				(pin
 					(num "34")
-					(name "MTDI/IO41")
+					(name "IO41")
 					(type "bidirectional")
 				)
 				(pin
 					(num "35")
-					(name "MTMS/IO42")
+					(name "IO42")
 					(type "bidirectional")
 				)
 				(pin
 					(num "36")
-					(name "RXD0/IO44")
+					(name "RXD0")
 					(type "bidirectional")
 				)
 				(pin
 					(num "37")
-					(name "TXD0/IO43")
+					(name "TXD0")
 					(type "bidirectional")
 				)
 				(pin
@@ -4533,6 +4857,11 @@
 				(pintype "passive")
 			)
 			(node
+				(ref "C22")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
 				(ref "C23")
 				(pin "2")
 				(pintype "passive")
@@ -4540,6 +4869,12 @@
 			(node
 				(ref "C25")
 				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "J3")
+				(pin "11")
+				(pinfunction "Pin_11_11")
 				(pintype "passive")
 			)
 			(node
@@ -4552,6 +4887,16 @@
 				(ref "J3")
 				(pin "4")
 				(pinfunction "Pin_4_4")
+				(pintype "passive")
+			)
+			(node
+				(ref "R13")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "R14")
+				(pin "2")
 				(pintype "passive")
 			)
 			(node
@@ -4591,11 +4936,6 @@
 				(pintype "passive")
 			)
 			(node
-				(ref "C22")
-				(pin "2")
-				(pintype "passive")
-			)
-			(node
 				(ref "C27")
 				(pin "1")
 				(pintype "passive")
@@ -4603,12 +4943,6 @@
 			(node
 				(ref "C5")
 				(pin "1")
-				(pintype "passive")
-			)
-			(node
-				(ref "J3")
-				(pin "11")
-				(pinfunction "Pin_11_11")
 				(pintype "passive")
 			)
 			(node
@@ -4632,16 +4966,6 @@
 			(node
 				(ref "R1")
 				(pin "1")
-				(pintype "passive")
-			)
-			(node
-				(ref "R13")
-				(pin "2")
-				(pintype "passive")
-			)
-			(node
-				(ref "R14")
-				(pin "2")
 				(pintype "passive")
 			)
 			(node
@@ -4787,8 +5111,8 @@
 			)
 			(node
 				(ref "U1")
-				(pin "37")
-				(pinfunction "TXD0/IO43_37")
+				(pin "36")
+				(pinfunction "RXD0_36")
 				(pintype "bidirectional")
 			)
 			(node
@@ -4989,9 +5313,8 @@
 			(name "/CAM_PWDN")
 			(class "Default")
 			(node
-				(ref "J3")
-				(pin "8")
-				(pinfunction "Pin_8_8")
+				(ref "R19")
+				(pin "1")
 				(pintype "passive")
 			)
 			(node
@@ -5003,7 +5326,44 @@
 		)
 		(net
 			(code "19")
+			(name "/CAM_PWDN_2V8")
+			(class "Default")
+			(node
+				(ref "J3")
+				(pin "8")
+				(pinfunction "Pin_8_8")
+				(pintype "passive")
+			)
+			(node
+				(ref "R19")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "R20")
+				(pin "1")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "20")
 			(name "/CAM_RST")
+			(class "Default")
+			(node
+				(ref "R17")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "U1")
+				(pin "33")
+				(pinfunction "IO40_33")
+				(pintype "bidirectional")
+			)
+		)
+		(net
+			(code "21")
+			(name "/CAM_RST_2V8")
 			(class "Default")
 			(node
 				(ref "J3")
@@ -5012,14 +5372,18 @@
 				(pintype "passive")
 			)
 			(node
-				(ref "U1")
-				(pin "33")
-				(pinfunction "MTDO/IO40_33")
-				(pintype "bidirectional")
+				(ref "R17")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "R18")
+				(pin "1")
+				(pintype "passive")
 			)
 		)
 		(net
-			(code "20")
+			(code "22")
 			(name "/CAM_SCL")
 			(class "Default")
 			(node
@@ -5036,12 +5400,12 @@
 			(node
 				(ref "U1")
 				(pin "32")
-				(pinfunction "MTCK/IO39_32")
+				(pinfunction "IO39_32")
 				(pintype "bidirectional")
 			)
 		)
 		(net
-			(code "21")
+			(code "23")
 			(name "/CAM_SDA")
 			(class "Default")
 			(node
@@ -5063,7 +5427,7 @@
 			)
 		)
 		(net
-			(code "22")
+			(code "24")
 			(name "/CAM_VSYNC")
 			(class "Default")
 			(node
@@ -5075,18 +5439,17 @@
 			(node
 				(ref "U1")
 				(pin "34")
-				(pinfunction "MTDI/IO41_34")
+				(pinfunction "IO41_34")
 				(pintype "bidirectional")
 			)
 		)
 		(net
-			(code "23")
+			(code "25")
 			(name "/CAM_XCLK")
 			(class "Default")
 			(node
-				(ref "J3")
-				(pin "13")
-				(pinfunction "Pin_13_13")
+				(ref "R15")
+				(pin "1")
 				(pintype "passive")
 			)
 			(node
@@ -5097,7 +5460,28 @@
 			)
 		)
 		(net
-			(code "24")
+			(code "26")
+			(name "/CAM_XCLK_2V8")
+			(class "Default")
+			(node
+				(ref "J3")
+				(pin "13")
+				(pinfunction "Pin_13_13")
+				(pintype "passive")
+			)
+			(node
+				(ref "R15")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "R16")
+				(pin "1")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "27")
 			(name "/DOORBELL_IN")
 			(class "Default")
 			(node
@@ -5130,7 +5514,7 @@
 			)
 		)
 		(net
-			(code "25")
+			(code "28")
 			(name "/GPIO1")
 			(class "Default")
 			(node
@@ -5156,7 +5540,7 @@
 			)
 		)
 		(net
-			(code "26")
+			(code "29")
 			(name "/GPIO4")
 			(class "Default")
 			(node
@@ -5185,7 +5569,7 @@
 			)
 		)
 		(net
-			(code "27")
+			(code "30")
 			(name "/GPIO5")
 			(class "Default")
 			(node
@@ -5214,7 +5598,7 @@
 			)
 		)
 		(net
-			(code "28")
+			(code "31")
 			(name "/GPIO6")
 			(class "Default")
 			(node
@@ -5237,7 +5621,7 @@
 			)
 		)
 		(net
-			(code "29")
+			(code "32")
 			(name "/GPIO7")
 			(class "Default")
 			(node
@@ -5254,7 +5638,7 @@
 			)
 		)
 		(net
-			(code "30")
+			(code "33")
 			(name "/GPIO19")
 			(class "Default")
 			(node
@@ -5272,7 +5656,7 @@
 			(node
 				(ref "U1")
 				(pin "13")
-				(pinfunction "USB_D-/IO19_13")
+				(pinfunction "USB_D-_13")
 				(pintype "bidirectional")
 			)
 			(node
@@ -5283,7 +5667,7 @@
 			)
 		)
 		(net
-			(code "31")
+			(code "34")
 			(name "/GPIO20")
 			(class "Default")
 			(node
@@ -5301,7 +5685,7 @@
 			(node
 				(ref "U1")
 				(pin "14")
-				(pinfunction "USB_D+/IO20_14")
+				(pinfunction "USB_D+_14")
 				(pintype "bidirectional")
 			)
 			(node
@@ -5312,7 +5696,7 @@
 			)
 		)
 		(net
-			(code "32")
+			(code "35")
 			(name "/OUTN")
 			(class "Default")
 			(node
@@ -5329,7 +5713,7 @@
 			)
 		)
 		(net
-			(code "33")
+			(code "36")
 			(name "/OUTP")
 			(class "Default")
 			(node
@@ -5346,7 +5730,7 @@
 			)
 		)
 		(net
-			(code "34")
+			(code "37")
 			(name "/PIR_OUT")
 			(class "Default")
 			(node
@@ -5357,13 +5741,13 @@
 			)
 			(node
 				(ref "U1")
-				(pin "15")
-				(pinfunction "IO3_15")
+				(pin "35")
+				(pinfunction "IO42_35")
 				(pintype "bidirectional")
 			)
 		)
 		(net
-			(code "35")
+			(code "38")
 			(name "/STATUS_LED")
 			(class "Default")
 			(node
@@ -5379,7 +5763,7 @@
 			)
 		)
 		(net
-			(code "36")
+			(code "39")
 			(name "GND")
 			(class "Default")
 			(node
@@ -5606,6 +5990,21 @@
 				(pintype "passive")
 			)
 			(node
+				(ref "R16")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "R18")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "R20")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
 				(ref "R4")
 				(pin "1")
 				(pintype "passive")
@@ -5672,7 +6071,7 @@
 				(ref "U4")
 				(pin "17")
 				(pinfunction "PAD_17")
-				(pintype "unspecified")
+				(pintype "passive")
 			)
 			(node
 				(ref "U4")
@@ -5700,7 +6099,7 @@
 			)
 		)
 		(net
-			(code "37")
+			(code "40")
 			(name "Net-(BOOT1-A)")
 			(class "Default")
 			(node
@@ -5717,7 +6116,7 @@
 			)
 		)
 		(net
-			(code "38")
+			(code "41")
 			(name "Net-(D2-A)")
 			(class "Default")
 			(node
@@ -5733,7 +6132,7 @@
 			)
 		)
 		(net
-			(code "39")
+			(code "42")
 			(name "Net-(D2-K)")
 			(class "Default")
 			(node
@@ -5750,7 +6149,7 @@
 			)
 		)
 		(net
-			(code "40")
+			(code "43")
 			(name "Net-(D3-A)")
 			(class "Default")
 			(node
@@ -5766,7 +6165,7 @@
 			)
 		)
 		(net
-			(code "41")
+			(code "44")
 			(name "Net-(J2-CC1)")
 			(class "Default")
 			(node
@@ -5782,7 +6181,7 @@
 			)
 		)
 		(net
-			(code "42")
+			(code "45")
 			(name "Net-(J2-CC2)")
 			(class "Default")
 			(node
@@ -5798,7 +6197,7 @@
 			)
 		)
 		(net
-			(code "43")
+			(code "46")
 			(name "Net-(J8-Pin_3)")
 			(class "Default")
 			(node
@@ -5814,7 +6213,7 @@
 			)
 		)
 		(net
-			(code "44")
+			(code "47")
 			(name "Net-(RESET1-B)")
 			(class "Default")
 			(node
@@ -5841,7 +6240,7 @@
 			)
 		)
 		(net
-			(code "45")
+			(code "48")
 			(name "Net-(U2-PROG)")
 			(class "Default")
 			(node
@@ -5857,7 +6256,7 @@
 			)
 		)
 		(net
-			(code "46")
+			(code "49")
 			(name "unconnected-(J2-SBU1-PadA8)")
 			(class "Default")
 			(node
@@ -5868,7 +6267,7 @@
 			)
 		)
 		(net
-			(code "47")
+			(code "50")
 			(name "unconnected-(J2-SBU2-PadB8)")
 			(class "Default")
 			(node
@@ -5879,7 +6278,7 @@
 			)
 		)
 		(net
-			(code "48")
+			(code "51")
 			(name "unconnected-(J3-Pin_1-Pad1)")
 			(class "Default")
 			(node
@@ -5890,7 +6289,51 @@
 			)
 		)
 		(net
-			(code "49")
+			(code "52")
+			(name "unconnected-(U1-IO3-Pad15)")
+			(class "Default")
+			(node
+				(ref "U1")
+				(pin "15")
+				(pinfunction "IO3_15")
+				(pintype "bidirectional+no_connect")
+			)
+		)
+		(net
+			(code "53")
+			(name "unconnected-(U1-IO35-Pad28)")
+			(class "Default")
+			(node
+				(ref "U1")
+				(pin "28")
+				(pinfunction "IO35_28")
+				(pintype "bidirectional+no_connect")
+			)
+		)
+		(net
+			(code "54")
+			(name "unconnected-(U1-IO36-Pad29)")
+			(class "Default")
+			(node
+				(ref "U1")
+				(pin "29")
+				(pinfunction "IO36_29")
+				(pintype "bidirectional+no_connect")
+			)
+		)
+		(net
+			(code "55")
+			(name "unconnected-(U1-IO37-Pad30)")
+			(class "Default")
+			(node
+				(ref "U1")
+				(pin "30")
+				(pinfunction "IO37_30")
+				(pintype "bidirectional+no_connect")
+			)
+		)
+		(net
+			(code "56")
 			(name "unconnected-(U1-IO45-Pad26)")
 			(class "Default")
 			(node
@@ -5901,7 +6344,7 @@
 			)
 		)
 		(net
-			(code "50")
+			(code "57")
 			(name "unconnected-(U1-IO46-Pad16)")
 			(class "Default")
 			(node
@@ -5912,62 +6355,18 @@
 			)
 		)
 		(net
-			(code "51")
-			(name "unconnected-(U1-MTMS{slash}IO42-Pad35)")
+			(code "58")
+			(name "unconnected-(U1-TXD0-Pad37)")
 			(class "Default")
 			(node
 				(ref "U1")
-				(pin "35")
-				(pinfunction "MTMS/IO42_35")
+				(pin "37")
+				(pinfunction "TXD0_37")
 				(pintype "bidirectional+no_connect")
 			)
 		)
 		(net
-			(code "52")
-			(name "unconnected-(U1-NC-Pad28)")
-			(class "Default")
-			(node
-				(ref "U1")
-				(pin "28")
-				(pinfunction "NC_28")
-				(pintype "no_connect")
-			)
-		)
-		(net
-			(code "53")
-			(name "unconnected-(U1-NC-Pad29)")
-			(class "Default")
-			(node
-				(ref "U1")
-				(pin "29")
-				(pinfunction "NC_29")
-				(pintype "no_connect")
-			)
-		)
-		(net
-			(code "54")
-			(name "unconnected-(U1-NC-Pad30)")
-			(class "Default")
-			(node
-				(ref "U1")
-				(pin "30")
-				(pinfunction "NC_30")
-				(pintype "no_connect")
-			)
-		)
-		(net
-			(code "55")
-			(name "unconnected-(U1-RXD0{slash}IO44-Pad36)")
-			(class "Default")
-			(node
-				(ref "U1")
-				(pin "36")
-				(pinfunction "RXD0/IO44_36")
-				(pintype "bidirectional+no_connect")
-			)
-		)
-		(net
-			(code "56")
+			(code "59")
 			(name "unconnected-(U3-NC-Pad4)")
 			(class "Default")
 			(node
@@ -5978,7 +6377,7 @@
 			)
 		)
 		(net
-			(code "57")
+			(code "60")
 			(name "unconnected-(U4-GAIN_SLOT-Pad2)")
 			(class "Default")
 			(node
@@ -5989,7 +6388,7 @@
 			)
 		)
 		(net
-			(code "58")
+			(code "61")
 			(name "unconnected-(U4-NC-Pad5)")
 			(class "Default")
 			(node
@@ -6000,7 +6399,7 @@
 			)
 		)
 		(net
-			(code "59")
+			(code "62")
 			(name "unconnected-(U4-NC-Pad6)")
 			(class "Default")
 			(node
@@ -6011,7 +6410,7 @@
 			)
 		)
 		(net
-			(code "60")
+			(code "63")
 			(name "unconnected-(U4-NC-Pad12)")
 			(class "Default")
 			(node
@@ -6022,7 +6421,7 @@
 			)
 		)
 		(net
-			(code "61")
+			(code "64")
 			(name "unconnected-(U4-NC-Pad13)")
 			(class "Default")
 			(node
@@ -6033,7 +6432,7 @@
 			)
 		)
 		(net
-			(code "62")
+			(code "65")
 			(name "unconnected-(U5-IO4-Pad6)")
 			(class "Default")
 			(node

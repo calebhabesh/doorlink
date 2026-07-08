@@ -4,6 +4,27 @@ This document tracks the bring-up process for the first revision of the Smart Do
 
 **WARNING: Do not connect the battery or USB power until visual inspections are complete.**
 
+## Rev B Camera Errata And Ordering Gate
+
+Rev A camera errata: the OV5640 FPC connector routed camera `DOVDD` to `+3V3`. The AliExpress `DCXYX-LZTKQJ-5M-339-V1` OV5640 module uses pin 11 as `DOVDD`, and that IO rail must be `+2V8` for this design.
+
+Rev B schematic requirements before any PCB layout update or JLCPCB reorder:
+
+- J3 pin 4 `AVDD` = `+2V8`
+- J3 pin 10 `DVDD` = `+1V5`
+- J3 pin 11 `DOVDD` = `+2V8`
+- J3 pin 24 `AFVDD` = `+2V8`
+- R13/R14 SCCB pullups = `+2V8`
+- ESP32-driven `CAM_XCLK`, `CAM_RST`, and `CAM_PWDN` pass through resistor dividers before reaching the camera-side FPC pins.
+- Camera output signals `Y9..Y2`, `PCLK`, `VSYNC`, and `HREF` remain direct camera-to-ESP32 input nets.
+
+Run these from the repository root before moving to PCB layout:
+
+```bash
+python3 scripts/verify-camera-interface.py
+kicad-cli sch erc --format report -o /tmp/smart-doorbell-erc.rpt pcb/smart-doorbell/smart-doorbell.kicad_sch
+```
+
 ## Phase 1: Power & Smoke Test
 - [ ] **Visual Inspection:** Check for solder bridges on the hand-soldered ESP32-S3 and ICS-43434. Verify polarity of LDOs and the battery charger.
 - [ ] **Short Circuit Check:** Use a multimeter in continuity mode to check for shorts between 3.3V, 2.8V, 1.5V, and GND *before* applying power.
@@ -30,7 +51,7 @@ This document tracks the bring-up process for the first revision of the Smart Do
 
 ## Phase 5: Audio (I2S)
 - [ ] **Microphone (ICS-43434):** Initialize I2S RX on pins WS=4, SCK=5, SD=6. Record a 2-second buffer and verify non-zero/non-clipping PCM data.
-- [ ] **Speaker (MAX98357A):** Drive AMP_EN (GPIO43) HIGH. Initialize I2S TX on WS=4, SCK=5, DIN=7. Play a simple sine wave tone.
+- [ ] **Speaker (MAX98357A):** Drive AMP_EN (GPIO44) HIGH. Initialize I2S TX on WS=4, SCK=5, DIN=7. Play a simple sine wave tone.
 
 ## Phase 6: Integration
 - [ ] **Wi-Fi Connect:** Connect to local network.
