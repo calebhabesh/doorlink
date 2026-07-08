@@ -1,0 +1,2 @@
+# Normalize generated production CSVs so reviews stay focused on content.
+pcb/smart-doorbell/production/*.csv text eol=lf

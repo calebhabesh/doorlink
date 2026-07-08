@@ -85,6 +85,7 @@ main/config.h
 
 # KiCad specific
 *.lck
+*.kicad_prl
 *-backups/
 _autosave-*
 *.kicad_sch-bak
@@ -99,6 +100,7 @@ backups/
 
 # Tooling and scripts
 .superpowers/
+docs/superpowers/plans/
 netlist_report*.txt
 parse_netlist*.py
 get_component_groups.py
@@ -113,4 +115,3 @@ check_status_led.py
 
 # Tasks/Notes
 TODO.md
-
