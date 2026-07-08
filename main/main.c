@@ -16,6 +16,21 @@
 #include "config.h"
 #include "esp_http_client.h"
 #include "board_pins.h"
+#include "camera_bringup.h"
+#include "mic_bringup.h"
+#include "wifi_bringup.h"
+
+#ifndef SMART_DOORBELL_CAMERA_BRINGUP
+#define SMART_DOORBELL_CAMERA_BRINGUP 1
+#endif
+
+#ifndef SMART_DOORBELL_WIFI_BRINGUP
+#define SMART_DOORBELL_WIFI_BRINGUP 0
+#endif
+
+#ifndef SMART_DOORBELL_MIC_BRINGUP
+#define SMART_DOORBELL_MIC_BRINGUP 0
+#endif
 
 static const char *TAG = "smart_doorbell";
 
@@ -410,6 +425,17 @@ static void run_bringup_tests(void) {
 
 void app_main(void)
 {
+#if SMART_DOORBELL_CAMERA_BRINGUP
+    run_camera_bringup();
+    return;
+#elif SMART_DOORBELL_WIFI_BRINGUP
+    run_wifi_bringup();
+    return;
+#elif SMART_DOORBELL_MIC_BRINGUP
+    run_mic_bringup();
+    return;
+#endif
+
     // Initialize NVS (Required for WiFi)
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
