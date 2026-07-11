@@ -360,10 +360,12 @@ Electrical caution:
 
 ## Light Pipe And LEDs
 
-Existing light pipe:
+Existing light-pipe parts:
 
 - LPA3.5 light guide column.
 - Purchased size: `LPA3.5-21.1 mm`.
+- Ten clear acrylic rods, `3 mm x 100 mm`.
+- Ten black `3 mm` panel-mount clip LED bezels.
 
 Likely issue:
 
@@ -372,19 +374,24 @@ Likely issue:
   distance is roughly `55-60 mm`; confirm this only with the actual enclosure
   and installed PCB.
 
-Recommendation:
+Final light-pipe construction:
 
-- Do not choose a fixed `42 mm` part as the final pipe without a dry fit; it is
-  below the conservative expected distance.
-- Buy five `>=100 mm` clear, solid PMMA/acrylic rods in `3.5 mm` diameter;
-  also buy five `3.0 mm` rods as a fit fallback. Confirm the LPA3.5 shaft and
-  front-hole diameter with calipers before committing to either diameter.
+- Use the `3 mm` acrylic rods with the matching `3 mm` black panel-mount
+  bezels. The bezel is the intentional, finished front-panel interface; do
+  not glue a short LPA3.5 part to a rod.
+- The bezel's nominal `3 mm` describes the LED/rod it accepts, not necessarily
+  its required panel-hole diameter. Obtain the seller's dimension drawing or
+  test one in scrap ABS before drilling the enclosure. Confirm its clip tabs
+  work with the actual enclosure wall thickness.
 - Cut the finished pipes slightly long and trim in small steps. Use a fine
   hobby/razor saw, then sand the end flat (`400 -> 800 -> 1200` grit). An
   X-Acto knife may score the material but is not the preferred cutter for a
   clean, square optical end.
 - Leave about `0.25-0.5 mm` axial clearance rather than preloading the PCB LED
   or front lid.
+- Insert the rod from the enclosure interior and retain its rear with a small
+  black sleeve/stop plus a tiny neutral-cure silicone dab. Keep adhesive away
+  from the visible optical end; do not use Loctite 404 for an optical joint.
 - Keep the light pipe path vertical/straight where possible.
 
 ## PIR Sensor
@@ -455,8 +462,6 @@ Core mechanical:
 
 Optional replacements/upgrades:
 
-- Clear solid 3.0 mm and 3.5 mm PMMA/acrylic rod blanks, `>=100 mm`, for
-  finished light pipes after dry fit.
 - Bigger LiPo only if thickness remains around `10 mm`; avoid thick packs.
 
 ## KiCad Modification Approach
