@@ -364,19 +364,27 @@ Existing light pipe:
 
 - LPA3.5 light guide column.
 - Purchased size: `LPA3.5-21.1 mm`.
-- Can be cut with an X-Acto knife.
 
 Likely issue:
 
-- `21.1 mm` may be too short depending on final PCB-to-lid distance in the
-  selected `70 mm` enclosure.
+- `21.1 mm` is a test/spare part, not a presumed final fit. With the PCB
+  mounted to the rear/deep base on 6 mm standoffs, the likely LED-to-inner-lid
+  distance is roughly `55-60 mm`; confirm this only with the actual enclosure
+  and installed PCB.
 
 Recommendation:
 
-- Use existing `21.1 mm` part only if dry-fit confirms it reaches cleanly from
-  status LED to front panel.
-- Otherwise buy longer LPA3.5 or 3.5 mm PMMA/acrylic light pipe/rod, about
-  `35-50 mm`, and cut/sand to length.
+- Do not choose a fixed `42 mm` part as the final pipe without a dry fit; it is
+  below the conservative expected distance.
+- Buy five `>=100 mm` clear, solid PMMA/acrylic rods in `3.5 mm` diameter;
+  also buy five `3.0 mm` rods as a fit fallback. Confirm the LPA3.5 shaft and
+  front-hole diameter with calipers before committing to either diameter.
+- Cut the finished pipes slightly long and trim in small steps. Use a fine
+  hobby/razor saw, then sand the end flat (`400 -> 800 -> 1200` grit). An
+  X-Acto knife may score the material but is not the preferred cutter for a
+  clean, square optical end.
+- Leave about `0.25-0.5 mm` axial clearance rather than preloading the PCB LED
+  or front lid.
 - Keep the light pipe path vertical/straight where possible.
 
 ## PIR Sensor
@@ -447,7 +455,8 @@ Core mechanical:
 
 Optional replacements/upgrades:
 
-- Longer LPA3.5 or 3.5 mm PMMA/acrylic light pipe, `35-50 mm`.
+- Clear solid 3.0 mm and 3.5 mm PMMA/acrylic rod blanks, `>=100 mm`, for
+  finished light pipes after dry fit.
 - Bigger LiPo only if thickness remains around `10 mm`; avoid thick packs.
 
 ## KiCad Modification Approach
