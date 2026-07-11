@@ -101,6 +101,38 @@ Do not stretch or scale the PCB to the enclosure. The existing outline is
 already within the documented mounting-plane envelope. The USB-C end tapers to
 about `39.5 mm`, which is useful around the enclosure's rounded end corners.
 
+## Camera Module Target and FPC Contingency
+
+The selected camera is the `DCXYX-LZTKQJ-5M-357-V1 FF`: the 120-degree
+distortion-free, fixed-focus OV5640 24-pin DVP module. Fixed focus is the
+intended production choice; autofocus is not a requirement for this doorbell.
+
+The first 22 connector positions use the eight-bit DVP/SCCB/power arrangement
+documented in the KiCad source. The exact function of positions 23 and 24 on
+the selected `357-V1 FF` flex has not been proven by a model-specific drawing.
+The current PCB instead assumes the earlier AF-family mapping:
+
+- J3 pin 23 is hard-wired to GND.
+- J3 pin 24 is hard-wired to `+2V8`.
+
+Do not preserve those direct connections on the next board revision. Make both
+pins NC by default, with test pads and normally-unpopulated configurable links:
+
+- `J3.23` -> test pad -> `0R`, DNP -> GND (`AF_GND` contingency).
+- `J3.24` -> test pad -> `0R`, DNP -> `+2V8` (`AFVDD` contingency).
+
+For the selected fixed-focus camera, both `0R` resistors remain unpopulated and
+neither pin connects to power, ground, GPIO, or pull resistors. Populate them
+only after a specific autofocus module's pinout confirms pin 23 is `AF_GND`
+and pin 24 is `AFVDD`. This is a future AF contingency, not a requirement for
+the fixed-focus build.
+
+Before a board order, obtain a model-specific `357-V1 FF` pinout or inspect the
+received module and its pin-1/contact orientation. Do not plug that module into
+the current hard-wired board until the final two contacts are confirmed. Update
+`scripts/verify-camera-interface.py` when the schematic changes: it currently
+expects the legacy hard-wired pin 23/pin 24 mapping.
+
 ## Recommended PCB Mechanical Direction
 
 Keep the PCB at its current envelope for the first enclosure fit:
