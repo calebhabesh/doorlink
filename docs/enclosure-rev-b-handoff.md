@@ -20,9 +20,9 @@ the KiCad Rev B PCB outline, mounting holes, or component placement.
 
 ## Enclosure Decision
 
-Use a black, solid-cover `DS-AG-0811`-style ABS enclosure:
+Use a black, solid-cover `DS-AG-0813`-style ABS enclosure:
 
-- Selected outside size: `80 x 110 x 70 mm` (`W x H x D`), with no external
+- Selected outside size: `80 x 130 x 70 mm` (`W x H x D`), with no external
   mounting ears.
 - The catalogued enclosure uses a `50 mm` deep base and `20 mm` lid. Mount the
   PCB to the deep base/back side; use the lid as the hallway-facing front panel
@@ -39,7 +39,7 @@ Why this enclosure:
 - The 22 mm button plus battery plus PCB stack caused the lid not to close.
 - User dry-fit showed that even with the PCB basically sitting on the 10 mm
   battery, the `100 x 68 x 50 mm` enclosure could not fully close.
-- The `80 x 110 x 70 mm` enclosure keeps a much more doorbell-like front
+- The `80 x 130 x 70 mm` enclosure keeps a much more doorbell-like front
   profile and has more total depth than the old box.
 - The present PCB outline is shaped for rounded corners: it is wide through
   its middle and narrow at its USB-C end. Preserve that advantage for the
@@ -60,19 +60,19 @@ Depth math:
 - The available depth works only when the battery uses the side-wall/depth
   volume described below rather than stacking behind the button or PCB.
 
-Catalog fit evidence for the standard `DS-AG-0811`:
+Catalog fit evidence for the standard `DS-AG-0813`:
 
 - Reference: [Switch Box mechanical document](https://images.100y.com.tw/pdf_file/DMCA.pdf),
   pages 5-6. Treat this as the geometry reference for the standard mould; the
   exact marketplace enclosure may be a compatible clone and still needs
   measurement.
-- Published outside dimensions: `110 x 80 x 70 mm` (`H x W x D`).
-- Published dimension table: `H1/H2/H3/H4 = 110/104/92/80 mm`,
+- Published outside dimensions: `130 x 80 x 70 mm` (`H x W x D`).
+- Published dimension table: `H1/H2/H3/H4 = 130/124/112/100 mm`,
   `W1/W2/W3 = 80/74/62 mm`, and `D1/D2 = 50/20 mm`; stated tolerance is
   `+/-1 mm`.
-- The matching internal mounting plate is `96.5 x 68 x 1.6 mm`.
+- The matching internal mounting plate is `116 x 68 x 1.6 mm`.
 - The current roughly `59 x 91 mm` board fits within that mounting-plane
-  envelope with about `4.5 mm` total width margin and `5.5 mm` total height
+  envelope with about `9 mm` total width margin and `25 mm` total height
   margin. This supports the current outline, but the actual purchased case
   still requires a physical fit check for ribs, bosses, and molding variation.
 
@@ -186,7 +186,7 @@ as roughly `1500-2000 mAh` until measured.
 
 Recommended placement:
 
-- Mount battery to the right interior wall of the `80 x 110 x 70 mm` deep
+- Mount battery to the right interior wall of the `80 x 130 x 70 mm` deep
   base. The right side keeps the left side free for the short `MK1` mic duct
   and is close to battery connector `J1`.
 - Orientation:
@@ -401,7 +401,7 @@ Use:
 
 Core mechanical:
 
-- Black `DS-AG-0811`-style `80 x 110 x 70 mm` solid-cover ABS enclosure;
+- Black `DS-AG-0813`-style `80 x 130 x 70 mm` solid-cover ABS enclosure;
   preferably buy a spare.
 - M2.5 threaded standoffs, `4 mm` and/or `6 mm` length, OD ideally `<=5 mm`.
 - M2.5 machine screw assortment matched to standoff length.
@@ -432,7 +432,7 @@ Before editing:
 Recommended KiCad process:
 
 1. Add mechanical reference geometry on a non-fabrication drawing layer:
-   - `DS-AG-0811` enclosure mounting plane / inner envelope
+   - `DS-AG-0813` enclosure mounting plane / inner envelope
    - front/lid plane
    - button rear keepout cylinder
    - side battery bay
@@ -456,8 +456,8 @@ Recommended KiCad process:
 
 ## Open Items For Next Session
 
-- Receive and measure the exact purchased black `80 x 110 x 70 mm` enclosure;
-  confirm the internal ribs/bosses against the documented `DS-AG-0811`
+- Receive and measure the exact purchased black `80 x 130 x 70 mm` enclosure;
+  confirm the internal ribs/bosses against the documented `DS-AG-0813`
   geometry (which permits `+/-1 mm`).
 - Dry-fit the unmodified PCB, including its USB-C connector, before changing
   the outline or ordering another board.
