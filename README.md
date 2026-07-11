@@ -59,7 +59,7 @@ The target firmware model is an asynchronous "Record-and-Send" event flow follow
 | SRV05-4                         | ESD Protection        |
 | 22mm Momentary Button           | Doorbell trigger      |
 | Raspberry Pi 4 (4GB)            | Local gateway server  |
-| 100×68×50mm Black ABS Enclosure | Housing               |
+| 80×110×70mm Black ABS Enclosure (planned Rev B) | Housing |
 
 *\* Note: The ESP32-S3 and ICS-43434 are hand-soldered onto the board to maintain economy-level PCBA constraints with JLCPCB.*
 
