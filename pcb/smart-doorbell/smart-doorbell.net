@@ -2,7 +2,7 @@
 	(version "E")
 	(design
 		(source "/home/ethioking/dev/smart-doorbell/pcb/smart-doorbell/smart-doorbell.kicad_sch")
-		(date "2026-07-08T07:11:57")
+		(date "2026-07-14T19:24:09")
 		(tool "Eeschema 10.0.4")
 		(sheet
 			(number "1")
@@ -61,6 +61,8 @@
 			(description "Single Pole Single Throw (SPST) switch")
 			(fields
 				(field
+					(name "LCSC Part #") "C231329")
+				(field
 					(name "Footprint") "Button_Switch_SMD:SW_SPST_B3U-1000P")
 				(field
 					(name "Datasheet")
@@ -72,6 +74,10 @@
 				(lib "Switch")
 				(part "SW_SPST")
 				(description "Single Pole Single Throw (SPST) switch")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C231329")
 			)
 			(property
 				(name "Sheetname")
@@ -111,6 +117,8 @@
 			(description "Unpolarized capacitor")
 			(fields
 				(field
+					(name "LCSC Part #") "C19702")
+				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric")
 				(field
 					(name "Datasheet")
@@ -122,6 +130,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C19702")
 			)
 			(property
 				(name "Sheetname")
@@ -219,6 +231,8 @@
 			(description "Unpolarized capacitor")
 			(fields
 				(field
+					(name "LCSC Part #") "C19702")
+				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric")
 				(field
 					(name "Datasheet")
@@ -230,6 +244,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C19702")
 			)
 			(property
 				(name "Sheetname")
@@ -483,8 +501,8 @@
 			)
 		)
 		(comp
-			(ref "C13")
-			(value "10u")
+			(ref "C11")
+			(value "0.1u")
 			(footprint "Capacitor_SMD:C_0603_1608Metric")
 			(description "Unpolarized capacitor")
 			(fields
@@ -500,6 +518,66 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "969529c2-9c54-4142-b801-c6b60ca5741f")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C13")
+			(value "10u")
+			(footprint "Capacitor_SMD:C_0603_1608Metric")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "LCSC Part #") "C19702")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C19702")
 			)
 			(property
 				(name "Sheetname")
@@ -551,8 +629,8 @@
 					(name "Description") "Unpolarized capacitor")
 			)
 			(libsource
-				(lib "")
-				(part "C_1")
+				(lib "Device")
+				(part "C")
 				(description "Unpolarized capacitor")
 			)
 			(property
@@ -867,6 +945,8 @@
 			(description "Unpolarized capacitor")
 			(fields
 				(field
+					(name "LCSC Part #") "C19702")
+				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric")
 				(field
 					(name "Datasheet")
@@ -878,6 +958,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C19702")
 			)
 			(property
 				(name "Sheetname")
@@ -1077,11 +1161,13 @@
 			)
 		)
 		(comp
-			(ref "C25")
-			(value "10u")
+			(ref "C24")
+			(value "22u")
 			(footprint "Capacitor_SMD:C_0603_1608Metric")
 			(description "Unpolarized capacitor")
 			(fields
+				(field
+					(name "LCSC Part #") "C84419")
 				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric")
 				(field
@@ -1094,6 +1180,70 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C84419")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "94ebc8a1-ec94-466e-8ab9-b5c3a5137742")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C25")
+			(value "10u")
+			(footprint "Capacitor_SMD:C_0603_1608Metric")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "LCSC Part #") "C19702")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C19702")
 			)
 			(property
 				(name "Sheetname")
@@ -1137,6 +1287,8 @@
 			(description "Unpolarized capacitor")
 			(fields
 				(field
+					(name "LCSC Part #") "C19702")
+				(field
 					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric")
 				(field
 					(name "Datasheet")
@@ -1148,6 +1300,10 @@
 				(lib "Device")
 				(part "C")
 				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C19702")
 			)
 			(property
 				(name "Sheetname")
@@ -1186,7 +1342,67 @@
 		)
 		(comp
 			(ref "C27")
-			(value "10u")
+			(value "22u")
+			(footprint "Capacitor_SMD:C_0603_1608Metric")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "LCSC Part #") "C84419")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C84419")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "e0b3eef5-f7a8-4d4a-bbf5-0041719e6f70")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C28")
+			(value "0.1u")
 			(footprint "Capacitor_SMD:C_0603_1608Metric")
 			(description "Unpolarized capacitor")
 			(fields
@@ -1223,7 +1439,361 @@
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "e0b3eef5-f7a8-4d4a-bbf5-0041719e6f70")
+			(tstamps "a63cda12-bca5-4ce2-8534-9076b164d9db")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C29")
+			(value "22u")
+			(footprint "Capacitor_SMD:C_0603_1608Metric")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "LCSC Part #") "C84419")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C84419")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "81d3efc9-9124-499b-8249-76b05a91b39b")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C30")
+			(value "0.1u")
+			(footprint "Capacitor_SMD:C_0603_1608Metric")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "48e85fc1-3a34-49c4-a77f-27a782f4324e")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C31")
+			(value "22u")
+			(footprint "Capacitor_SMD:C_0603_1608Metric")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "LCSC Part #") "C84419")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C84419")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "8fd37c34-ae63-4246-83ed-6bd88a140705")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C32")
+			(value "10u")
+			(footprint "Capacitor_SMD:C_0603_1608Metric")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "LCSC Part #") "C90053")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C90053")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "a31237f9-184e-422d-a99c-a2d79ed4d195")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C33")
+			(value "10u")
+			(footprint "Capacitor_SMD:C_0603_1608Metric")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "LCSC Part #") "C19702")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C19702")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "9d065546-d141-4332-82e9-0d662fa46ad4")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "C34")
+			(value "10u")
+			(footprint "Capacitor_SMD:C_0603_1608Metric")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "LCSC Part #") "C19702")
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C19702")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "5ff398c6-7075-419d-b83b-dee32a328929")
 			(units
 				(unit
 					(name "A")
@@ -1359,11 +1929,225 @@
 			)
 		)
 		(comp
+			(ref "H1")
+			(value "MountingHole_2.7mm_M2.5")
+			(footprint "MountingHole:MountingHole_2.7mm_M2.5")
+			(description "Mounting Hole without connection")
+			(fields
+				(field
+					(name "Footprint") "MountingHole:MountingHole_2.7mm_M2.5")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Mounting Hole without connection")
+			)
+			(libsource
+				(lib "Mechanical")
+				(part "MountingHole")
+				(description "Mounting Hole without connection")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "exclude_from_pos_files")
+			)
+			(property
+				(name "ki_keywords")
+				(value "mounting hole")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "MountingHole*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "17496cad-9441-4595-bc18-e0f35685d9a8")
+			(units
+				(unit
+					(name "A")
+					(pins)
+				)
+			)
+		)
+		(comp
+			(ref "H2")
+			(value "MountingHole_2.7mm_M2.5")
+			(footprint "MountingHole:MountingHole_2.7mm_M2.5")
+			(description "Mounting Hole without connection")
+			(fields
+				(field
+					(name "Footprint") "MountingHole:MountingHole_2.7mm_M2.5")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Mounting Hole without connection")
+			)
+			(libsource
+				(lib "Mechanical")
+				(part "MountingHole")
+				(description "Mounting Hole without connection")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "exclude_from_pos_files")
+			)
+			(property
+				(name "ki_keywords")
+				(value "mounting hole")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "MountingHole*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "95b42eaa-1b24-4e5c-b03a-c827922127f5")
+			(units
+				(unit
+					(name "A")
+					(pins)
+				)
+			)
+		)
+		(comp
+			(ref "H3")
+			(value "MountingHole_2.7mm_M2.5")
+			(footprint "MountingHole:MountingHole_2.7mm_M2.5")
+			(description "Mounting Hole without connection")
+			(fields
+				(field
+					(name "Footprint") "MountingHole:MountingHole_2.7mm_M2.5")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Mounting Hole without connection")
+			)
+			(libsource
+				(lib "Mechanical")
+				(part "MountingHole")
+				(description "Mounting Hole without connection")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "exclude_from_pos_files")
+			)
+			(property
+				(name "ki_keywords")
+				(value "mounting hole")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "MountingHole*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "9ddf1461-426e-4ddb-9f2e-f86d33ad32e6")
+			(units
+				(unit
+					(name "A")
+					(pins)
+				)
+			)
+		)
+		(comp
+			(ref "H4")
+			(value "MountingHole_2.7mm_M2.5")
+			(footprint "MountingHole:MountingHole_2.7mm_M2.5")
+			(description "Mounting Hole without connection")
+			(fields
+				(field
+					(name "Footprint") "MountingHole:MountingHole_2.7mm_M2.5")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Mounting Hole without connection")
+			)
+			(libsource
+				(lib "Mechanical")
+				(part "MountingHole")
+				(description "Mounting Hole without connection")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "exclude_from_pos_files")
+			)
+			(property
+				(name "ki_keywords")
+				(value "mounting hole")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "MountingHole*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "377ed887-e83d-4cda-8287-935dd8594dc0")
+			(units
+				(unit
+					(name "A")
+					(pins)
+				)
+			)
+		)
+		(comp
 			(ref "J1")
 			(value "Conn_01x02_Pin")
 			(footprint "Connector_JST:JST_PH_B2B-PH-K_1x02_P2.00mm_Vertical")
 			(description "Generic connector, single row, 01x02, script generated")
 			(fields
+				(field
+					(name "LCSC Part #") "C131337 ")
 				(field
 					(name "Footprint") "Connector_JST:JST_PH_B2B-PH-K_1x02_P2.00mm_Vertical")
 				(field
@@ -1376,6 +2160,10 @@
 				(lib "Connector")
 				(part "Conn_01x02_Pin")
 				(description "Generic connector, single row, 01x02, script generated")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C131337 ")
 			)
 			(property
 				(name "Sheetname")
@@ -1420,6 +2208,8 @@
 			(description "USB 2.0-only 16P Type-C Receptacle connector")
 			(fields
 				(field
+					(name "LCSC Part #") "C165948")
+				(field
 					(name "Footprint") "Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12")
 				(field
 					(name "Datasheet") "https://www.usb.org/sites/default/files/documents/usb_type-c.zip")
@@ -1430,6 +2220,10 @@
 				(lib "Connector")
 				(part "USB_C_Receptacle_USB2.0_16P")
 				(description "USB 2.0-only 16P Type-C Receptacle connector")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C165948")
 			)
 			(property
 				(name "Sheetname")
@@ -1518,6 +2312,8 @@
 			(description "Generic connector, single row, 01x24, script generated (kicad-library-utils/schlib/autogen/connector/)")
 			(fields
 				(field
+					(name "LCSC Part #") "C202112")
+				(field
 					(name "Footprint") "Connector_FFC-FPC:Hirose_FH12-24S-0.5SH_1x24-1MP_P0.50mm_Horizontal")
 				(field
 					(name "Datasheet")
@@ -1529,6 +2325,10 @@
 				(lib "Connector_Generic")
 				(part "Conn_01x24")
 				(description "Generic connector, single row, 01x24, script generated (kicad-library-utils/schlib/autogen/connector/)")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C202112")
 			)
 			(property
 				(name "Sheetname")
@@ -1638,6 +2438,8 @@
 			(description "Generic connector, single row, 01x06, script generated (kicad-library-utils/schlib/autogen/connector/)")
 			(fields
 				(field
+					(name "LCSC Part #") "C37208")
+				(field
 					(name "Footprint") "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Vertical")
 				(field
 					(name "Datasheet")
@@ -1649,6 +2451,10 @@
 				(lib "Connector_Generic")
 				(part "Conn_01x06")
 				(description "Generic connector, single row, 01x06, script generated (kicad-library-utils/schlib/autogen/connector/)")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C37208")
 			)
 			(property
 				(name "Sheetname")
@@ -1698,11 +2504,73 @@
 			)
 		)
 		(comp
+			(ref "J5")
+			(value "NTC_OPTION")
+			(footprint "Connector_Wire:SolderWire-0.25sqmm_1x02_P4.2mm_D0.65mm_OD1.7mm")
+			(description "Generic connector, single row, 01x02, script generated (kicad-library-utils/schlib/autogen/connector/)")
+			(fields
+				(field
+					(name "Footprint") "Connector_Wire:SolderWire-0.25sqmm_1x02_P4.2mm_D0.65mm_OD1.7mm")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Generic connector, single row, 01x02, script generated (kicad-library-utils/schlib/autogen/connector/)")
+			)
+			(libsource
+				(lib "Connector_Generic")
+				(part "Conn_01x02")
+				(description "Generic connector, single row, 01x02, script generated (kicad-library-utils/schlib/autogen/connector/)")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "exclude_from_pos_files")
+			)
+			(property
+				(name "ki_keywords")
+				(value "connector")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "Connector*:*_1x??_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "655b46f5-5652-4358-ad2f-dd42ea8fa0dc")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
 			(ref "J6")
 			(value "Conn_01x02_Pin")
 			(footprint "Connector_JST:JST_PH_B2B-PH-K_1x02_P2.00mm_Vertical")
 			(description "Generic connector, single row, 01x02, script generated")
 			(fields
+				(field
+					(name "LCSC Part #") "C131337 ")
 				(field
 					(name "Footprint") "Connector_JST:JST_PH_B2B-PH-K_1x02_P2.00mm_Vertical")
 				(field
@@ -1715,6 +2583,10 @@
 				(lib "Connector")
 				(part "Conn_01x02_Pin")
 				(description "Generic connector, single row, 01x02, script generated")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C131337 ")
 			)
 			(property
 				(name "Sheetname")
@@ -1758,6 +2630,8 @@
 			(description "Generic connector, single row, 01x03, script generated (kicad-library-utils/schlib/autogen/connector/)")
 			(fields
 				(field
+					(name "LCSC Part #") "C131339")
+				(field
 					(name "Footprint") "Connector_JST:JST_PH_B3B-PH-K_1x03_P2.00mm_Vertical")
 				(field
 					(name "Datasheet")
@@ -1769,6 +2643,10 @@
 				(lib "Connector_Generic")
 				(part "Conn_01x03")
 				(description "Generic connector, single row, 01x03, script generated (kicad-library-utils/schlib/autogen/connector/)")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C131339")
 			)
 			(property
 				(name "Sheetname")
@@ -1815,6 +2693,8 @@
 			(description "Generic connector, single row, 01x04, script generated (kicad-library-utils/schlib/autogen/connector/)")
 			(fields
 				(field
+					(name "LCSC Part #") "C131334")
+				(field
 					(name "Footprint") "Connector_JST:JST_PH_B4B-PH-K_1x04_P2.00mm_Vertical")
 				(field
 					(name "Datasheet")
@@ -1826,6 +2706,10 @@
 				(lib "Connector_Generic")
 				(part "Conn_01x04")
 				(description "Generic connector, single row, 01x04, script generated (kicad-library-utils/schlib/autogen/connector/)")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C131334")
 			)
 			(property
 				(name "Sheetname")
@@ -1869,6 +2753,138 @@
 			)
 		)
 		(comp
+			(ref "J9")
+			(value "Conn_01x04")
+			(footprint "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical")
+			(description "Generic connector, single row, 01x04, script generated (kicad-library-utils/schlib/autogen/connector/)")
+			(fields
+				(field
+					(name "Footprint") "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Generic connector, single row, 01x04, script generated (kicad-library-utils/schlib/autogen/connector/)")
+			)
+			(libsource
+				(lib "Connector_Generic")
+				(part "Conn_01x04")
+				(description "Generic connector, single row, 01x04, script generated (kicad-library-utils/schlib/autogen/connector/)")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "exclude_from_pos_files")
+			)
+			(property
+				(name "ki_keywords")
+				(value "connector")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "Connector*:*_1x??_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "919290db-55ca-4efb-87cd-d9d7842ef165")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+						(pin
+							(num "3")
+						)
+						(pin
+							(num "4")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "L1")
+			(value "0.47u")
+			(footprint "Inductor_SMD:L_1008_2520Metric")
+			(description "Inductor")
+			(fields
+				(field
+					(name "MPN") "MHCH252010A-R47M-Q8")
+				(field
+					(name "LCSC Part #") "C2981231")
+				(field
+					(name "Footprint") "Inductor_SMD:L_1008_2520Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Inductor")
+			)
+			(libsource
+				(lib "Device")
+				(part "L")
+				(description "Inductor")
+			)
+			(property
+				(name "MPN")
+				(value "MHCH252010A-R47M-Q8")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C2981231")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "inductor choke coil reactor magnetic")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "Choke_* *Coil* Inductor_* L_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "6bbd70c6-0500-435c-af04-08dda026c329")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
 			(ref "MK1")
 			(value "ICS-43434")
 			(footprint "Sensor_Audio:InvenSense_ICS-43434-6_3.5x2.65mm")
@@ -1894,6 +2910,12 @@
 			(property
 				(name "Sheetfile")
 				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "exclude_from_pos_files")
 			)
 			(property
 				(name "ki_keywords")
@@ -1941,6 +2963,8 @@
 			(description "Resistor, US symbol")
 			(fields
 				(field
+					(name "LCSC Part #") "C15401")
+				(field
 					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
 				(field
 					(name "Datasheet")
@@ -1952,6 +2976,10 @@
 				(lib "Device")
 				(part "R_US")
 				(description "Resistor, US symbol")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C15401")
 			)
 			(property
 				(name "Sheetname")
@@ -2049,6 +3077,8 @@
 			(description "Resistor, US symbol")
 			(fields
 				(field
+					(name "LCSC Part #") " C21190")
+				(field
 					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
 				(field
 					(name "Datasheet")
@@ -2060,6 +3090,10 @@
 				(lib "Device")
 				(part "R_US")
 				(description "Resistor, US symbol")
+			)
+			(property
+				(name "LCSC Part #")
+				(value " C21190")
 			)
 			(property
 				(name "Sheetname")
@@ -2103,6 +3137,8 @@
 			(description "Resistor, US symbol")
 			(fields
 				(field
+					(name "LCSC Part #") "C25803")
+				(field
 					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
 				(field
 					(name "Datasheet")
@@ -2114,6 +3150,10 @@
 				(lib "Device")
 				(part "R_US")
 				(description "Resistor, US symbol")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C25803")
 			)
 			(property
 				(name "Sheetname")
@@ -2157,6 +3197,8 @@
 			(description "Resistor, US symbol")
 			(fields
 				(field
+					(name "LCSC Part #") "C15401")
+				(field
 					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
 				(field
 					(name "Datasheet")
@@ -2168,6 +3210,10 @@
 				(lib "Device")
 				(part "R_US")
 				(description "Resistor, US symbol")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C15401")
 			)
 			(property
 				(name "Sheetname")
@@ -2265,6 +3311,8 @@
 			(description "Resistor, US symbol")
 			(fields
 				(field
+					(name "LCSC Part #") "C25803")
+				(field
 					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
 				(field
 					(name "Datasheet")
@@ -2276,6 +3324,10 @@
 				(lib "Device")
 				(part "R_US")
 				(description "Resistor, US symbol")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C25803")
 			)
 			(property
 				(name "Sheetname")
@@ -2319,6 +3371,8 @@
 			(description "Resistor, US symbol")
 			(fields
 				(field
+					(name "LCSC Part #") "C25803")
+				(field
 					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
 				(field
 					(name "Datasheet")
@@ -2330,6 +3384,10 @@
 				(lib "Device")
 				(part "R_US")
 				(description "Resistor, US symbol")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C25803")
 			)
 			(property
 				(name "Sheetname")
@@ -2475,8 +3533,71 @@
 			)
 		)
 		(comp
+			(ref "R11")
+			(value "0")
+			(footprint "Resistor_SMD:R_0603_1608Metric")
+			(description "Resistor, US symbol")
+			(fields
+				(field
+					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Resistor, US symbol")
+			)
+			(libsource
+				(lib "Device")
+				(part "R_US")
+				(description "Resistor, US symbol")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "exclude_from_pos_files")
+			)
+			(property
+				(name "dnp")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "6b3e027a-55c5-4abd-b8ed-3db723f15a34")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
 			(ref "R12")
-			(value "2k")
+			(value "4.7k")
 			(footprint "Resistor_SMD:R_0603_1608Metric")
 			(description "Resistor, US symbol")
 			(fields
@@ -2751,6 +3872,8 @@
 			(description "Resistor, US symbol")
 			(fields
 				(field
+					(name "LCSC Part #") "C15401")
+				(field
 					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
 				(field
 					(name "Datasheet")
@@ -2762,6 +3885,10 @@
 				(lib "Device")
 				(part "R_US")
 				(description "Resistor, US symbol")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C15401")
 			)
 			(property
 				(name "Sheetname")
@@ -2859,6 +3986,8 @@
 			(description "Resistor, US symbol")
 			(fields
 				(field
+					(name "LCSC Part #") "C15401")
+				(field
 					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
 				(field
 					(name "Datasheet")
@@ -2870,6 +3999,10 @@
 				(lib "Device")
 				(part "R_US")
 				(description "Resistor, US symbol")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C15401")
 			)
 			(property
 				(name "Sheetname")
@@ -2961,11 +4094,1192 @@
 			)
 		)
 		(comp
+			(ref "R21")
+			(value "0")
+			(footprint "Resistor_SMD:R_0603_1608Metric")
+			(description "Resistor, US symbol")
+			(fields
+				(field
+					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Resistor, US symbol")
+			)
+			(libsource
+				(lib "Device")
+				(part "R_US")
+				(description "Resistor, US symbol")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "exclude_from_pos_files")
+			)
+			(property
+				(name "dnp")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "99a4ddc7-2cf1-4ce5-8ce2-e79adec00500")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R22")
+			(value "511k")
+			(footprint "Resistor_SMD:R_0603_1608Metric")
+			(description "Resistor, US symbol")
+			(fields
+				(field
+					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Resistor, US symbol")
+			)
+			(libsource
+				(lib "Device")
+				(part "R_US")
+				(description "Resistor, US symbol")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "faf7dee2-2f27-4df8-8f10-2fc6c589067e")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R23")
+			(value "91k")
+			(footprint "Resistor_SMD:R_0603_1608Metric")
+			(description "Resistor, US symbol")
+			(fields
+				(field
+					(name "LCSC Part #") "C23265")
+				(field
+					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Resistor, US symbol")
+			)
+			(libsource
+				(lib "Device")
+				(part "R_US")
+				(description "Resistor, US symbol")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C23265")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "e6915f78-539b-4fcc-b2fe-bbf45fefebdd")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R24")
+			(value "100k")
+			(footprint "Resistor_SMD:R_0603_1608Metric")
+			(description "Resistor, US symbol")
+			(fields
+				(field
+					(name "LCSC Part #") "C25803")
+				(field
+					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Resistor, US symbol")
+			)
+			(libsource
+				(lib "Device")
+				(part "R_US")
+				(description "Resistor, US symbol")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C25803")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "a9a7979d-e811-4a84-a26f-6dfc35764625")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R25")
+			(value "25k")
+			(footprint "Resistor_SMD:R_0603_1608Metric")
+			(description "Resistor, US symbol")
+			(fields
+				(field
+					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Resistor, US symbol")
+			)
+			(libsource
+				(lib "Device")
+				(part "R_US")
+				(description "Resistor, US symbol")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "3c5107e8-a1e1-4718-85ac-f23b1bb715f1")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R26")
+			(value "10k")
+			(footprint "Resistor_SMD:R_0603_1608Metric")
+			(description "Resistor, US symbol")
+			(fields
+				(field
+					(name "LCSC Part #") "C15401")
+				(field
+					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Resistor, US symbol")
+			)
+			(libsource
+				(lib "Device")
+				(part "R_US")
+				(description "Resistor, US symbol")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C15401")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "9f777dfb-6cb9-4ae3-bffa-f79af5f4697f")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R27")
+			(value "330k")
+			(footprint "Resistor_SMD:R_0603_1608Metric")
+			(description "Resistor, US symbol")
+			(fields
+				(field
+					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Resistor, US symbol")
+			)
+			(libsource
+				(lib "Device")
+				(part "R_US")
+				(description "Resistor, US symbol")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "b82cfb51-e740-4ca9-a639-93f4e6680236")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R28")
+			(value "110k")
+			(footprint "Resistor_SMD:R_0603_1608Metric")
+			(description "Resistor, US symbol")
+			(fields
+				(field
+					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Resistor, US symbol")
+			)
+			(libsource
+				(lib "Device")
+				(part "R_US")
+				(description "Resistor, US symbol")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "b721f433-b22b-447a-a4af-1474d51b5a6f")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R29")
+			(value "100k")
+			(footprint "Resistor_SMD:R_0603_1608Metric")
+			(description "Resistor, US symbol")
+			(fields
+				(field
+					(name "LCSC Part #") "C25803")
+				(field
+					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Resistor, US symbol")
+			)
+			(libsource
+				(lib "Device")
+				(part "R_US")
+				(description "Resistor, US symbol")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C25803")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "ea0e1cac-366d-46e3-90bd-8f5917b1c5e1")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R30")
+			(value "1k")
+			(footprint "Resistor_SMD:R_0603_1608Metric")
+			(description "Resistor, US symbol")
+			(fields
+				(field
+					(name "LCSC Part #") " C21190")
+				(field
+					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Resistor, US symbol")
+			)
+			(libsource
+				(lib "Device")
+				(part "R_US")
+				(description "Resistor, US symbol")
+			)
+			(property
+				(name "LCSC Part #")
+				(value " C21190")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "b2a9fd64-9f0b-47b7-8f2f-a04da71d316d")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R31")
+			(value "1k")
+			(footprint "Resistor_SMD:R_0603_1608Metric")
+			(description "Resistor, US symbol")
+			(fields
+				(field
+					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Resistor, US symbol")
+			)
+			(libsource
+				(lib "Device")
+				(part "R_US")
+				(description "Resistor, US symbol")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "dnp")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "0a2ebc19-04a6-445b-8701-5f3c8b7b746b")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R32")
+			(value "0")
+			(footprint "Resistor_SMD:R_0603_1608Metric")
+			(description "Resistor, US symbol")
+			(fields
+				(field
+					(name "LCSC Part #") "C21189")
+				(field
+					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Resistor, US symbol")
+			)
+			(libsource
+				(lib "Device")
+				(part "R_US")
+				(description "Resistor, US symbol")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C21189")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "7dfc191f-9d9b-4e39-9849-d8db78523f1b")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R33")
+			(value "10k")
+			(footprint "Resistor_SMD:R_0603_1608Metric")
+			(description "Resistor, US symbol")
+			(fields
+				(field
+					(name "LCSC Part #") "C15401")
+				(field
+					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Resistor, US symbol")
+			)
+			(libsource
+				(lib "Device")
+				(part "R_US")
+				(description "Resistor, US symbol")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C15401")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "e2a42697-80a2-4061-8e37-bc80b20e49d9")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R34")
+			(value "22")
+			(footprint "Resistor_SMD:R_0603_1608Metric")
+			(description "Resistor, US symbol")
+			(fields
+				(field
+					(name "LCSC Part #") "C23345")
+				(field
+					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Resistor, US symbol")
+			)
+			(libsource
+				(lib "Device")
+				(part "R_US")
+				(description "Resistor, US symbol")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C23345")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "3e9ee4ff-249e-402a-85b2-17f25ed1955c")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R35")
+			(value "22")
+			(footprint "Resistor_SMD:R_0603_1608Metric")
+			(description "Resistor, US symbol")
+			(fields
+				(field
+					(name "LCSC Part #") "C23345")
+				(field
+					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Resistor, US symbol")
+			)
+			(libsource
+				(lib "Device")
+				(part "R_US")
+				(description "Resistor, US symbol")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C23345")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "0e26d419-f2d6-475f-a244-5346e0d9e3cc")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R36")
+			(value "0")
+			(footprint "Resistor_SMD:R_0603_1608Metric")
+			(description "Resistor, US symbol")
+			(fields
+				(field
+					(name "LCSC Part #") "C21189")
+				(field
+					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Resistor, US symbol")
+			)
+			(libsource
+				(lib "Device")
+				(part "R_US")
+				(description "Resistor, US symbol")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C21189")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "39b5ece4-470c-44bf-885e-200d2ca7e4c7")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R37")
+			(value "1k")
+			(footprint "Resistor_SMD:R_0603_1608Metric")
+			(description "Resistor, US symbol")
+			(fields
+				(field
+					(name "LCSC Part #") "C21190")
+				(field
+					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Resistor, US symbol")
+			)
+			(libsource
+				(lib "Device")
+				(part "R_US")
+				(description "Resistor, US symbol")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C21190")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "dnp")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "a4f2381e-254d-4d61-8705-b76f27a7a634")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R38")
+			(value "100k")
+			(footprint "Resistor_SMD:R_0603_1608Metric")
+			(description "Resistor, US symbol")
+			(fields
+				(field
+					(name "LCSC Part #") "C25803")
+				(field
+					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Resistor, US symbol")
+			)
+			(libsource
+				(lib "Device")
+				(part "R_US")
+				(description "Resistor, US symbol")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C25803")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "f3cfe273-a124-468d-8b36-2a08cda6f9d0")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R39")
+			(value "1k")
+			(footprint "Resistor_SMD:R_0603_1608Metric")
+			(description "Resistor, US symbol")
+			(fields
+				(field
+					(name "LCSC Part #") "C21190")
+				(field
+					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Resistor, US symbol")
+			)
+			(libsource
+				(lib "Device")
+				(part "R_US")
+				(description "Resistor, US symbol")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C21190")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "00f1ca41-0354-411e-9f94-c992d8ef4d6f")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "R40")
+			(value "1k")
+			(footprint "Resistor_SMD:R_0603_1608Metric")
+			(description "Resistor, US symbol")
+			(fields
+				(field
+					(name "LCSC Part #") "C21190")
+				(field
+					(name "Footprint") "Resistor_SMD:R_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Resistor, US symbol")
+			)
+			(libsource
+				(lib "Device")
+				(part "R_US")
+				(description "Resistor, US symbol")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C21190")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "R res resistor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "R_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "9b68349e-91ec-440c-a058-36557b78d7b0")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
 			(ref "RESET1")
 			(value "SW_SPST")
 			(footprint "Button_Switch_SMD:SW_SPST_B3U-1000P")
 			(description "Single Pole Single Throw (SPST) switch")
 			(fields
+				(field
+					(name "LCSC Part #") "C231329")
 				(field
 					(name "Footprint") "Button_Switch_SMD:SW_SPST_B3U-1000P")
 				(field
@@ -2978,6 +5292,10 @@
 				(lib "Switch")
 				(part "SW_SPST")
 				(description "Single Pole Single Throw (SPST) switch")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C231329")
 			)
 			(property
 				(name "Sheetname")
@@ -3011,6 +5329,576 @@
 			)
 		)
 		(comp
+			(ref "TP1")
+			(value "TestPoint")
+			(footprint "TestPoint:TestPoint_Pad_D1.0mm")
+			(description "test point")
+			(fields
+				(field
+					(name "Footprint") "TestPoint:TestPoint_Pad_D1.0mm")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "test point")
+			)
+			(libsource
+				(lib "Connector")
+				(part "TestPoint")
+				(description "test point")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "exclude_from_pos_files")
+			)
+			(property
+				(name "ki_keywords")
+				(value "test point tp")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "Pin* Test*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "1fb462c1-7012-4fd8-87d2-647f0394555b")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "TP2")
+			(value "TestPoint")
+			(footprint "TestPoint:TestPoint_Pad_D1.0mm")
+			(description "test point")
+			(fields
+				(field
+					(name "Footprint") "TestPoint:TestPoint_Pad_D1.0mm")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "test point")
+			)
+			(libsource
+				(lib "Connector")
+				(part "TestPoint")
+				(description "test point")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "exclude_from_pos_files")
+			)
+			(property
+				(name "ki_keywords")
+				(value "test point tp")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "Pin* Test*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "ceb1e661-f6d9-490d-b887-4e6a5574a294")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "TP3")
+			(value "TestPoint")
+			(footprint "TestPoint:TestPoint_Pad_D1.0mm")
+			(description "test point")
+			(fields
+				(field
+					(name "Footprint") "TestPoint:TestPoint_Pad_D1.0mm")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "test point")
+			)
+			(libsource
+				(lib "Connector")
+				(part "TestPoint")
+				(description "test point")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "exclude_from_pos_files")
+			)
+			(property
+				(name "ki_keywords")
+				(value "test point tp")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "Pin* Test*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "96f6a3e3-403f-444d-968c-681f4e80b1e4")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "TP4")
+			(value "TestPoint")
+			(footprint "TestPoint:TestPoint_Pad_D1.0mm")
+			(description "test point")
+			(fields
+				(field
+					(name "Footprint") "TestPoint:TestPoint_Pad_D1.0mm")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "test point")
+			)
+			(libsource
+				(lib "Connector")
+				(part "TestPoint")
+				(description "test point")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "exclude_from_pos_files")
+			)
+			(property
+				(name "ki_keywords")
+				(value "test point tp")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "Pin* Test*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "fe522490-b7d5-45a1-8fc4-bd0614f5eff7")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "TP5")
+			(value "TestPoint")
+			(footprint "TestPoint:TestPoint_Pad_D1.0mm")
+			(description "test point")
+			(fields
+				(field
+					(name "Footprint") "TestPoint:TestPoint_Pad_D1.0mm")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "test point")
+			)
+			(libsource
+				(lib "Connector")
+				(part "TestPoint")
+				(description "test point")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "exclude_from_pos_files")
+			)
+			(property
+				(name "ki_keywords")
+				(value "test point tp")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "Pin* Test*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "4fcd7794-fc36-4df7-be2e-52aa2b658b1f")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "TP6")
+			(value "TestPoint")
+			(footprint "TestPoint:TestPoint_Pad_D1.0mm")
+			(description "test point")
+			(fields
+				(field
+					(name "Footprint") "TestPoint:TestPoint_Pad_D1.0mm")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "test point")
+			)
+			(libsource
+				(lib "Connector")
+				(part "TestPoint")
+				(description "test point")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "exclude_from_pos_files")
+			)
+			(property
+				(name "ki_keywords")
+				(value "test point tp")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "Pin* Test*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "fea6afca-f9f0-4ebe-9b8b-da64797365c4")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "TP7")
+			(value "TestPoint")
+			(footprint "TestPoint:TestPoint_Pad_D1.0mm")
+			(description "test point")
+			(fields
+				(field
+					(name "Footprint") "TestPoint:TestPoint_Pad_D1.0mm")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "test point")
+			)
+			(libsource
+				(lib "Connector")
+				(part "TestPoint")
+				(description "test point")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "exclude_from_pos_files")
+			)
+			(property
+				(name "ki_keywords")
+				(value "test point tp")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "Pin* Test*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "0ccd6496-1749-4748-adb6-aea055ff6953")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "TP8")
+			(value "TestPoint")
+			(footprint "TestPoint:TestPoint_Pad_D1.0mm")
+			(description "test point")
+			(fields
+				(field
+					(name "Footprint") "TestPoint:TestPoint_Pad_D1.0mm")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "test point")
+			)
+			(libsource
+				(lib "Connector")
+				(part "TestPoint")
+				(description "test point")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "exclude_from_pos_files")
+			)
+			(property
+				(name "ki_keywords")
+				(value "test point tp")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "Pin* Test*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "4001e1fc-62c5-41f1-8fd6-46cfa6c18094")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "TP9")
+			(value "TestPoint")
+			(footprint "TestPoint:TestPoint_Pad_D1.0mm")
+			(description "test point")
+			(fields
+				(field
+					(name "Footprint") "TestPoint:TestPoint_Pad_D1.0mm")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "test point")
+			)
+			(libsource
+				(lib "Connector")
+				(part "TestPoint")
+				(description "test point")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "exclude_from_pos_files")
+			)
+			(property
+				(name "ki_keywords")
+				(value "test point tp")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "Pin* Test*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "9378e016-67ea-4177-aa11-5091085d9e08")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "TP10")
+			(value "TestPoint")
+			(footprint "TestPoint:TestPoint_Pad_D1.0mm")
+			(description "test point")
+			(fields
+				(field
+					(name "Footprint") "TestPoint:TestPoint_Pad_D1.0mm")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "test point")
+			)
+			(libsource
+				(lib "Connector")
+				(part "TestPoint")
+				(description "test point")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "exclude_from_pos_files")
+			)
+			(property
+				(name "ki_keywords")
+				(value "test point tp")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "Pin* Test*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "fb3e294d-a894-4938-8091-91ba304bbc1a")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+					)
+				)
+			)
+		)
+		(comp
 			(ref "U1")
 			(value "ESP32-S3-WROOM-1")
 			(footprint "RF_Module:ESP32-S3-WROOM-1")
@@ -3036,6 +5924,12 @@
 			(property
 				(name "Sheetfile")
 				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "exclude_from_pos_files")
 			)
 			(property
 				(name "ki_keywords")
@@ -3183,22 +6077,34 @@
 		)
 		(comp
 			(ref "U2")
-			(value "MCP73831-2-OT")
-			(footprint "Package_TO_SOT_SMD:SOT-23-5")
-			(datasheet "http://ww1.microchip.com/downloads/en/DeviceDoc/20001984g.pdf")
-			(description "Single cell, Li-Ion/Li-Po charge management controller, 4.20V, Tri-State Status Output, in SOT23-5 package")
+			(value "MCP73871T-2AAI/ML")
+			(footprint "Package_DFN_QFN:QFN-20-1EP_4x4mm_P0.5mm_EP2.5x2.5mm")
+			(datasheet "http://www.mouser.com/ds/2/268/22090a-52174.pdf")
+			(description "Single cell Li-Ion/Li-Po power-path charger, 4.20V, timer disabled, 3.1V LBO threshold")
 			(fields
 				(field
-					(name "Footprint") "Package_TO_SOT_SMD:SOT-23-5")
+					(name "LCSC Part #") "C144351")
 				(field
-					(name "Datasheet") "http://ww1.microchip.com/downloads/en/DeviceDoc/20001984g.pdf")
+					(name "MPN") "MCP73871T-2AAI/ML")
 				(field
-					(name "Description") "Single cell, Li-Ion/Li-Po charge management controller, 4.20V, Tri-State Status Output, in SOT23-5 package")
+					(name "Footprint") "Package_DFN_QFN:QFN-20-1EP_4x4mm_P0.5mm_EP2.5x2.5mm")
+				(field
+					(name "Datasheet") "http://www.mouser.com/ds/2/268/22090a-52174.pdf")
+				(field
+					(name "Description") "Single cell Li-Ion/Li-Po power-path charger, 4.20V, timer disabled, 3.1V LBO threshold")
 			)
 			(libsource
 				(lib "Battery_Management")
-				(part "MCP73831-2-OT")
-				(description "Single cell, Li-Ion/Li-Po charge management controller, 4.20V, Tri-State Status Output, in SOT23-5 package")
+				(part "MCP73871-2CC")
+				(description "Single cell, Li-Ion/Li-Po charge management controller, 4.20V, 6h safety timer, 3.1V LBO threshold")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C144351")
+			)
+			(property
+				(name "MPN")
+				(value "MCP73871T-2AAI/ML")
 			)
 			(property
 				(name "Sheetname")
@@ -3214,23 +6120,17 @@
 			)
 			(property
 				(name "ki_fp_filters")
-				(value "SOT?23*")
+				(value "QFN*4x4mm*P0.5mm*")
 			)
 			(sheetpath
 				(names "/")
 				(tstamps "/")
 			)
-			(tstamps "e173c0b6-a158-441e-81f4-fee745745d46")
+			(tstamps "e8f2c8cd-88c3-4b97-a370-ee07668289cb")
 			(units
 				(unit
 					(name "A")
 					(pins
-						(pin
-							(num "5")
-						)
-						(pin
-							(num "4")
-						)
 						(pin
 							(num "2")
 						)
@@ -3238,70 +6138,61 @@
 							(num "3")
 						)
 						(pin
-							(num "1")
-						)
-					)
-				)
-			)
-		)
-		(comp
-			(ref "U3")
-			(value "AP2112K-3.3")
-			(footprint "Package_TO_SOT_SMD:SOT-23-5")
-			(datasheet "https://www.diodes.com/assets/Datasheets/AP2112.pdf")
-			(description "600mA low dropout linear regulator, with enable pin, 3.8V-6V input voltage range, 3.3V fixed positive output, SOT-23-5")
-			(fields
-				(field
-					(name "Footprint") "Package_TO_SOT_SMD:SOT-23-5")
-				(field
-					(name "Datasheet") "https://www.diodes.com/assets/Datasheets/AP2112.pdf")
-				(field
-					(name "Description") "600mA low dropout linear regulator, with enable pin, 3.8V-6V input voltage range, 3.3V fixed positive output, SOT-23-5")
-			)
-			(libsource
-				(lib "Regulator_Linear")
-				(part "AP2112K-3.3")
-				(description "600mA low dropout linear regulator, with enable pin, 3.8V-6V input voltage range, 3.3V fixed positive output, SOT-23-5")
-			)
-			(property
-				(name "Sheetname")
-				(value "smart-doorbell")
-			)
-			(property
-				(name "Sheetfile")
-				(value "smart-doorbell.kicad_sch")
-			)
-			(property
-				(name "ki_keywords")
-				(value "linear regulator ldo fixed positive")
-			)
-			(property
-				(name "ki_fp_filters")
-				(value "SOT?23?5*")
-			)
-			(sheetpath
-				(names "/")
-				(tstamps "/")
-			)
-			(tstamps "864aefcf-5bd6-4b4e-862c-4f0497bf1d83")
-			(units
-				(unit
-					(name "A")
-					(pins
-						(pin
-							(num "1")
-						)
-						(pin
-							(num "3")
-						)
-						(pin
-							(num "2")
+							(num "13")
 						)
 						(pin
 							(num "4")
 						)
 						(pin
+							(num "12")
+						)
+						(pin
 							(num "5")
+						)
+						(pin
+							(num "9")
+						)
+						(pin
+							(num "17")
+						)
+						(pin
+							(num "19")
+						)
+						(pin
+							(num "18")
+						)
+						(pin
+							(num "21")
+						)
+						(pin
+							(num "11")
+						)
+						(pin
+							(num "10")
+						)
+						(pin
+							(num "20")
+						)
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "14")
+						)
+						(pin
+							(num "15")
+						)
+						(pin
+							(num "16")
+						)
+						(pin
+							(num "6")
+						)
+						(pin
+							(num "8")
+						)
+						(pin
+							(num "7")
 						)
 					)
 				)
@@ -3310,12 +6201,12 @@
 		(comp
 			(ref "U4")
 			(value "MAX98357A")
-			(footprint "Package_DFN_QFN:TQFN-16-1EP_3x3mm_P0.5mm_EP1.23x1.23mm")
+			(footprint "smart-doorbell-power:MAX98357A_TQFN-16-1EP_3x3mm_P0.5mm_EP1.23x1.23mm")
 			(datasheet "https://www.analog.com/media/en/technical-documentation/data-sheets/MAX98357A-MAX98357B.pdf")
 			(description "Mono DAC with amplifier, I2S, PCM, TDM, 32-bit, 96khz, 3.2W, TQFP-16")
 			(fields
 				(field
-					(name "Footprint") "Package_DFN_QFN:TQFN-16-1EP_3x3mm_P0.5mm_EP1.23x1.23mm")
+					(name "Footprint") "smart-doorbell-power:MAX98357A_TQFN-16-1EP_3x3mm_P0.5mm_EP1.23x1.23mm")
 				(field
 					(name "Datasheet") "https://www.analog.com/media/en/technical-documentation/data-sheets/MAX98357A-MAX98357B.pdf")
 				(field
@@ -3474,15 +6365,19 @@
 		)
 		(comp
 			(ref "U6")
-			(value "XC6206P152MR")
+			(value "DS8561-15S3")
 			(footprint "Package_TO_SOT_SMD:SOT-23-3")
-			(datasheet "https://www.torexsemi.com/file/xc6206/XC6206.pdf")
+			(datasheet "https://wmsc.lcsc.com/wmsc/upload/file/pdf/v2/lcsc/2305121703_DSTECH-DS8561-15S3_C5795628.pdf")
 			(description "Positive 60-250mA Low Dropout Regulator, Fixed Output, SOT-23")
 			(fields
 				(field
+					(name "MPN") "DS8561-15S3")
+				(field
+					(name "LCSC Part #") "C5795628")
+				(field
 					(name "Footprint") "Package_TO_SOT_SMD:SOT-23-3")
 				(field
-					(name "Datasheet") "https://www.torexsemi.com/file/xc6206/XC6206.pdf")
+					(name "Datasheet") "https://wmsc.lcsc.com/wmsc/upload/file/pdf/v2/lcsc/2305121703_DSTECH-DS8561-15S3_C5795628.pdf")
 				(field
 					(name "Description") "Positive 60-250mA Low Dropout Regulator, Fixed Output, SOT-23")
 			)
@@ -3490,6 +6385,14 @@
 				(lib "Regulator_Linear")
 				(part "XC6206PxxxMR")
 				(description "Positive 60-250mA Low Dropout Regulator, Fixed Output, SOT-23")
+			)
+			(property
+				(name "MPN")
+				(value "DS8561-15S3")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C5795628")
 			)
 			(property
 				(name "Sheetname")
@@ -3586,44 +6489,169 @@
 				)
 			)
 		)
+		(comp
+			(ref "U8")
+			(value "TPS63802DLAR")
+			(footprint "smart-doorbell-power:TPS63802DLAR_DLA0010A")
+			(datasheet "https://www.ti.com/lit/ds/symlink/tps63802.pdf")
+			(description "2A high-efficiency, low-IQ buck-boost converter, adjustable 1.8V to 5.2V, VSON-HR DLA0010A")
+			(fields
+				(field
+					(name "MPN") "TPS63802DLAR")
+				(field
+					(name "LCSC Part #") "C2845237")
+				(field
+					(name "Footprint") "smart-doorbell-power:TPS63802DLAR_DLA0010A")
+				(field
+					(name "Datasheet") "https://www.ti.com/lit/ds/symlink/tps63802.pdf")
+				(field
+					(name "Description") "2A high-efficiency, low-IQ buck-boost converter, adjustable 1.8V to 5.2V, VSON-HR DLA0010A")
+			)
+			(libsource
+				(lib "smart-doorbell-power")
+				(part "TPS63802DLAR")
+				(description "2A high-efficiency, low-IQ buck-boost converter, adjustable 1.8V to 5.2V, VSON-HR DLA0010A")
+			)
+			(property
+				(name "MPN")
+				(value "TPS63802DLAR")
+			)
+			(property
+				(name "LCSC Part #")
+				(value "C2845237")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "buck boost converter TPS63802")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "TPS63802DLAR_DLA0010A")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "7886556d-e6d5-49f8-a275-e7a8893af276")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+						(pin
+							(num "10")
+						)
+						(pin
+							(num "3")
+						)
+						(pin
+							(num "8")
+						)
+						(pin
+							(num "4")
+						)
+						(pin
+							(num "5")
+						)
+						(pin
+							(num "6")
+						)
+						(pin
+							(num "7")
+						)
+						(pin
+							(num "9")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "U9")
+			(value "TPS22919DCK")
+			(footprint "Package_TO_SOT_SMD:SOT-363_SC-70-6")
+			(datasheet "https://www.ti.com/lit/ds/symlink/tps22919.pdf")
+			(description "1.6V to 5.5 V, 1.5 A, 90-mΩ Self-Protected Load Switch with Controlled Rise Time, SC-70-6")
+			(fields
+				(field
+					(name "Footprint") "Package_TO_SOT_SMD:SOT-363_SC-70-6")
+				(field
+					(name "Datasheet") "https://www.ti.com/lit/ds/symlink/tps22919.pdf")
+				(field
+					(name "Description") "1.6V to 5.5 V, 1.5 A, 90-mΩ Self-Protected Load Switch with Controlled Rise Time, SC-70-6")
+			)
+			(libsource
+				(lib "Power_Management")
+				(part "TPS22919DCK")
+				(description "1.6V to 5.5 V, 1.5 A, 90-mΩ Self-Protected Load Switch with Controlled Rise Time, SC-70-6")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "dnp")
+			)
+			(property
+				(name "ki_keywords")
+				(value "high-side power distribution switch")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "SOT?363*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "f33016e3-0b89-4818-9a94-a20d02300ff5")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "3")
+						)
+						(pin
+							(num "4")
+						)
+						(pin
+							(num "2")
+						)
+						(pin
+							(num "6")
+						)
+						(pin
+							(num "5")
+						)
+					)
+				)
+			)
+		)
 	)
 	(groups)
 	(variants)
 	(libparts
-		(libpart
-			(lib "")
-			(part "C_1")
-			(description "Unpolarized capacitor")
-			(footprints
-				(fp "C_*")
-			)
-			(fields
-				(field
-					(name "Reference") "C")
-				(field
-					(name "Value") "C")
-				(field
-					(name "Footprint")
-				)
-				(field
-					(name "Datasheet")
-				)
-				(field
-					(name "Description") "Unpolarized capacitor")
-			)
-			(pins
-				(pin
-					(num "1")
-					(name "")
-					(type "passive")
-				)
-				(pin
-					(num "2")
-					(name "")
-					(type "passive")
-				)
-			)
-		)
 		(libpart
 			(lib "Audio")
 			(part "MAX98357A")
@@ -3728,55 +6756,135 @@
 				(pin
 					(num "17")
 					(name "PAD")
-					(type "passive")
+					(type "unspecified")
 				)
 			)
 		)
 		(libpart
 			(lib "Battery_Management")
-			(part "MCP73831-2-OT")
-			(description "Single cell, Li-Ion/Li-Po charge management controller, 4.20V, Tri-State Status Output, in SOT23-5 package")
-			(docs "http://ww1.microchip.com/downloads/en/DeviceDoc/20001984g.pdf")
+			(part "MCP73871-2CC")
+			(description "Single cell, Li-Ion/Li-Po charge management controller, 4.20V, 6h safety timer, 3.1V LBO threshold")
+			(docs "http://www.mouser.com/ds/2/268/22090a-52174.pdf")
 			(footprints
-				(fp "SOT?23*")
+				(fp "QFN*4x4mm*P0.5mm*")
 			)
 			(fields
 				(field
 					(name "Reference") "U")
 				(field
-					(name "Value") "MCP73831-2-OT")
+					(name "Value") "MCP73871-2CC")
 				(field
-					(name "Footprint") "Package_TO_SOT_SMD:SOT-23-5")
+					(name "Footprint") "Package_DFN_QFN:QFN-20-1EP_4x4mm_P0.5mm_EP2.5x2.5mm")
 				(field
-					(name "Datasheet") "http://ww1.microchip.com/downloads/en/DeviceDoc/20001984g.pdf")
+					(name "Datasheet") "http://www.mouser.com/ds/2/268/22090a-52174.pdf")
 				(field
-					(name "Description") "Single cell, Li-Ion/Li-Po charge management controller, 4.20V, Tri-State Status Output, in SOT23-5 package")
+					(name "Description") "Single cell, Li-Ion/Li-Po charge management controller, 4.20V, 6h safety timer, 3.1V LBO threshold")
 			)
 			(pins
 				(pin
 					(num "1")
-					(name "STAT")
-					(type "tri_state")
+					(name "OUT")
+					(type "power_out")
 				)
 				(pin
 					(num "2")
+					(name "VPCC")
+					(type "input")
+				)
+				(pin
+					(num "3")
+					(name "SEL")
+					(type "input")
+				)
+				(pin
+					(num "4")
+					(name "PROG2")
+					(type "input")
+				)
+				(pin
+					(num "5")
+					(name "THERM")
+					(type "bidirectional")
+				)
+				(pin
+					(num "6")
+					(name "~{PG}")
+					(type "open_collector")
+				)
+				(pin
+					(num "7")
+					(name "STAT2")
+					(type "open_collector")
+				)
+				(pin
+					(num "8")
+					(name "STAT1/~{LBO}")
+					(type "open_collector")
+				)
+				(pin
+					(num "9")
+					(name "~{TE}")
+					(type "input")
+				)
+				(pin
+					(num "10")
 					(name "V_{SS}")
 					(type "power_in")
 				)
 				(pin
-					(num "3")
+					(num "11")
+					(name "V_{SS}")
+					(type "passive")
+				)
+				(pin
+					(num "12")
+					(name "PROG3")
+					(type "bidirectional")
+				)
+				(pin
+					(num "13")
+					(name "PROG1")
+					(type "bidirectional")
+				)
+				(pin
+					(num "14")
 					(name "V_{BAT}")
 					(type "power_out")
 				)
 				(pin
-					(num "4")
-					(name "V_{DD}")
+					(num "15")
+					(name "V_{BAT}")
+					(type "passive")
+				)
+				(pin
+					(num "16")
+					(name "V_{BAT_SENSE}")
+					(type "input")
+				)
+				(pin
+					(num "17")
+					(name "CE")
+					(type "input")
+				)
+				(pin
+					(num "18")
+					(name "IN")
 					(type "power_in")
 				)
 				(pin
-					(num "5")
-					(name "PROG")
-					(type "input")
+					(num "19")
+					(name "IN")
+					(type "passive")
+				)
+				(pin
+					(num "20")
+					(name "OUT")
+					(type "passive")
+				)
+				(pin
+					(num "21")
+					(name "V_{SS}")
+					(type "passive")
 				)
 			)
 		)
@@ -3810,6 +6918,36 @@
 				(pin
 					(num "2")
 					(name "Pin_2")
+					(type "passive")
+				)
+			)
+		)
+		(libpart
+			(lib "Connector")
+			(part "TestPoint")
+			(description "test point")
+			(footprints
+				(fp "Pin*")
+				(fp "Test*")
+			)
+			(fields
+				(field
+					(name "Reference") "TP")
+				(field
+					(name "Value") "TestPoint")
+				(field
+					(name "Footprint")
+				)
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "test point")
+			)
+			(pins
+				(pin
+					(num "1")
+					(name "1")
 					(type "passive")
 				)
 			)
@@ -3919,6 +7057,40 @@
 				(pin
 					(num "SH")
 					(name "SHIELD")
+					(type "passive")
+				)
+			)
+		)
+		(libpart
+			(lib "Connector_Generic")
+			(part "Conn_01x02")
+			(description "Generic connector, single row, 01x02, script generated (kicad-library-utils/schlib/autogen/connector/)")
+			(footprints
+				(fp "Connector*:*_1x??_*")
+			)
+			(fields
+				(field
+					(name "Reference") "J")
+				(field
+					(name "Value") "Conn_01x02")
+				(field
+					(name "Footprint")
+				)
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Generic connector, single row, 01x02, script generated (kicad-library-utils/schlib/autogen/connector/)")
+			)
+			(pins
+				(pin
+					(num "1")
+					(name "Pin_1")
+					(type "passive")
+				)
+				(pin
+					(num "2")
+					(name "Pin_2")
 					(type "passive")
 				)
 			)
@@ -4240,6 +7412,43 @@
 		)
 		(libpart
 			(lib "Device")
+			(part "L")
+			(description "Inductor")
+			(footprints
+				(fp "Choke_*")
+				(fp "*Coil*")
+				(fp "Inductor_*")
+				(fp "L_*")
+			)
+			(fields
+				(field
+					(name "Reference") "L")
+				(field
+					(name "Value") "L")
+				(field
+					(name "Footprint")
+				)
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Inductor")
+			)
+			(pins
+				(pin
+					(num "1")
+					(name "1")
+					(type "passive")
+				)
+				(pin
+					(num "2")
+					(name "2")
+					(type "passive")
+				)
+			)
+		)
+		(libpart
+			(lib "Device")
 			(part "LED")
 			(description "Light emitting diode")
 			(footprints
@@ -4307,6 +7516,81 @@
 					(num "2")
 					(name "")
 					(type "passive")
+				)
+			)
+		)
+		(libpart
+			(lib "Mechanical")
+			(part "MountingHole")
+			(description "Mounting Hole without connection")
+			(footprints
+				(fp "MountingHole*")
+			)
+			(fields
+				(field
+					(name "Reference") "H")
+				(field
+					(name "Value") "MountingHole")
+				(field
+					(name "Footprint")
+				)
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Mounting Hole without connection")
+			)
+		)
+		(libpart
+			(lib "Power_Management")
+			(part "TPS22919DCK")
+			(description "1.6V to 5.5 V, 1.5 A, 90-mΩ Self-Protected Load Switch with Controlled Rise Time, SC-70-6")
+			(docs "https://www.ti.com/lit/ds/symlink/tps22919.pdf")
+			(footprints
+				(fp "SOT?363*")
+			)
+			(fields
+				(field
+					(name "Reference") "U")
+				(field
+					(name "Value") "TPS22919DCK")
+				(field
+					(name "Footprint") "Package_TO_SOT_SMD:SOT-363_SC-70-6")
+				(field
+					(name "Datasheet") "https://www.ti.com/lit/ds/symlink/tps22919.pdf")
+				(field
+					(name "Description") "1.6V to 5.5 V, 1.5 A, 90-mΩ Self-Protected Load Switch with Controlled Rise Time, SC-70-6")
+			)
+			(pins
+				(pin
+					(num "1")
+					(name "IN")
+					(type "power_in")
+				)
+				(pin
+					(num "2")
+					(name "GND")
+					(type "power_in")
+				)
+				(pin
+					(num "3")
+					(name "ON")
+					(type "input")
+				)
+				(pin
+					(num "4")
+					(name "NC")
+					(type "no_connect")
+				)
+				(pin
+					(num "5")
+					(name "QOD")
+					(type "open_collector")
+				)
+				(pin
+					(num "6")
+					(name "OUT")
+					(type "power_out")
 				)
 			)
 		)
@@ -4593,54 +7877,6 @@
 		)
 		(libpart
 			(lib "Regulator_Linear")
-			(part "AP2112K-3.3")
-			(description "600mA low dropout linear regulator, with enable pin, 3.8V-6V input voltage range, 3.3V fixed positive output, SOT-23-5")
-			(docs "https://www.diodes.com/assets/Datasheets/AP2112.pdf")
-			(footprints
-				(fp "SOT?23?5*")
-			)
-			(fields
-				(field
-					(name "Reference") "U")
-				(field
-					(name "Value") "AP2112K-3.3")
-				(field
-					(name "Footprint") "Package_TO_SOT_SMD:SOT-23-5")
-				(field
-					(name "Datasheet") "https://www.diodes.com/assets/Datasheets/AP2112.pdf")
-				(field
-					(name "Description") "600mA low dropout linear regulator, with enable pin, 3.8V-6V input voltage range, 3.3V fixed positive output, SOT-23-5")
-			)
-			(pins
-				(pin
-					(num "1")
-					(name "VIN")
-					(type "power_in")
-				)
-				(pin
-					(num "2")
-					(name "GND")
-					(type "power_in")
-				)
-				(pin
-					(num "3")
-					(name "EN")
-					(type "input")
-				)
-				(pin
-					(num "4")
-					(name "NC")
-					(type "no_connect")
-				)
-				(pin
-					(num "5")
-					(name "VOUT")
-					(type "power_out")
-				)
-			)
-		)
-		(libpart
-			(lib "Regulator_Linear")
 			(part "XC6206PxxxMR")
 			(description "Positive 60-250mA Low Dropout Regulator, Fixed Output, SOT-23")
 			(docs "https://www.torexsemi.com/file/xc6206/XC6206.pdf")
@@ -4761,6 +7997,79 @@
 				)
 			)
 		)
+		(libpart
+			(lib "smart-doorbell-power")
+			(part "TPS63802DLAR")
+			(description "2A high-efficiency, low-IQ buck-boost converter, adjustable 1.8V to 5.2V, VSON-HR DLA0010A")
+			(docs "https://www.ti.com/lit/ds/symlink/tps63802.pdf")
+			(footprints
+				(fp "TPS63802DLAR_DLA0010A")
+			)
+			(fields
+				(field
+					(name "Reference") "U")
+				(field
+					(name "Value") "TPS63802DLAR")
+				(field
+					(name "Footprint") "smart-doorbell-power:TPS63802DLAR_DLA0010A")
+				(field
+					(name "Datasheet") "https://www.ti.com/lit/ds/symlink/tps63802.pdf")
+				(field
+					(name "Description") "2A high-efficiency, low-IQ buck-boost converter, adjustable 1.8V to 5.2V, VSON-HR DLA0010A")
+			)
+			(pins
+				(pin
+					(num "1")
+					(name "EN")
+					(type "input")
+				)
+				(pin
+					(num "2")
+					(name "MODE")
+					(type "input")
+				)
+				(pin
+					(num "3")
+					(name "AGND")
+					(type "power_in")
+				)
+				(pin
+					(num "4")
+					(name "FB")
+					(type "input")
+				)
+				(pin
+					(num "5")
+					(name "PG")
+					(type "open_collector")
+				)
+				(pin
+					(num "6")
+					(name "VOUT")
+					(type "power_out")
+				)
+				(pin
+					(num "7")
+					(name "L2")
+					(type "passive")
+				)
+				(pin
+					(num "8")
+					(name "GND")
+					(type "power_in")
+				)
+				(pin
+					(num "9")
+					(name "L1")
+					(type "passive")
+				)
+				(pin
+					(num "10")
+					(name "VIN")
+					(type "power_in")
+				)
+			)
+		)
 	)
 	(libraries
 		(library
@@ -4784,6 +8093,14 @@
 			(uri "${KICAD10_SYMBOL_DIR}/Device.kicad_sym")
 		)
 		(library
+			(logical "Mechanical")
+			(uri "${KICAD10_SYMBOL_DIR}/Mechanical.kicad_sym")
+		)
+		(library
+			(logical "Power_Management")
+			(uri "${KICAD10_SYMBOL_DIR}/Power_Management.kicad_sym")
+		)
+		(library
 			(logical "Power_Protection")
 			(uri "${KICAD10_SYMBOL_DIR}/Power_Protection.kicad_sym")
 		)
@@ -4802,6 +8119,10 @@
 		(library
 			(logical "Switch")
 			(uri "${KICAD10_SYMBOL_DIR}/Switch.kicad_sym")
+		)
+		(library
+			(logical "smart-doorbell-power")
+			(uri "${KIPRJMOD}/smart-doorbell-power.kicad_sym")
 		)
 	)
 	(nets
@@ -4828,6 +8149,12 @@
 				(ref "J3")
 				(pin "10")
 				(pinfunction "Pin_10_10")
+				(pintype "passive")
+			)
+			(node
+				(ref "TP8")
+				(pin "1")
+				(pinfunction "1_1")
 				(pintype "passive")
 			)
 			(node
@@ -4879,14 +8206,13 @@
 			)
 			(node
 				(ref "J3")
-				(pin "24")
-				(pinfunction "Pin_24_24")
+				(pin "4")
+				(pinfunction "Pin_4_4")
 				(pintype "passive")
 			)
 			(node
-				(ref "J3")
-				(pin "4")
-				(pinfunction "Pin_4_4")
+				(ref "R11")
+				(pin "2")
 				(pintype "passive")
 			)
 			(node
@@ -4897,6 +8223,12 @@
 			(node
 				(ref "R14")
 				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "TP7")
+				(pin "1")
+				(pinfunction "1_1")
 				(pintype "passive")
 			)
 			(node
@@ -4916,16 +8248,6 @@
 				(pintype "passive")
 			)
 			(node
-				(ref "C15")
-				(pin "1")
-				(pintype "passive")
-			)
-			(node
-				(ref "C17")
-				(pin "1")
-				(pintype "passive")
-			)
-			(node
 				(ref "C19")
 				(pin "1")
 				(pintype "passive")
@@ -4937,6 +8259,16 @@
 			)
 			(node
 				(ref "C27")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C29")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C30")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -4969,8 +8301,29 @@
 				(pintype "passive")
 			)
 			(node
+				(ref "R22")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "R33")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "R36")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
 				(ref "R5")
 				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "TP6")
+				(pin "1")
+				(pinfunction "1_1")
 				(pintype "passive")
 			)
 			(node
@@ -4980,27 +8333,21 @@
 				(pintype "power_in")
 			)
 			(node
-				(ref "U3")
-				(pin "5")
-				(pinfunction "VOUT_5")
-				(pintype "power_out")
-			)
-			(node
 				(ref "U5")
 				(pin "5")
 				(pinfunction "VP_5")
 				(pintype "passive")
 			)
 			(node
-				(ref "U6")
-				(pin "3")
-				(pinfunction "VI_3")
-				(pintype "power_in")
+				(ref "U8")
+				(pin "6")
+				(pinfunction "VOUT_6")
+				(pintype "power_out")
 			)
 			(node
-				(ref "U7")
-				(pin "3")
-				(pinfunction "VI_3")
+				(ref "U9")
+				(pin "1")
+				(pinfunction "IN_1")
 				(pintype "power_in")
 			)
 		)
@@ -5008,6 +8355,11 @@
 			(code "4")
 			(name "+5V")
 			(class "Default")
+			(node
+				(ref "C24")
+				(pin "1")
+				(pintype "passive")
+			)
 			(node
 				(ref "J2")
 				(pin "A4")
@@ -5038,10 +8390,39 @@
 				(pintype "passive")
 			)
 			(node
+				(ref "R27")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "TP3")
+				(pin "1")
+				(pinfunction "1_1")
+				(pintype "passive")
+			)
+			(node
+				(ref "U2")
+				(pin "17")
+				(pinfunction "CE_17")
+				(pintype "input")
+			)
+			(node
+				(ref "U2")
+				(pin "18")
+				(pinfunction "IN_18")
+				(pintype "power_in")
+			)
+			(node
+				(ref "U2")
+				(pin "19")
+				(pinfunction "IN_19")
+				(pintype "passive")
+			)
+			(node
 				(ref "U2")
 				(pin "4")
-				(pinfunction "V_{DD}_4")
-				(pintype "power_in")
+				(pinfunction "PROG2_4")
+				(pintype "input")
 			)
 		)
 		(net
@@ -5054,8 +8435,13 @@
 				(pintype "passive")
 			)
 			(node
-				(ref "C26")
-				(pin "1")
+				(ref "C33")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "C34")
+				(pin "2")
 				(pintype "passive")
 			)
 			(node
@@ -5070,34 +8456,28 @@
 				(pintype "passive")
 			)
 			(node
+				(ref "TP4")
+				(pin "1")
+				(pinfunction "1_1")
+				(pintype "passive")
+			)
+			(node
 				(ref "U2")
-				(pin "3")
-				(pinfunction "V_{BAT}_3")
+				(pin "14")
+				(pinfunction "V_{BAT}_14")
 				(pintype "power_out")
 			)
 			(node
-				(ref "U3")
-				(pin "1")
-				(pinfunction "VIN_1")
-				(pintype "power_in")
-			)
-			(node
-				(ref "U3")
-				(pin "3")
-				(pinfunction "EN_3")
-				(pintype "input")
-			)
-			(node
-				(ref "U4")
-				(pin "7")
-				(pinfunction "VDD_7")
-				(pintype "power_in")
-			)
-			(node
-				(ref "U4")
-				(pin "8")
-				(pinfunction "VDD_8")
+				(ref "U2")
+				(pin "15")
+				(pinfunction "V_{BAT}_15")
 				(pintype "passive")
+			)
+			(node
+				(ref "U2")
+				(pin "16")
+				(pinfunction "V_{BAT_SENSE}_16")
+				(pintype "input")
 			)
 		)
 		(net
@@ -5124,6 +8504,28 @@
 		)
 		(net
 			(code "7")
+			(name "/BATT_THERM")
+			(class "Default")
+			(node
+				(ref "J5")
+				(pin "1")
+				(pinfunction "Pin_1_1")
+				(pintype "passive")
+			)
+			(node
+				(ref "R26")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "U2")
+				(pin "5")
+				(pinfunction "THERM_5")
+				(pintype "bidirectional")
+			)
+		)
+		(net
+			(code "8")
 			(name "/BTN_LED")
 			(class "Default")
 			(node
@@ -5139,7 +8541,51 @@
 			)
 		)
 		(net
-			(code "8")
+			(code "9")
+			(name "/CAM_3V3")
+			(class "Default")
+			(node
+				(ref "C15")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C17")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "R36")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "TP10")
+				(pin "1")
+				(pinfunction "1_1")
+				(pintype "passive")
+			)
+			(node
+				(ref "U6")
+				(pin "3")
+				(pinfunction "VI_3")
+				(pintype "power_in")
+			)
+			(node
+				(ref "U7")
+				(pin "3")
+				(pinfunction "VI_3")
+				(pintype "power_in")
+			)
+			(node
+				(ref "U9")
+				(pin "6")
+				(pinfunction "OUT_6")
+				(pintype "power_out")
+			)
+		)
+		(net
+			(code "10")
 			(name "/CAM_D0")
 			(class "Default")
 			(node
@@ -5156,7 +8602,7 @@
 			)
 		)
 		(net
-			(code "9")
+			(code "11")
 			(name "/CAM_D1")
 			(class "Default")
 			(node
@@ -5173,7 +8619,7 @@
 			)
 		)
 		(net
-			(code "10")
+			(code "12")
 			(name "/CAM_D2")
 			(class "Default")
 			(node
@@ -5190,7 +8636,7 @@
 			)
 		)
 		(net
-			(code "11")
+			(code "13")
 			(name "/CAM_D3")
 			(class "Default")
 			(node
@@ -5207,7 +8653,7 @@
 			)
 		)
 		(net
-			(code "12")
+			(code "14")
 			(name "/CAM_D4")
 			(class "Default")
 			(node
@@ -5224,7 +8670,7 @@
 			)
 		)
 		(net
-			(code "13")
+			(code "15")
 			(name "/CAM_D5")
 			(class "Default")
 			(node
@@ -5241,7 +8687,7 @@
 			)
 		)
 		(net
-			(code "14")
+			(code "16")
 			(name "/CAM_D6")
 			(class "Default")
 			(node
@@ -5258,7 +8704,7 @@
 			)
 		)
 		(net
-			(code "15")
+			(code "17")
 			(name "/CAM_D7")
 			(class "Default")
 			(node
@@ -5275,7 +8721,7 @@
 			)
 		)
 		(net
-			(code "16")
+			(code "18")
 			(name "/CAM_HREF")
 			(class "Default")
 			(node
@@ -5292,7 +8738,7 @@
 			)
 		)
 		(net
-			(code "17")
+			(code "19")
 			(name "/CAM_PCLK")
 			(class "Default")
 			(node
@@ -5309,7 +8755,7 @@
 			)
 		)
 		(net
-			(code "18")
+			(code "20")
 			(name "/CAM_PWDN")
 			(class "Default")
 			(node
@@ -5325,7 +8771,7 @@
 			)
 		)
 		(net
-			(code "19")
+			(code "21")
 			(name "/CAM_PWDN_2V8")
 			(class "Default")
 			(node
@@ -5346,7 +8792,28 @@
 			)
 		)
 		(net
-			(code "20")
+			(code "22")
+			(name "/CAM_PWR_EN")
+			(class "Default")
+			(node
+				(ref "R37")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "R38")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "U9")
+				(pin "3")
+				(pinfunction "ON_3")
+				(pintype "input")
+			)
+		)
+		(net
+			(code "23")
 			(name "/CAM_RST")
 			(class "Default")
 			(node
@@ -5362,7 +8829,7 @@
 			)
 		)
 		(net
-			(code "21")
+			(code "24")
 			(name "/CAM_RST_2V8")
 			(class "Default")
 			(node
@@ -5383,7 +8850,7 @@
 			)
 		)
 		(net
-			(code "22")
+			(code "25")
 			(name "/CAM_SCL")
 			(class "Default")
 			(node
@@ -5405,7 +8872,7 @@
 			)
 		)
 		(net
-			(code "23")
+			(code "26")
 			(name "/CAM_SDA")
 			(class "Default")
 			(node
@@ -5427,7 +8894,7 @@
 			)
 		)
 		(net
-			(code "24")
+			(code "27")
 			(name "/CAM_VSYNC")
 			(class "Default")
 			(node
@@ -5444,7 +8911,7 @@
 			)
 		)
 		(net
-			(code "25")
+			(code "28")
 			(name "/CAM_XCLK")
 			(class "Default")
 			(node
@@ -5460,7 +8927,7 @@
 			)
 		)
 		(net
-			(code "26")
+			(code "29")
 			(name "/CAM_XCLK_2V8")
 			(class "Default")
 			(node
@@ -5481,7 +8948,7 @@
 			)
 		)
 		(net
-			(code "27")
+			(code "30")
 			(name "/DOORBELL_IN")
 			(class "Default")
 			(node
@@ -5514,7 +8981,7 @@
 			)
 		)
 		(net
-			(code "28")
+			(code "31")
 			(name "/GPIO1")
 			(class "Default")
 			(node
@@ -5540,7 +9007,7 @@
 			)
 		)
 		(net
-			(code "29")
+			(code "32")
 			(name "/GPIO4")
 			(class "Default")
 			(node
@@ -5569,7 +9036,7 @@
 			)
 		)
 		(net
-			(code "30")
+			(code "33")
 			(name "/GPIO5")
 			(class "Default")
 			(node
@@ -5598,7 +9065,7 @@
 			)
 		)
 		(net
-			(code "31")
+			(code "34")
 			(name "/GPIO6")
 			(class "Default")
 			(node
@@ -5621,7 +9088,7 @@
 			)
 		)
 		(net
-			(code "32")
+			(code "35")
 			(name "/GPIO7")
 			(class "Default")
 			(node
@@ -5638,20 +9105,13 @@
 			)
 		)
 		(net
-			(code "33")
+			(code "36")
 			(name "/GPIO19")
 			(class "Default")
 			(node
-				(ref "J2")
-				(pin "A7")
-				(pinfunction "D-_A7")
-				(pintype "bidirectional")
-			)
-			(node
-				(ref "J2")
-				(pin "B7")
-				(pinfunction "D-_B7")
-				(pintype "bidirectional")
+				(ref "R35")
+				(pin "2")
+				(pintype "passive")
 			)
 			(node
 				(ref "U1")
@@ -5659,28 +9119,15 @@
 				(pinfunction "USB_D-_13")
 				(pintype "bidirectional")
 			)
-			(node
-				(ref "U5")
-				(pin "4")
-				(pinfunction "IO3_4")
-				(pintype "passive")
-			)
 		)
 		(net
-			(code "34")
+			(code "37")
 			(name "/GPIO20")
 			(class "Default")
 			(node
-				(ref "J2")
-				(pin "A6")
-				(pinfunction "D+_A6")
-				(pintype "bidirectional")
-			)
-			(node
-				(ref "J2")
-				(pin "B6")
-				(pinfunction "D+_B6")
-				(pintype "bidirectional")
+				(ref "R34")
+				(pin "2")
+				(pintype "passive")
 			)
 			(node
 				(ref "U1")
@@ -5688,15 +9135,51 @@
 				(pinfunction "USB_D+_14")
 				(pintype "bidirectional")
 			)
+		)
+		(net
+			(code "38")
+			(name "/GPIO42_AUX")
+			(class "Default")
 			(node
-				(ref "U5")
-				(pin "3")
-				(pinfunction "IO2_3")
+				(ref "R31")
+				(pin "2")
 				(pintype "passive")
+			)
+			(node
+				(ref "R37")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "R39")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "U1")
+				(pin "35")
+				(pinfunction "IO42_35")
+				(pintype "bidirectional")
 			)
 		)
 		(net
-			(code "35")
+			(code "39")
+			(name "/GPIO43_AUX")
+			(class "Default")
+			(node
+				(ref "R40")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "U1")
+				(pin "37")
+				(pinfunction "TXD0_37")
+				(pintype "bidirectional")
+			)
+		)
+		(net
+			(code "40")
 			(name "/OUTN")
 			(class "Default")
 			(node
@@ -5713,7 +9196,7 @@
 			)
 		)
 		(net
-			(code "36")
+			(code "41")
 			(name "/OUTP")
 			(class "Default")
 			(node
@@ -5730,8 +9213,8 @@
 			)
 		)
 		(net
-			(code "37")
-			(name "/PIR_OUT")
+			(code "42")
+			(name "/PIR_SENSOR_OUT")
 			(class "Default")
 			(node
 				(ref "J7")
@@ -5740,14 +9223,39 @@
 				(pintype "passive")
 			)
 			(node
+				(ref "R29")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "R30")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "R31")
+				(pin "1")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "43")
+			(name "/PIR_WAKE")
+			(class "Default")
+			(node
+				(ref "R30")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
 				(ref "U1")
-				(pin "35")
-				(pinfunction "IO42_35")
+				(pin "15")
+				(pinfunction "IO3_15")
 				(pintype "bidirectional")
 			)
 		)
 		(net
-			(code "38")
+			(code "44")
 			(name "/STATUS_LED")
 			(class "Default")
 			(node
@@ -5763,7 +9271,145 @@
 			)
 		)
 		(net
-			(code "39")
+			(code "45")
+			(name "/SYS")
+			(class "Default")
+			(node
+				(ref "C11")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "C26")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C28")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C31")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C32")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "J9")
+				(pin "1")
+				(pinfunction "Pin_1_1")
+				(pintype "passive")
+			)
+			(node
+				(ref "R24")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "R32")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "TP5")
+				(pin "1")
+				(pinfunction "1_1")
+				(pintype "passive")
+			)
+			(node
+				(ref "U2")
+				(pin "1")
+				(pinfunction "OUT_1")
+				(pintype "power_out")
+			)
+			(node
+				(ref "U2")
+				(pin "20")
+				(pinfunction "OUT_20")
+				(pintype "passive")
+			)
+			(node
+				(ref "U4")
+				(pin "7")
+				(pinfunction "VDD_7")
+				(pintype "power_in")
+			)
+			(node
+				(ref "U4")
+				(pin "8")
+				(pinfunction "VDD_8")
+				(pintype "passive")
+			)
+			(node
+				(ref "U8")
+				(pin "10")
+				(pinfunction "VIN_10")
+				(pintype "power_in")
+			)
+		)
+		(net
+			(code "46")
+			(name "/U5_IO2")
+			(class "Default")
+			(node
+				(ref "J2")
+				(pin "A6")
+				(pinfunction "D+_A6")
+				(pintype "bidirectional")
+			)
+			(node
+				(ref "J2")
+				(pin "B6")
+				(pinfunction "D+_B6")
+				(pintype "bidirectional")
+			)
+			(node
+				(ref "R34")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "U5")
+				(pin "3")
+				(pinfunction "IO2_3")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "47")
+			(name "/U5_IO3")
+			(class "Default")
+			(node
+				(ref "J2")
+				(pin "A7")
+				(pinfunction "D-_A7")
+				(pintype "bidirectional")
+			)
+			(node
+				(ref "J2")
+				(pin "B7")
+				(pinfunction "D-_B7")
+				(pintype "bidirectional")
+			)
+			(node
+				(ref "R35")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "U5")
+				(pin "4")
+				(pinfunction "IO3_4")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "48")
 			(name "GND")
 			(class "Default")
 			(node
@@ -5779,6 +9425,11 @@
 			)
 			(node
 				(ref "C10")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C11")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -5843,6 +9494,11 @@
 				(pintype "passive")
 			)
 			(node
+				(ref "C24")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
 				(ref "C25")
 				(pin "1")
 				(pintype "passive")
@@ -5858,7 +9514,42 @@
 				(pintype "passive")
 			)
 			(node
+				(ref "C28")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "C29")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
 				(ref "C3")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C30")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "C31")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "C32")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "C33")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C34")
 				(pin "1")
 				(pintype "passive")
 			)
@@ -5932,12 +9623,6 @@
 				(pintype "passive")
 			)
 			(node
-				(ref "J3")
-				(pin "23")
-				(pinfunction "Pin_23_23")
-				(pintype "passive")
-			)
-			(node
 				(ref "J4")
 				(pin "2")
 				(pinfunction "Pin_2_2")
@@ -5947,6 +9632,12 @@
 				(ref "J4")
 				(pin "3")
 				(pinfunction "Pin_3_3")
+				(pintype "passive")
+			)
+			(node
+				(ref "J5")
+				(pin "2")
+				(pinfunction "Pin_2_2")
 				(pintype "passive")
 			)
 			(node
@@ -5965,6 +9656,12 @@
 				(ref "J8")
 				(pin "4")
 				(pinfunction "Pin_4_4")
+				(pintype "passive")
+			)
+			(node
+				(ref "J9")
+				(pin "2")
+				(pinfunction "Pin_2_2")
 				(pintype "passive")
 			)
 			(node
@@ -6005,6 +9702,41 @@
 				(pintype "passive")
 			)
 			(node
+				(ref "R21")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "R23")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "R25")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "R26")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "R28")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "R29")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "R38")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
 				(ref "R4")
 				(pin "1")
 				(pintype "passive")
@@ -6023,6 +9755,12 @@
 				(ref "RESET1")
 				(pin "1")
 				(pinfunction "A_1")
+				(pintype "passive")
+			)
+			(node
+				(ref "TP9")
+				(pin "1")
+				(pinfunction "1_1")
 				(pintype "passive")
 			)
 			(node
@@ -6045,15 +9783,33 @@
 			)
 			(node
 				(ref "U2")
-				(pin "2")
-				(pinfunction "V_{SS}_2")
+				(pin "10")
+				(pinfunction "V_{SS}_10")
 				(pintype "power_in")
 			)
 			(node
-				(ref "U3")
-				(pin "2")
-				(pinfunction "GND_2")
-				(pintype "power_in")
+				(ref "U2")
+				(pin "11")
+				(pinfunction "V_{SS}_11")
+				(pintype "passive")
+			)
+			(node
+				(ref "U2")
+				(pin "21")
+				(pinfunction "V_{SS}_21")
+				(pintype "passive")
+			)
+			(node
+				(ref "U2")
+				(pin "3")
+				(pinfunction "SEL_3")
+				(pintype "input")
+			)
+			(node
+				(ref "U2")
+				(pin "9")
+				(pinfunction "~{TE}_9")
+				(pintype "input")
 			)
 			(node
 				(ref "U4")
@@ -6071,7 +9827,7 @@
 				(ref "U4")
 				(pin "17")
 				(pinfunction "PAD_17")
-				(pintype "passive")
+				(pintype "unspecified")
 			)
 			(node
 				(ref "U4")
@@ -6097,15 +9853,44 @@
 				(pinfunction "GND_1")
 				(pintype "power_in")
 			)
+			(node
+				(ref "U8")
+				(pin "2")
+				(pinfunction "MODE_2")
+				(pintype "input")
+			)
+			(node
+				(ref "U8")
+				(pin "3")
+				(pinfunction "AGND_3")
+				(pintype "power_in")
+			)
+			(node
+				(ref "U8")
+				(pin "8")
+				(pinfunction "GND_8")
+				(pintype "power_in")
+			)
+			(node
+				(ref "U9")
+				(pin "2")
+				(pinfunction "GND_2")
+				(pintype "power_in")
+			)
 		)
 		(net
-			(code "40")
+			(code "49")
 			(name "Net-(BOOT1-A)")
 			(class "Default")
 			(node
 				(ref "BOOT1")
 				(pin "1")
 				(pinfunction "A_1")
+				(pintype "passive")
+			)
+			(node
+				(ref "R33")
+				(pin "2")
 				(pintype "passive")
 			)
 			(node
@@ -6116,7 +9901,7 @@
 			)
 		)
 		(net
-			(code "41")
+			(code "50")
 			(name "Net-(D2-A)")
 			(class "Default")
 			(node
@@ -6132,7 +9917,7 @@
 			)
 		)
 		(net
-			(code "42")
+			(code "51")
 			(name "Net-(D2-K)")
 			(class "Default")
 			(node
@@ -6143,13 +9928,13 @@
 			)
 			(node
 				(ref "U2")
-				(pin "1")
-				(pinfunction "STAT_1")
-				(pintype "tri_state")
+				(pin "8")
+				(pinfunction "STAT1/~{LBO}_8")
+				(pintype "open_collector")
 			)
 		)
 		(net
-			(code "43")
+			(code "52")
 			(name "Net-(D3-A)")
 			(class "Default")
 			(node
@@ -6165,7 +9950,7 @@
 			)
 		)
 		(net
-			(code "44")
+			(code "53")
 			(name "Net-(J2-CC1)")
 			(class "Default")
 			(node
@@ -6181,7 +9966,7 @@
 			)
 		)
 		(net
-			(code "45")
+			(code "54")
 			(name "Net-(J2-CC2)")
 			(class "Default")
 			(node
@@ -6197,7 +9982,51 @@
 			)
 		)
 		(net
-			(code "46")
+			(code "55")
+			(name "Net-(J3-Pin_23)")
+			(class "Default")
+			(node
+				(ref "J3")
+				(pin "23")
+				(pinfunction "Pin_23_23")
+				(pintype "passive")
+			)
+			(node
+				(ref "R21")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "TP2")
+				(pin "1")
+				(pinfunction "1_1")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "56")
+			(name "Net-(J3-Pin_24)")
+			(class "Default")
+			(node
+				(ref "J3")
+				(pin "24")
+				(pinfunction "Pin_24_24")
+				(pintype "passive")
+			)
+			(node
+				(ref "R11")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "TP1")
+				(pin "1")
+				(pinfunction "1_1")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "57")
 			(name "Net-(J8-Pin_3)")
 			(class "Default")
 			(node
@@ -6213,7 +10042,39 @@
 			)
 		)
 		(net
-			(code "47")
+			(code "58")
+			(name "Net-(J9-Pin_3)")
+			(class "Default")
+			(node
+				(ref "J9")
+				(pin "3")
+				(pinfunction "Pin_3_3")
+				(pintype "passive")
+			)
+			(node
+				(ref "R39")
+				(pin "2")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "59")
+			(name "Net-(J9-Pin_4)")
+			(class "Default")
+			(node
+				(ref "J9")
+				(pin "4")
+				(pinfunction "Pin_4_4")
+				(pintype "passive")
+			)
+			(node
+				(ref "R40")
+				(pin "2")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "60")
 			(name "Net-(RESET1-B)")
 			(class "Default")
 			(node
@@ -6240,8 +10101,8 @@
 			)
 		)
 		(net
-			(code "48")
-			(name "Net-(U2-PROG)")
+			(code "61")
+			(name "Net-(U2-PROG1)")
 			(class "Default")
 			(node
 				(ref "R12")
@@ -6250,13 +10111,137 @@
 			)
 			(node
 				(ref "U2")
-				(pin "5")
-				(pinfunction "PROG_5")
+				(pin "13")
+				(pinfunction "PROG1_13")
+				(pintype "bidirectional")
+			)
+		)
+		(net
+			(code "62")
+			(name "Net-(U2-PROG3)")
+			(class "Default")
+			(node
+				(ref "R25")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "U2")
+				(pin "12")
+				(pinfunction "PROG3_12")
+				(pintype "bidirectional")
+			)
+		)
+		(net
+			(code "63")
+			(name "Net-(U2-VPCC)")
+			(class "Default")
+			(node
+				(ref "R27")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "R28")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "U2")
+				(pin "2")
+				(pinfunction "VPCC_2")
 				(pintype "input")
 			)
 		)
 		(net
-			(code "49")
+			(code "64")
+			(name "Net-(U4-GAIN_SLOT)")
+			(class "Default")
+			(node
+				(ref "R32")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "U4")
+				(pin "2")
+				(pinfunction "GAIN_SLOT_2")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "65")
+			(name "Net-(U8-EN)")
+			(class "Default")
+			(node
+				(ref "R24")
+				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "U8")
+				(pin "1")
+				(pinfunction "EN_1")
+				(pintype "input")
+			)
+		)
+		(net
+			(code "66")
+			(name "Net-(U8-FB)")
+			(class "Default")
+			(node
+				(ref "R22")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "R23")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "U8")
+				(pin "4")
+				(pinfunction "FB_4")
+				(pintype "input")
+			)
+		)
+		(net
+			(code "67")
+			(name "Net-(U8-L1)")
+			(class "Default")
+			(node
+				(ref "L1")
+				(pin "2")
+				(pinfunction "2_2")
+				(pintype "passive")
+			)
+			(node
+				(ref "U8")
+				(pin "9")
+				(pinfunction "L1_9")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "68")
+			(name "Net-(U8-L2)")
+			(class "Default")
+			(node
+				(ref "L1")
+				(pin "1")
+				(pinfunction "1_1")
+				(pintype "passive")
+			)
+			(node
+				(ref "U8")
+				(pin "7")
+				(pinfunction "L2_7")
+				(pintype "passive")
+			)
+		)
+		(net
+			(code "69")
 			(name "unconnected-(J2-SBU1-PadA8)")
 			(class "Default")
 			(node
@@ -6267,7 +10252,7 @@
 			)
 		)
 		(net
-			(code "50")
+			(code "70")
 			(name "unconnected-(J2-SBU2-PadB8)")
 			(class "Default")
 			(node
@@ -6278,7 +10263,7 @@
 			)
 		)
 		(net
-			(code "51")
+			(code "71")
 			(name "unconnected-(J3-Pin_1-Pad1)")
 			(class "Default")
 			(node
@@ -6289,18 +10274,7 @@
 			)
 		)
 		(net
-			(code "52")
-			(name "unconnected-(U1-IO3-Pad15)")
-			(class "Default")
-			(node
-				(ref "U1")
-				(pin "15")
-				(pinfunction "IO3_15")
-				(pintype "bidirectional+no_connect")
-			)
-		)
-		(net
-			(code "53")
+			(code "72")
 			(name "unconnected-(U1-IO35-Pad28)")
 			(class "Default")
 			(node
@@ -6311,7 +10285,7 @@
 			)
 		)
 		(net
-			(code "54")
+			(code "73")
 			(name "unconnected-(U1-IO36-Pad29)")
 			(class "Default")
 			(node
@@ -6322,7 +10296,7 @@
 			)
 		)
 		(net
-			(code "55")
+			(code "74")
 			(name "unconnected-(U1-IO37-Pad30)")
 			(class "Default")
 			(node
@@ -6333,7 +10307,7 @@
 			)
 		)
 		(net
-			(code "56")
+			(code "75")
 			(name "unconnected-(U1-IO45-Pad26)")
 			(class "Default")
 			(node
@@ -6344,7 +10318,7 @@
 			)
 		)
 		(net
-			(code "57")
+			(code "76")
 			(name "unconnected-(U1-IO46-Pad16)")
 			(class "Default")
 			(node
@@ -6355,40 +10329,29 @@
 			)
 		)
 		(net
-			(code "58")
-			(name "unconnected-(U1-TXD0-Pad37)")
+			(code "77")
+			(name "unconnected-(U2-STAT2-Pad7)")
 			(class "Default")
 			(node
-				(ref "U1")
-				(pin "37")
-				(pinfunction "TXD0_37")
-				(pintype "bidirectional+no_connect")
+				(ref "U2")
+				(pin "7")
+				(pinfunction "STAT2_7")
+				(pintype "open_collector+no_connect")
 			)
 		)
 		(net
-			(code "59")
-			(name "unconnected-(U3-NC-Pad4)")
+			(code "78")
+			(name "unconnected-(U2-~{PG}-Pad6)")
 			(class "Default")
 			(node
-				(ref "U3")
-				(pin "4")
-				(pinfunction "NC_4")
-				(pintype "no_connect")
+				(ref "U2")
+				(pin "6")
+				(pinfunction "~{PG}_6")
+				(pintype "open_collector+no_connect")
 			)
 		)
 		(net
-			(code "60")
-			(name "unconnected-(U4-GAIN_SLOT-Pad2)")
-			(class "Default")
-			(node
-				(ref "U4")
-				(pin "2")
-				(pinfunction "GAIN_SLOT_2")
-				(pintype "passive+no_connect")
-			)
-		)
-		(net
-			(code "61")
+			(code "79")
 			(name "unconnected-(U4-NC-Pad5)")
 			(class "Default")
 			(node
@@ -6399,7 +10362,7 @@
 			)
 		)
 		(net
-			(code "62")
+			(code "80")
 			(name "unconnected-(U4-NC-Pad6)")
 			(class "Default")
 			(node
@@ -6410,7 +10373,7 @@
 			)
 		)
 		(net
-			(code "63")
+			(code "81")
 			(name "unconnected-(U4-NC-Pad12)")
 			(class "Default")
 			(node
@@ -6421,7 +10384,7 @@
 			)
 		)
 		(net
-			(code "64")
+			(code "82")
 			(name "unconnected-(U4-NC-Pad13)")
 			(class "Default")
 			(node
@@ -6432,7 +10395,7 @@
 			)
 		)
 		(net
-			(code "65")
+			(code "83")
 			(name "unconnected-(U5-IO4-Pad6)")
 			(class "Default")
 			(node
@@ -6440,6 +10403,39 @@
 				(pin "6")
 				(pinfunction "IO4_6")
 				(pintype "passive+no_connect")
+			)
+		)
+		(net
+			(code "84")
+			(name "unconnected-(U8-PG-Pad5)")
+			(class "Default")
+			(node
+				(ref "U8")
+				(pin "5")
+				(pinfunction "PG_5")
+				(pintype "open_collector+no_connect")
+			)
+		)
+		(net
+			(code "85")
+			(name "unconnected-(U9-NC-Pad4)")
+			(class "Default")
+			(node
+				(ref "U9")
+				(pin "4")
+				(pinfunction "NC_4")
+				(pintype "no_connect")
+			)
+		)
+		(net
+			(code "86")
+			(name "unconnected-(U9-QOD-Pad5)")
+			(class "Default")
+			(node
+				(ref "U9")
+				(pin "5")
+				(pinfunction "QOD_5")
+				(pintype "open_collector+no_connect")
 			)
 		)
 	)

@@ -1,6 +1,6 @@
 # Smart Doorbell Agent Guide
 
-This file is the working guide for AI agents editing this repository. Treat the KiCad project under `pcb/smart-doorbell/` as the routed PCB source of truth for net assignments. Treat `/home/ethioking/Documents/Documentation/bom-JLCPCB Assembly Order.xls` as the final JLCPCB assembly BOM source when component availability/cost swaps disagree with the preliminary KiCad BOM.
+This file is the working guide for AI agents editing this repository. Treat the KiCad project under `pcb/smart-doorbell/` as the routed PCB source of truth for references, values, footprints, population intent, and net assignments. Use `pcb/smart-doorbell/production/Smart_Doorbell_Project_B_bom-JLCPCB_FINAL.csv` as the authoritative per-reference LCSC assignment record for this revision. The exact ordered JLCPCB upload files are recorded in `pcb/smart-doorbell/jlcpcb/ORDERED_RELEASE.md`; the ordered plugin BOM must remain an exact per-reference match to the protected BOM. `/home/ethioking/Documents/Documentation/bom-JLCPCB Assembly Order.xls` describes the obsolete MCP73831/AP2112 power topology and must not be uploaded or treated as authoritative. It may only be consulted for substitution candidates after independently confirming the current reference, value, footprint, electrical requirements, and JLC/LCSC assignment.
 
 ## Development Workflow
 
@@ -58,7 +58,7 @@ Alternatively, you can run them manually in separate panes:
 
 ## Hardware Source Of Truth
 
-The KiCad BOM/netlist may contain preliminary component values. Per the final assembly order, the effective MCU target is `ESP32-S3-WROOM-1-N16R8`; the WROOM-2 value in the KiCad files reflects an earlier cost/availability option. Always verify firmware flash/PSRAM settings against the actual module being assembled.
+The effective MCU target is `ESP32-S3-WROOM-1-N16R8`. U1 is intentionally excluded from the JLC assembly BOM for hand soldering, so verify the separately sourced module and firmware flash/PSRAM settings against that exact 16 MB flash / 8 MB PSRAM variant.
 
 Confirmed routed net assignments from `pcb/smart-doorbell/smart-doorbell.net`:
 
@@ -68,7 +68,8 @@ Confirmed routed net assignments from `pcb/smart-doorbell/smart-doorbell.net`:
 - I2S microphone: ICS-43434 SD on GPIO6.
 - I2S amplifier: MAX98357A DIN on GPIO7, `AMP_EN` on GPIO44.
 - USB-C native USB: D- GPIO19, D+ GPIO20, protected by SRV05-4.
-- Optional PIR header: `PIR_OUT` on GPIO42.
+- PIR header J7.2: `PIR_SENSOR_OUT`, with R29 (100k) providing a pulldown and populated R30 (1k) routing `PIR_WAKE` to GPIO3 by default.
+- GPIO42 is the DNP PIR fallback through R31 and otherwise serves the `GPIO42_AUX` contingency path; do not treat it as the default PIR input.
 - Status LED: GPIO47.
 - Button LED: GPIO48.
 

@@ -11,7 +11,8 @@
 // Wake/button and indicators
 #define DOORBELL_BUTTON_PIN GPIO_NUM_2   // /DOORBELL_IN
 #define BATTERY_ADC_PIN     GPIO_NUM_1   // /GPIO1, 100k/100k divider
-#define PIR_OUT_PIN         GPIO_NUM_42  // /PIR_OUT optional header
+#define PIR_WAKE_PIN        GPIO_NUM_3   // /PIR_WAKE, J7.2 through populated R30
+#define PIR_OUT_PIN         PIR_WAKE_PIN // Compatibility alias for existing firmware
 #define STATUS_LED_PIN      GPIO_NUM_47  // /STATUS_LED
 #define BUTTON_LED_PIN      GPIO_NUM_48  // /BTN_LED
 

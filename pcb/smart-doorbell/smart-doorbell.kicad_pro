@@ -60,10 +60,10 @@
           "hatch_smoothing_level": 0,
           "hatch_smoothing_value": 0.1,
           "hatch_thickness": 1.0,
-          "min_clearance": 0.5,
+          "min_clearance": 0.25,
           "min_island_area": 10.0,
           "min_thickness": 0.25,
-          "pad_connection": 1,
+          "pad_connection": 2,
           "remove_islands": 0,
           "thermal_relief_gap": 0.5,
           "thermal_relief_spoke_width": 0.5
@@ -76,7 +76,16 @@
           "width": 0.0
         }
       ],
-      "drc_exclusions": [],
+      "drc_exclusions": [
+        [
+          "silk_edge_clearance|132150000|146950000|398c027b-ed8d-4dc2-a67f-2f37f040cddb|66691781-1295-4a87-bb5f-7345a14d8c56",
+          "Intentional for usb c cable to fully push in"
+        ],
+        [
+          "silk_edge_clearance|141550000|146950000|398c027b-ed8d-4dc2-a67f-2f37f040cddb|ff845f04-7c69-476e-b94c-0384d05ed543",
+          "Intentional for usb c cable to fully push in"
+        ]
+      ],
       "meta": {
         "version": 2
       },
@@ -156,7 +165,7 @@
         "min_microvia_drill": 0.1,
         "min_resolved_spokes": 1,
         "min_silk_clearance": 0.0,
-        "min_text_height": 0.8,
+        "min_text_height": 0.5,
         "min_text_thickness": 0.08,
         "min_through_hole_diameter": 0.2,
         "min_track_width": 0.2,
@@ -284,7 +293,12 @@
     "equivalence_files": []
   },
   "erc": {
-    "erc_exclusions": [],
+    "erc_exclusions": [
+      [
+        "pin_to_pin|2501900|647700|8ac6b434-b39d-4d61-8582-dfbbd9a3a5d9|34af2270-df50-4eab-a1ba-52dee52fbc35|/38cd52bd-ce09-46d7-bc8a-28401a6698c9|/38cd52bd-ce09-46d7-bc8a-28401a6698c9|/38cd52bd-ce09-46d7-bc8a-28401a6698c9",
+        "> U4 pin 17 is the MAX98357A exposed thermal pad. Per the datasheet, it is not internally connected but must be externally tied\n  > to a solid GND plane for thermal dissipation. ERC warning is caused by the library’s “unspecified” pin type; connection is\n  > intentional.> U4 pin 17 is the MAX98357A exposed thermal pad. Per the datasheet, it is not internally connected but must be externally tied\n  > to a solid GND plane for thermal dissipation. ERC warning is caused by the library’s “unspecified” pin type; connection is\n  > intentional."
+      ]
+    ],
     "meta": {
       "version": 0
     },
@@ -640,9 +654,21 @@
           "label": "#",
           "name": "${ITEM_NUMBER}",
           "show": false
+        },
+        {
+          "group_by": false,
+          "label": "MPN",
+          "name": "MPN",
+          "show": true
+        },
+        {
+          "group_by": false,
+          "label": "LCSC Part #",
+          "name": "LCSC Part #",
+          "show": true
         }
       ],
-      "filter_string": "",
+      "filter_string": "R40",
       "group_symbols": true,
       "include_excluded_from_bom": true,
       "name": "",
@@ -690,7 +716,7 @@
         "uuid": "38cd52bd-ce09-46d7-bc8a-28401a6698c9"
       }
     ],
-    "used_designators": "U8",
+    "used_designators": "J5,J9,#PWR3,#PWR15,#PWR17,#PWR30,#PWR34,#PWR36,#PWR47-48,#PWR80-96,R11,R21-40,TP1-10,U3,U8,C11,C24,C28-34,L1",
     "variants": []
   },
   "sheets": [

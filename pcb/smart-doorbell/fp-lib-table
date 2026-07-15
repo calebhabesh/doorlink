@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "smart-doorbell-power")(type "KiCad")(uri "${KIPRJMOD}/smart-doorbell-power.pretty")(options "")(descr "Project-local power-management footprints"))
+)

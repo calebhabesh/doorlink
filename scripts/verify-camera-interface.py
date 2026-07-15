@@ -3,7 +3,9 @@
 
 This check is intentionally narrow: it guards the Rev B camera connector
 against the Rev A DOVDD/SCCB rail mistake and verifies the approved
-DCXYX-LZTKQJ-5M-339-V1 24-pin OV5640 module pin table.
+DCXYX-LZTKQJ-5M-357-V1 24-pin OV5640 module pin table. Pins 23 and
+24 are deliberately isolated behind DNP links until the exact 357-V1 FF
+camera pinout and orientation are verified.
 """
 
 from __future__ import annotations
@@ -41,9 +43,20 @@ EXPECTED_J3_NETS = {
     "20": "/CAM_D3",  # Y5
     "21": "/CAM_D1",  # Y3
     "22": "/CAM_D2",  # Y4
-    "23": "GND",  # AF_GND
-    "24": "+2V8",  # AFVDD
+    "23": "Net-(J3-Pin_23)",  # Possible AF_GND; isolated via DNP R21
+    "24": "Net-(J3-Pin_24)",  # Possible AFVDD; isolated via DNP R11
 }
+
+EXPECTED_CAMERA_CONTINGENCY_NETS = {
+    ("R21", "1"): "Net-(J3-Pin_23)",
+    ("R21", "2"): "GND",
+    ("TP2", "1"): "Net-(J3-Pin_23)",
+    ("R11", "1"): "Net-(J3-Pin_24)",
+    ("R11", "2"): "+2V8",
+    ("TP1", "1"): "Net-(J3-Pin_24)",
+}
+
+EXPECTED_DNP_COMPONENTS = {"R11", "R21"}
 
 EXPECTED_PULLUPS = {
     ("R13", "2"): "+2V8",  # CAM_SDA pullup
@@ -174,6 +187,25 @@ def parse_component_values(netlist: str) -> dict[str, str]:
     return values
 
 
+def parse_dnp_components() -> set[str]:
+    """Return refs marked DNP in the KiCad schematic source.
+
+    KiCad's sexpr netlist exporter omits the DNP flag when a component is also
+    excluded from the BOM, so this one assembly-safety property is checked in
+    the schematic itself.
+    """
+    dnp_refs: set[str] = set()
+    source = SCHEMATIC.read_text(encoding="utf-8")
+    for ref in EXPECTED_DNP_COMPONENTS:
+        reference = f'\t\t(property "Reference" "{ref}"'
+        reference_at = source.find(reference)
+        symbol_at = source.rfind("\n\t(symbol\n", 0, reference_at)
+        if reference_at >= 0 and symbol_at >= 0 and "\n\t\t(dnp yes)" in source[symbol_at:reference_at]:
+            dnp_refs.add(ref)
+
+    return dnp_refs
+
+
 def check_expected(
     node_nets: dict[tuple[str, str], str], ref: str, pin: str, expected: str
 ) -> str | None:
@@ -187,6 +219,7 @@ def main() -> int:
     netlist = export_netlist()
     node_nets = parse_node_nets(netlist)
     component_values = parse_component_values(netlist)
+    dnp_components = parse_dnp_components()
 
     failures: list[str] = []
 
@@ -199,6 +232,15 @@ def main() -> int:
         failure = check_expected(node_nets, ref, pin, expected)
         if failure:
             failures.append(failure)
+
+    for (ref, pin), expected in EXPECTED_CAMERA_CONTINGENCY_NETS.items():
+        failure = check_expected(node_nets, ref, pin, expected)
+        if failure:
+            failures.append(failure)
+
+    for ref in EXPECTED_DNP_COMPONENTS:
+        if ref not in dnp_components:
+            failures.append(f"{ref}: expected DNP marking")
 
     for (ref, pin), forbidden in FORBIDDEN_NETS.items():
         actual = node_nets.get((ref, pin))

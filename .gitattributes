@@ -1,2 +1,10 @@
 # Normalize generated production CSVs so reviews stay focused on content.
 pcb/smart-doorbell/production/*.csv text eol=lf
+
+# Ordered/reviewed manufacturing artifacts are byte-for-byte release evidence.
+# Preserve their original line endings so documented hashes survive a clone.
+pcb/smart-doorbell/production/Smart_Doorbell_Project_B* -text -eol
+pcb/smart-doorbell/jlcpcb/gerber/* -text
+pcb/smart-doorbell/jlcpcb/production_files/* -text
+pcb/smart-doorbell/production/Smart_Doorbell_Project_B*.csv whitespace=-trailing-space,cr-at-eol
+pcb/smart-doorbell/jlcpcb/production_files/*.csv whitespace=-trailing-space,cr-at-eol

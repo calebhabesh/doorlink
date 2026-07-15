@@ -97,6 +97,8 @@ _autosave-*
 backups/
 *.rpt
 *.zip
+!pcb/smart-doorbell/production/Smart_Doorbell_Project_B.zip
+!pcb/smart-doorbell/jlcpcb/production_files/GERBER-smart-doorbell.zip
 
 # Tooling and scripts
 .superpowers/
