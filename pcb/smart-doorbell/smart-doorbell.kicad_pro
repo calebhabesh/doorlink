@@ -564,6 +564,7 @@
       "netlist": "",
       "plot": "gerbers",
       "specctra_dsn": "",
+      "step": "",
       "vrml": ""
     },
     "page_layout_descr_file": ""
@@ -668,7 +669,7 @@
           "show": true
         }
       ],
-      "filter_string": "R40",
+      "filter_string": "",
       "group_symbols": true,
       "include_excluded_from_bom": true,
       "name": "",
@@ -716,7 +717,7 @@
         "uuid": "38cd52bd-ce09-46d7-bc8a-28401a6698c9"
       }
     ],
-    "used_designators": "J5,J9,#PWR3,#PWR15,#PWR17,#PWR30,#PWR34,#PWR36,#PWR47-48,#PWR80-96,R11,R21-40,TP1-10,U3,U8,C11,C24,C28-34,L1",
+    "used_designators": "J5,J9-10,#PWR3,#PWR15,#PWR17,#PWR30,#PWR34,#PWR36,#PWR47-48,#PWR80-97,R11,R21-40,TP1-10,U3,U8,C11,C24,C28-35,L1",
     "variants": []
   },
   "sheets": [

@@ -1,6 +1,6 @@
 # Smart Doorbell Agent Guide
 
-This file is the working guide for AI agents editing this repository. Treat the KiCad project under `pcb/smart-doorbell/` as the routed PCB source of truth for references, values, footprints, population intent, and net assignments. Use `pcb/smart-doorbell/production/Smart_Doorbell_Project_B_bom-JLCPCB_FINAL.csv` as the authoritative per-reference LCSC assignment record for this revision. The exact ordered JLCPCB upload files are recorded in `pcb/smart-doorbell/jlcpcb/ORDERED_RELEASE.md`; the ordered plugin BOM must remain an exact per-reference match to the protected BOM. `/home/ethioking/Documents/Documentation/bom-JLCPCB Assembly Order.xls` describes the obsolete MCP73831/AP2112 power topology and must not be uploaded or treated as authoritative. It may only be consulted for substitution candidates after independently confirming the current reference, value, footprint, electrical requirements, and JLC/LCSC assignment.
+This file is the working guide for AI agents editing this repository. Treat the KiCad project under `pcb/smart-doorbell/` as the routed PCB source of truth for references, values, footprints, population intent, and net assignments. Use `pcb/smart-doorbell/production/Smart_Doorbell_Project_B_bom-JLCPCB_FINAL.csv` as the authoritative per-reference LCSC assignment record for inherited references; the Rev C population delta is recorded and checked separately. The exact ordered Rev B JLCPCB upload files are recorded in `pcb/smart-doorbell/jlcpcb/ORDERED_RELEASE.md`; the isolated Rev C candidate and its remaining external preview gate are recorded in `pcb/smart-doorbell/jlcpcb/rev-c/RELEASE_CANDIDATE.md`. The ordered Rev B plugin BOM must remain an exact per-reference match to the protected BOM. `/home/ethioking/Documents/Documentation/bom-JLCPCB Assembly Order.xls` describes the obsolete MCP73831/AP2112 power topology and must not be uploaded or treated as authoritative. It may only be consulted for substitution candidates after independently confirming the current reference, value, footprint, electrical requirements, and JLC/LCSC assignment.
 
 ## Development Workflow
 
@@ -69,11 +69,11 @@ Confirmed routed net assignments from `pcb/smart-doorbell/smart-doorbell.net`:
 - I2S amplifier: MAX98357A DIN on GPIO7, `AMP_EN` on GPIO44.
 - USB-C native USB: D- GPIO19, D+ GPIO20, protected by SRV05-4.
 - PIR header J7.2: `PIR_SENSOR_OUT`, with R29 (100k) providing a pulldown and populated R30 (1k) routing `PIR_WAKE` to GPIO3 by default.
-- GPIO42 is the DNP PIR fallback through R31 and otherwise serves the `GPIO42_AUX` contingency path; do not treat it as the default PIR input.
+- Rev C leaves the GPIO42 PIR fallback R31 DNP and populates R37, so `GPIO42_AUX` drives `CAM_PWR_EN` through R37. Do not treat GPIO42 as the default PIR input or populate R31 while R37 is fitted.
 - Status LED: GPIO47.
 - Button LED: GPIO48.
 
-The OV5640 24-pin FPC connector must match the camera ribbon cable pinout exactly. The ESP GPIO choices on the WROOM side were selected for clean PCB routing; they are flexible during design, but fixed once the board is fabricated. Current routed camera FPC to ESP GPIO mapping:
+The OV5640 24-pin FPC connector must match the camera ribbon cable pinout exactly. With the selected module lens-up/contact-down in bottom-contact J3, camera pin `n` physically mates with J3 pad `25 - n`; Rev C deliberately routes that mirrored physical map. The ESP GPIO choices on the WROOM side were selected for clean PCB routing; they are flexible during design, but fixed once the board is fabricated. Current routed camera FPC to ESP GPIO mapping:
 
 | Signal | ESP GPIO |
 | --- | --- |
@@ -93,6 +93,7 @@ The OV5640 24-pin FPC connector must match the camera ribbon cable pinout exactl
 | CAM_SCL | GPIO39 |
 | CAM_RST | GPIO40 |
 | CAM_VSYNC | GPIO41 |
+| CAM_PWR_EN | GPIO42 |
 
 Do not assign firmware peripherals to GPIO19 or GPIO20 except for USB.
 
@@ -101,7 +102,7 @@ Do not assign firmware peripherals to GPIO19 or GPIO20 except for USB.
 - Keep secrets out of git. `main/config.h` is ignored; update `main/config.example.h` for tracked configuration shape.
 - The intended runtime model is event-driven deep sleep:
   - configure EXT0 wakeup on `DOORBELL_IN`/GPIO2;
-  - on button wake, connect Wi-Fi, capture a real JPEG, record visitor audio, upload media to the gateway, open a short MQTT listen window, then sleep;
+  - on button wake, prepare safe camera controls, enable U9 through `CAM_PWR_EN`/GPIO42, wait for the camera rails, capture a real JPEG, and deinitialize the camera and disable U9 as soon as its frame buffer has been returned and always before sleep;
   - avoid full-duplex audio and acoustic echo cancellation on the ESP32-S3.
 - Current firmware is allowed to be a scaffold until hardware arrives. Verify `main/board_pins.h` against the routed PCB netlist before touching camera, audio, wake, USB, or power code.
 

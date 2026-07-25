@@ -1,79 +1,86 @@
 # PCB release artifacts
 
+The routed KiCad project is the electrical and population source of truth.
+`Smart_Doorbell_Project_B_bom-JLCPCB_FINAL.csv` remains the protected,
+authoritative per-reference LCSC assignment record for all references inherited
+by Rev C.
+
+The external `bom-JLCPCB Assembly Order.xls` describes the obsolete
+MCP73831/AP2112 topology. It is not an upload BOM and may only be consulted for
+substitution candidates after every current requirement has been reverified.
+
 ## Ordered Rev B release
 
-The PCB/PCBA order submitted on 2026-07-15 used the kicad-jlcpcb-tools outputs:
+The exact PCB/PCBA package submitted on 2026-07-15 remains at:
 
 - `../jlcpcb/production_files/GERBER-smart-doorbell.zip`
 - `../jlcpcb/production_files/BOM-smart-doorbell.csv`
 - `../jlcpcb/production_files/CPL-smart-doorbell.csv`
 
-Their immutable ordered hashes and provenance are recorded in
-`../jlcpcb/ORDERED_RELEASE.md`. The project-local part and placement corrections
-are stored in `../jlcpcb/project.db`. The fabrication ZIP includes the native
-F.Mask correction applied and verified by `../../../scripts/fix-jlcpcb-mask.sh`.
+Its immutable hashes, order identifiers, and provenance are recorded in
+`../jlcpcb/ORDERED_RELEASE.md`. Run `sha256sum -c ORDERED_RELEASE.sha256` from
+`../jlcpcb/` before using Rev B as comparison evidence.
 
-Do not regenerate or re-upload this package merely because KiCad is saved after
-the order. Any future upload must be regenerated from the then-current sources
-and pass a new release review.
+Rev B contains the known physical J3 camera-pin reversal. Never reorder it and
+do not insert the selected lens-up/contact-down camera directly into a Rev B
+board. Rev B populated R36, left U9/R37 DNP, and used populated fixed R26 in
+place of real cell-temperature sensing; these facts describe only the ordered
+historical batch.
+
+## Rev C release candidate
+
+Rev C has a separate, non-ordered release directory:
+
+- `../jlcpcb/rev-c/production_files/GERBER-smart-doorbell.zip`
+- `../jlcpcb/rev-c/production_files/BOM-smart-doorbell.csv`
+- `../jlcpcb/rev-c/production_files/CPL-smart-doorbell.csv`
+
+Exact hashes, generation provenance, local verification results, and the
+remaining external JLCPCB preview gate are recorded in
+`../jlcpcb/rev-c/RELEASE_CANDIDATE.md`. Run
+`sha256sum -c RELEASE_CANDIDATE.sha256` from that directory before upload.
+
+Rev C contains 85 populated references in both BOM and CPL. Existing protected
+Rev B references retain their exact value/LCSC assignment. The intentional
+population delta is:
+
+- add/populate C35 (`1u`, C15849);
+- add/populate R37 (`1k`, C21190);
+- add/populate U9 (`TPS22919DCKR`, C2149796);
+- remove/DNP R26 and R36.
+
+U9 is the only populated path from `+3V3` to `CAM_3V3`. R38 and the TPS22919
+internal pulldown keep it default-off; GPIO42 reaches `CAM_PWR_EN` through
+populated R37. R31 must remain DNP so GPIO42 is not also connected to the PIR
+fallback. QOD is intentionally open.
+
+Rev C intentionally excludes these references from both BOM and CPL:
+
+- U1 (`ESP32-S3-WROOM-1-N16R8`) and MK1 (`ICS-43434`), hand solder;
+- R11 and R21, DNP camera contingency links;
+- R26, DNP fixed THERM resistor;
+- R31, DNP GPIO42 PIR fallback;
+- R36, DNP camera-power bypass;
+- J5 and J9, unpopulated hand-solder/expansion connections;
+- TP1 through TP10, bare test points;
+- H1 through H4, mechanical mounting holes.
+
+J5 is only a connection for an external thermistor. No NTC is present in the
+Rev C JLCPCB BOM. Do not charge a battery until a suitable
+10 kOhm-at-25-degrees-C NTC is wired to J5 and thermally attached to the cell.
+
+The BOM explicitly targets timer-disabled `MCP73871T-2AAI/ML`; do not substitute
+the six-hour-timer `MCP73871T-2CCI/ML` at the present approximately 213 mA
+charge current.
 
 ## Legacy comparison evidence
 
 `Smart_Doorbell_Project_B.zip` and its adjacent Fabrication Toolkit exports are
-retained only as previously reviewed comparison evidence. They are not the files
-used for the 2026-07-15 order.
+retained only as previously reviewed comparison evidence. They were not the
+files submitted for the 2026-07-15 order.
 
-`Smart_Doorbell_Project_B_bom-JLCPCB_FINAL.csv` remains the protected,
-authoritative per-reference LCSC assignment record. The ordered plugin BOM was
-verified to match it exactly. The external `bom-JLCPCB Assembly Order.xls`
-contains an earlier MCP73831/AP2112 topology and is not a valid upload BOM for
-this revision.
-
-## Assembly status
-
-The assembly exports intentionally exclude these hand-solder/DNP parts:
-
-- U1 (ESP32-S3-WROOM-1-N16R8), hand solder
-- MK1 (ICS-43434), hand solder
-- R11 and R21, DNP camera contingency links
-- R31, DNP GPIO42 PIR fallback
-- U9 and R37, DNP camera-power-switch contingency
-- J5 and J9, unpopulated hand-solder/expansion connections
-- TP1 through TP10, bare test points
-- H1 through H4, mechanical mounting holes
-
-## Camera-power contingency assembly rule
-
-The default assembly keeps the existing always-powered camera-regulator input
-path:
-
-- Populate R36 (0 ohm bypass).
-- Populate R38 (100 kohm `CAM_PWR_EN` pulldown).
-- Do not populate U9 or R37.
-- Do not populate R31; the PIR uses GPIO3 through R30.
-
-To test GPIO42-controlled camera power gating in the future:
-
-- Remove R36 before enabling the switched path.
-- Populate U9 (TPS22919DCK) and R37 (1 kohm).
-- Keep R31 DNP so GPIO42 is not connected to the PIR output.
-
-R31 and R37 must never be populated simultaneously. R31 assigns GPIO42 to the
-PIR fallback, while R37 assigns GPIO42 to `CAM_PWR_EN`. Populating both would
-couple the PIR output to the camera-switch enable signal.
-
-The BOM explicitly targets the timer-disabled `MCP73871T-2AAI/ML`. Do not
-substitute the six-hour-timer `MCP73871T-2CCI/ML` at the present 213 mA charge
-current.
-
-This package does not replace the final JLC assembly preview or first-article
-qualification. Before ordering, verify every resolved JLC/LCSC part, package,
-quantity, side and rotation against the protected BOM and placement preview.
-
-The TPS63802 input loop and local MCP73871 VBAT bypass are implemented layout
-features, not pending relayout tasks. First-article testing must still validate
-regulator startup/load steps, ripple and heating, charger operation, battery
-voltage sag and protection behavior, the exact 357-V1 FF camera contact side and
-pin orientation, and enclosure fit. The fixed THERM resistor provides no real
-cell-temperature monitoring, so charging is restricted to controlled conditions
-within the battery's documented 0--45 degrees C charging range.
+Neither a local CPL inspection nor this manifest replaces JLCPCB's rendered
+assembly preview. Before paying for Rev C, verify all 85 placements, every DNP,
+package, side, and rotation in the actual preview, with special attention to U9
+pin 1 at the corrected 180-degree CPL rotation. Record that sign-off in the
+Rev C release manifest.

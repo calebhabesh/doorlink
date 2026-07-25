@@ -2,17 +2,17 @@
 	(version "E")
 	(design
 		(source "/home/ethioking/dev/smart-doorbell/pcb/smart-doorbell/smart-doorbell.kicad_sch")
-		(date "2026-07-14T19:24:09")
-		(tool "Eeschema 10.0.4")
+		(date "2026-07-25T14:09:36")
+		(tool "Eeschema 10.0.5")
 		(sheet
 			(number "1")
 			(name "/")
 			(tstamps "/")
 			(title_block
-				(title)
+				(title "Smart Doorbell Project")
 				(company)
-				(rev)
-				(date)
+				(rev "C")
+				(date "2026-07-25")
 				(source "smart-doorbell.kicad_sch")
 				(comment
 					(number "1")
@@ -1809,6 +1809,60 @@
 			)
 		)
 		(comp
+			(ref "C35")
+			(value "1u")
+			(footprint "Capacitor_SMD:C_0603_1608Metric")
+			(description "Unpolarized capacitor")
+			(fields
+				(field
+					(name "Footprint") "Capacitor_SMD:C_0603_1608Metric")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Unpolarized capacitor")
+			)
+			(libsource
+				(lib "Device")
+				(part "C")
+				(description "Unpolarized capacitor")
+			)
+			(property
+				(name "Sheetname")
+				(value "smart-doorbell")
+			)
+			(property
+				(name "Sheetfile")
+				(value "smart-doorbell.kicad_sch")
+			)
+			(property
+				(name "ki_keywords")
+				(value "cap capacitor")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "C_*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "b9264b78-5747-4b02-aca0-a4478b2a25c6")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+						(pin
+							(num "2")
+						)
+					)
+				)
+			)
+		)
+		(comp
 			(ref "D2")
 			(value "LED")
 			(footprint "LED_SMD:LED_0603_1608Metric")
@@ -2322,8 +2376,8 @@
 					(name "Description") "Generic connector, single row, 01x24, script generated (kicad-library-utils/schlib/autogen/connector/)")
 			)
 			(libsource
-				(lib "Connector_Generic")
-				(part "Conn_01x24")
+				(lib "ov5640_pinout")
+				(part "OV5640_FPC_24")
 				(description "Generic connector, single row, 01x24, script generated (kicad-library-utils/schlib/autogen/connector/)")
 			)
 			(property
@@ -4418,6 +4472,9 @@
 				(value "smart-doorbell.kicad_sch")
 			)
 			(property
+				(name "dnp")
+			)
+			(property
 				(name "ki_keywords")
 				(value "R res resistor")
 			)
@@ -5003,6 +5060,9 @@
 				(value "smart-doorbell.kicad_sch")
 			)
 			(property
+				(name "dnp")
+			)
+			(property
 				(name "ki_keywords")
 				(value "R res resistor")
 			)
@@ -5061,9 +5121,6 @@
 			(property
 				(name "Sheetfile")
 				(value "smart-doorbell.kicad_sch")
-			)
-			(property
-				(name "dnp")
 			)
 			(property
 				(name "ki_keywords")
@@ -6587,6 +6644,8 @@
 			(description "1.6V to 5.5 V, 1.5 A, 90-mΩ Self-Protected Load Switch with Controlled Rise Time, SC-70-6")
 			(fields
 				(field
+					(name "LCSC Part #") "C2149796")
+				(field
 					(name "Footprint") "Package_TO_SOT_SMD:SOT-363_SC-70-6")
 				(field
 					(name "Datasheet") "https://www.ti.com/lit/ds/symlink/tps22919.pdf")
@@ -6599,15 +6658,16 @@
 				(description "1.6V to 5.5 V, 1.5 A, 90-mΩ Self-Protected Load Switch with Controlled Rise Time, SC-70-6")
 			)
 			(property
+				(name "LCSC Part #")
+				(value "C2149796")
+			)
+			(property
 				(name "Sheetname")
 				(value "smart-doorbell")
 			)
 			(property
 				(name "Sheetfile")
 				(value "smart-doorbell.kicad_sch")
-			)
-			(property
-				(name "dnp")
 			)
 			(property
 				(name "ki_keywords")
@@ -7228,150 +7288,6 @@
 				(pin
 					(num "6")
 					(name "Pin_6")
-					(type "passive")
-				)
-			)
-		)
-		(libpart
-			(lib "Connector_Generic")
-			(part "Conn_01x24")
-			(description "Generic connector, single row, 01x24, script generated (kicad-library-utils/schlib/autogen/connector/)")
-			(footprints
-				(fp "Connector*:*_1x??_*")
-			)
-			(fields
-				(field
-					(name "Reference") "J")
-				(field
-					(name "Value") "Conn_01x24")
-				(field
-					(name "Footprint")
-				)
-				(field
-					(name "Datasheet")
-				)
-				(field
-					(name "Description") "Generic connector, single row, 01x24, script generated (kicad-library-utils/schlib/autogen/connector/)")
-			)
-			(pins
-				(pin
-					(num "1")
-					(name "Pin_1")
-					(type "passive")
-				)
-				(pin
-					(num "2")
-					(name "Pin_2")
-					(type "passive")
-				)
-				(pin
-					(num "3")
-					(name "Pin_3")
-					(type "passive")
-				)
-				(pin
-					(num "4")
-					(name "Pin_4")
-					(type "passive")
-				)
-				(pin
-					(num "5")
-					(name "Pin_5")
-					(type "passive")
-				)
-				(pin
-					(num "6")
-					(name "Pin_6")
-					(type "passive")
-				)
-				(pin
-					(num "7")
-					(name "Pin_7")
-					(type "passive")
-				)
-				(pin
-					(num "8")
-					(name "Pin_8")
-					(type "passive")
-				)
-				(pin
-					(num "9")
-					(name "Pin_9")
-					(type "passive")
-				)
-				(pin
-					(num "10")
-					(name "Pin_10")
-					(type "passive")
-				)
-				(pin
-					(num "11")
-					(name "Pin_11")
-					(type "passive")
-				)
-				(pin
-					(num "12")
-					(name "Pin_12")
-					(type "passive")
-				)
-				(pin
-					(num "13")
-					(name "Pin_13")
-					(type "passive")
-				)
-				(pin
-					(num "14")
-					(name "Pin_14")
-					(type "passive")
-				)
-				(pin
-					(num "15")
-					(name "Pin_15")
-					(type "passive")
-				)
-				(pin
-					(num "16")
-					(name "Pin_16")
-					(type "passive")
-				)
-				(pin
-					(num "17")
-					(name "Pin_17")
-					(type "passive")
-				)
-				(pin
-					(num "18")
-					(name "Pin_18")
-					(type "passive")
-				)
-				(pin
-					(num "19")
-					(name "Pin_19")
-					(type "passive")
-				)
-				(pin
-					(num "20")
-					(name "Pin_20")
-					(type "passive")
-				)
-				(pin
-					(num "21")
-					(name "Pin_21")
-					(type "passive")
-				)
-				(pin
-					(num "22")
-					(name "Pin_22")
-					(type "passive")
-				)
-				(pin
-					(num "23")
-					(name "Pin_23")
-					(type "passive")
-				)
-				(pin
-					(num "24")
-					(name "Pin_24")
 					(type "passive")
 				)
 			)
@@ -7998,6 +7914,150 @@
 			)
 		)
 		(libpart
+			(lib "ov5640_pinout")
+			(part "OV5640_FPC_24")
+			(description "Generic connector, single row, 01x24, script generated (kicad-library-utils/schlib/autogen/connector/)")
+			(footprints
+				(fp "Connector*:*_1x??_*")
+			)
+			(fields
+				(field
+					(name "Reference") "J")
+				(field
+					(name "Value") "OV5640_FPC_24")
+				(field
+					(name "Footprint")
+				)
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "Generic connector, single row, 01x24, script generated (kicad-library-utils/schlib/autogen/connector/)")
+			)
+			(pins
+				(pin
+					(num "1")
+					(name "CAM24_AFVDD")
+					(type "passive")
+				)
+				(pin
+					(num "2")
+					(name "CAM23_AF_GND")
+					(type "passive")
+				)
+				(pin
+					(num "3")
+					(name "CAM22_Y4_D2")
+					(type "passive")
+				)
+				(pin
+					(num "4")
+					(name "CAM21_Y3_D1")
+					(type "passive")
+				)
+				(pin
+					(num "5")
+					(name "CAM20_Y5_D3")
+					(type "passive")
+				)
+				(pin
+					(num "6")
+					(name "CAM19_Y2_D0")
+					(type "passive")
+				)
+				(pin
+					(num "7")
+					(name "CAM18_Y6_D4")
+					(type "passive")
+				)
+				(pin
+					(num "8")
+					(name "CAM17_PCLK")
+					(type "passive")
+				)
+				(pin
+					(num "9")
+					(name "CAM16_Y7_D5")
+					(type "passive")
+				)
+				(pin
+					(num "10")
+					(name "CAM15_DGND")
+					(type "passive")
+				)
+				(pin
+					(num "11")
+					(name "CAM14_Y8_D6")
+					(type "passive")
+				)
+				(pin
+					(num "12")
+					(name "CAM13_XCLK")
+					(type "passive")
+				)
+				(pin
+					(num "13")
+					(name "CAM12_Y9_D7")
+					(type "passive")
+				)
+				(pin
+					(num "14")
+					(name "CAM11_DOVDD")
+					(type "passive")
+				)
+				(pin
+					(num "15")
+					(name "CAM10_DVDD")
+					(type "passive")
+				)
+				(pin
+					(num "16")
+					(name "CAM9_HREF")
+					(type "passive")
+				)
+				(pin
+					(num "17")
+					(name "CAM8_PWDN")
+					(type "passive")
+				)
+				(pin
+					(num "18")
+					(name "CAM7_VSYNC")
+					(type "passive")
+				)
+				(pin
+					(num "19")
+					(name "CAM6_RESET")
+					(type "passive")
+				)
+				(pin
+					(num "20")
+					(name "CAM5_SIO_C")
+					(type "passive")
+				)
+				(pin
+					(num "21")
+					(name "CAM4_AVDD")
+					(type "passive")
+				)
+				(pin
+					(num "22")
+					(name "CAM3_SIO_D")
+					(type "passive")
+				)
+				(pin
+					(num "23")
+					(name "CAM2_AGND")
+					(type "passive")
+				)
+				(pin
+					(num "24")
+					(name "CAM1_NC")
+					(type "passive")
+				)
+			)
+		)
+		(libpart
 			(lib "smart-doorbell-power")
 			(part "TPS63802DLAR")
 			(description "2A high-efficiency, low-IQ buck-boost converter, adjustable 1.8V to 5.2V, VSON-HR DLA0010A")
@@ -8121,6 +8181,10 @@
 			(uri "${KICAD10_SYMBOL_DIR}/Switch.kicad_sym")
 		)
 		(library
+			(logical "ov5640_pinout")
+			(uri "${KIPRJMOD}/ov5640_pinout.kicad_sym")
+		)
+		(library
 			(logical "smart-doorbell-power")
 			(uri "${KIPRJMOD}/smart-doorbell-power.kicad_sym")
 		)
@@ -8147,8 +8211,8 @@
 			)
 			(node
 				(ref "J3")
-				(pin "10")
-				(pinfunction "Pin_10_10")
+				(pin "15")
+				(pinfunction "CAM10_DVDD_15")
 				(pintype "passive")
 			)
 			(node
@@ -8200,14 +8264,14 @@
 			)
 			(node
 				(ref "J3")
-				(pin "11")
-				(pinfunction "Pin_11_11")
+				(pin "14")
+				(pinfunction "CAM11_DOVDD_14")
 				(pintype "passive")
 			)
 			(node
 				(ref "J3")
-				(pin "4")
-				(pinfunction "Pin_4_4")
+				(pin "21")
+				(pinfunction "CAM4_AVDD_21")
 				(pintype "passive")
 			)
 			(node
@@ -8270,6 +8334,11 @@
 			(node
 				(ref "C30")
 				(pin "1")
+				(pintype "passive")
+			)
+			(node
+				(ref "C35")
+				(pin "2")
 				(pintype "passive")
 			)
 			(node
@@ -8590,8 +8659,8 @@
 			(class "Default")
 			(node
 				(ref "J3")
-				(pin "19")
-				(pinfunction "Pin_19_19")
+				(pin "6")
+				(pinfunction "CAM19_Y2_D0_6")
 				(pintype "passive")
 			)
 			(node
@@ -8607,8 +8676,8 @@
 			(class "Default")
 			(node
 				(ref "J3")
-				(pin "21")
-				(pinfunction "Pin_21_21")
+				(pin "4")
+				(pinfunction "CAM21_Y3_D1_4")
 				(pintype "passive")
 			)
 			(node
@@ -8624,8 +8693,8 @@
 			(class "Default")
 			(node
 				(ref "J3")
-				(pin "22")
-				(pinfunction "Pin_22_22")
+				(pin "3")
+				(pinfunction "CAM22_Y4_D2_3")
 				(pintype "passive")
 			)
 			(node
@@ -8641,8 +8710,8 @@
 			(class "Default")
 			(node
 				(ref "J3")
-				(pin "20")
-				(pinfunction "Pin_20_20")
+				(pin "5")
+				(pinfunction "CAM20_Y5_D3_5")
 				(pintype "passive")
 			)
 			(node
@@ -8658,8 +8727,8 @@
 			(class "Default")
 			(node
 				(ref "J3")
-				(pin "18")
-				(pinfunction "Pin_18_18")
+				(pin "7")
+				(pinfunction "CAM18_Y6_D4_7")
 				(pintype "passive")
 			)
 			(node
@@ -8675,8 +8744,8 @@
 			(class "Default")
 			(node
 				(ref "J3")
-				(pin "16")
-				(pinfunction "Pin_16_16")
+				(pin "9")
+				(pinfunction "CAM16_Y7_D5_9")
 				(pintype "passive")
 			)
 			(node
@@ -8692,8 +8761,8 @@
 			(class "Default")
 			(node
 				(ref "J3")
-				(pin "14")
-				(pinfunction "Pin_14_14")
+				(pin "11")
+				(pinfunction "CAM14_Y8_D6_11")
 				(pintype "passive")
 			)
 			(node
@@ -8709,8 +8778,8 @@
 			(class "Default")
 			(node
 				(ref "J3")
-				(pin "12")
-				(pinfunction "Pin_12_12")
+				(pin "13")
+				(pinfunction "CAM12_Y9_D7_13")
 				(pintype "passive")
 			)
 			(node
@@ -8726,8 +8795,8 @@
 			(class "Default")
 			(node
 				(ref "J3")
-				(pin "9")
-				(pinfunction "Pin_9_9")
+				(pin "16")
+				(pinfunction "CAM9_HREF_16")
 				(pintype "passive")
 			)
 			(node
@@ -8743,8 +8812,8 @@
 			(class "Default")
 			(node
 				(ref "J3")
-				(pin "17")
-				(pinfunction "Pin_17_17")
+				(pin "8")
+				(pinfunction "CAM17_PCLK_8")
 				(pintype "passive")
 			)
 			(node
@@ -8776,8 +8845,8 @@
 			(class "Default")
 			(node
 				(ref "J3")
-				(pin "8")
-				(pinfunction "Pin_8_8")
+				(pin "17")
+				(pinfunction "CAM8_PWDN_17")
 				(pintype "passive")
 			)
 			(node
@@ -8834,8 +8903,8 @@
 			(class "Default")
 			(node
 				(ref "J3")
-				(pin "6")
-				(pinfunction "Pin_6_6")
+				(pin "19")
+				(pinfunction "CAM6_RESET_19")
 				(pintype "passive")
 			)
 			(node
@@ -8855,8 +8924,8 @@
 			(class "Default")
 			(node
 				(ref "J3")
-				(pin "5")
-				(pinfunction "Pin_5_5")
+				(pin "20")
+				(pinfunction "CAM5_SIO_C_20")
 				(pintype "passive")
 			)
 			(node
@@ -8877,8 +8946,8 @@
 			(class "Default")
 			(node
 				(ref "J3")
-				(pin "3")
-				(pinfunction "Pin_3_3")
+				(pin "22")
+				(pinfunction "CAM3_SIO_D_22")
 				(pintype "passive")
 			)
 			(node
@@ -8899,8 +8968,8 @@
 			(class "Default")
 			(node
 				(ref "J3")
-				(pin "7")
-				(pinfunction "Pin_7_7")
+				(pin "18")
+				(pinfunction "CAM7_VSYNC_18")
 				(pintype "passive")
 			)
 			(node
@@ -8932,8 +9001,8 @@
 			(class "Default")
 			(node
 				(ref "J3")
-				(pin "13")
-				(pinfunction "Pin_13_13")
+				(pin "12")
+				(pinfunction "CAM13_XCLK_12")
 				(pintype "passive")
 			)
 			(node
@@ -9554,6 +9623,11 @@
 				(pintype "passive")
 			)
 			(node
+				(ref "C35")
+				(pin "1")
+				(pintype "passive")
+			)
+			(node
 				(ref "C5")
 				(pin "2")
 				(pintype "passive")
@@ -9612,14 +9686,14 @@
 			)
 			(node
 				(ref "J3")
-				(pin "15")
-				(pinfunction "Pin_15_15")
+				(pin "10")
+				(pinfunction "CAM15_DGND_10")
 				(pintype "passive")
 			)
 			(node
 				(ref "J3")
-				(pin "2")
-				(pinfunction "Pin_2_2")
+				(pin "23")
+				(pinfunction "CAM2_AGND_23")
 				(pintype "passive")
 			)
 			(node
@@ -9983,12 +10057,12 @@
 		)
 		(net
 			(code "55")
-			(name "Net-(J3-Pin_23)")
+			(name "Net-(J3-CAM23_AF_GND)")
 			(class "Default")
 			(node
 				(ref "J3")
-				(pin "23")
-				(pinfunction "Pin_23_23")
+				(pin "2")
+				(pinfunction "CAM23_AF_GND_2")
 				(pintype "passive")
 			)
 			(node
@@ -10005,12 +10079,12 @@
 		)
 		(net
 			(code "56")
-			(name "Net-(J3-Pin_24)")
+			(name "Net-(J3-CAM24_AFVDD)")
 			(class "Default")
 			(node
 				(ref "J3")
-				(pin "24")
-				(pinfunction "Pin_24_24")
+				(pin "1")
+				(pinfunction "CAM24_AFVDD_1")
 				(pintype "passive")
 			)
 			(node
@@ -10264,12 +10338,12 @@
 		)
 		(net
 			(code "71")
-			(name "unconnected-(J3-Pin_1-Pad1)")
+			(name "unconnected-(J3-CAM1_NC-Pad24)")
 			(class "Default")
 			(node
 				(ref "J3")
-				(pin "1")
-				(pinfunction "Pin_1_1")
+				(pin "24")
+				(pinfunction "CAM1_NC_24")
 				(pintype "passive+no_connect")
 			)
 		)

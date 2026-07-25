@@ -82,24 +82,24 @@ Current KiCad source of truth:
 
 - PCB file: `pcb/smart-doorbell/smart-doorbell.kicad_pcb`
 - Current outline bounding box is roughly `59 x 91 mm`:
-  - x range: `110.5..169.5`
-  - y range: `48.5..139.5`
+  - x range: `107.25..166.25`
+  - y range: `55.95..146.95`
 - Current mounting holes are M2.5:
   - footprint: `MountingHole_2.7mm_M2.5`
-  - positions: `(117.5, 71.5)`, `(162.5, 71.5)`,
-    `(117.5, 116.5)`, `(162.5, 116.5)`
-  - current pattern: `45 x 45 mm`
+  - positions: `(111.05, 71.425)`, `(162.45, 71.425)`,
+    `(111.05, 122.825)`, `(162.45, 122.825)`
+  - current pattern: `51.4 x 51.4 mm`
 - Current mechanically relevant footprints:
-  - `MK1` ICS-43434 mic at `(114.2, 81.992)`
-  - `J6` speaker JST-PH 2-pin at `(118.8, 90.55)`
-  - `J7` PIR JST-PH 3-pin at `(158.5, 79)`
-  - `J8` button/LED JST-PH 4-pin at `(136.9, 114.65)`
-  - `J1` battery JST-PH 2-pin at `(161.2, 106.9)`
-  - `J2` USB-C receptacle at `(140.1, 136)`
+  - `MK1` ICS-43434 mic at `(110.95, 89.442)`
+  - `J6` speaker JST-PH 2-pin at `(115.55, 98)`
+  - `J7` PIR JST-PH 3-pin at `(155.25, 86.45)`
+  - `J8` button/LED JST-PH 4-pin at `(133.65, 122.1)`
+  - `J1` battery JST-PH 2-pin at `(158.442, 114.371)`
+  - `J2` USB-C receptacle at `(136.85, 143.45)`
 
 Do not stretch or scale the PCB to the enclosure. The existing outline is
 already within the documented mounting-plane envelope. The USB-C end tapers to
-about `39.5 mm`, which is useful around the enclosure's rounded end corners.
+about `41 mm`, which is useful around the enclosure's rounded end corners.
 
 ## Camera Module Target and FPC Contingency
 
@@ -108,15 +108,10 @@ distortion-free, fixed-focus OV5640 24-pin DVP module. Fixed focus is the
 intended production choice; autofocus is not a requirement for this doorbell.
 
 The first 22 connector positions use the eight-bit DVP/SCCB/power arrangement
-documented in the KiCad source. The exact function of positions 23 and 24 on
-the selected `357-V1 FF` flex has not been proven by a model-specific drawing.
-The current PCB instead assumes the earlier AF-family mapping:
-
-- J3 pin 23 is hard-wired to GND.
-- J3 pin 24 is hard-wired to `+2V8`.
-
-Do not preserve those direct connections on the next board revision. Make both
-pins NC by default, with test pads and normally-unpopulated configurable links:
+documented in the KiCad source. The seller drawing now recorded in
+`docs/hardware/camera/README.md` identifies position 23 as `AF_GND` and position
+24 as `AFVDD`. Rev B keeps both contacts isolated by default, with test pads and
+normally-unpopulated configurable links:
 
 - `J3.23` -> test pad -> `0R`, DNP -> GND (`AF_GND` contingency).
 - `J3.24` -> test pad -> `0R`, DNP -> `+2V8` (`AFVDD` contingency).
@@ -127,11 +122,9 @@ only after a specific autofocus module's pinout confirms pin 23 is `AF_GND`
 and pin 24 is `AFVDD`. This is a future AF contingency, not a requirement for
 the fixed-focus build.
 
-Before a board order, obtain a model-specific `357-V1 FF` pinout or inspect the
-received module and its pin-1/contact orientation. Do not plug that module into
-the current hard-wired board until the final two contacts are confirmed. Update
-`scripts/verify-camera-interface.py` when the schematic changes: it currently
-expects the legacy hard-wired pin 23/pin 24 mapping.
+Before powering the camera, inspect the received module and verify its pin-1
+and exposed-contact orientation against the seller drawing. R11 and R21 remain
+DNP for the selected fixed-focus camera.
 
 ## Recommended PCB Mechanical Direction
 
@@ -413,10 +406,12 @@ Recommendation:
 PCB `J7` pin mapping:
 
 - `J7 pin 1`: `+3V3`
-- `J7 pin 2`: `/PIR_OUT`
+- `J7 pin 2`: `PIR_SENSOR_OUT`
 - `J7 pin 3`: `GND`
 
-Per current project guide, PIR output is GPIO42.
+The default Rev B path is J7.2 `PIR_SENSOR_OUT` through populated R30 (1 kohm)
+to `PIR_WAKE` on GPIO3. R29 (100 kohm) is the pulldown. GPIO42 is only the DNP
+fallback through R31 and must not be treated as the default PIR input.
 
 ## USB-C
 
@@ -472,7 +467,8 @@ Before editing:
 2. Keep `pcb/smart-doorbell/` as source of truth for routed nets.
 3. Use current project guide pin mappings:
    - `AMP_EN`: GPIO44
-   - `PIR_OUT`: GPIO42
+   - `PIR_WAKE`: GPIO3 through populated R30
+   - GPIO42: DNP PIR fallback through R31 / AUX contingency
    - USB native D-/D+: GPIO19/GPIO20 only
 
 Recommended KiCad process:
@@ -502,9 +498,9 @@ Recommended KiCad process:
 
 ## Open Items For Next Session
 
-- Receive and measure the exact purchased black `80 x 130 x 70 mm` enclosure;
-  confirm the internal ribs/bosses against the documented `DS-AG-0813`
-  geometry (which permits `+/-1 mm`).
+- Measure the received black `80 x 130 x 70 mm` enclosure and confirm its
+  internal ribs/bosses against the documented `DS-AG-0813` geometry (which
+  permits `+/-1 mm`).
 - Dry-fit the unmodified PCB, including its USB-C connector, before changing
   the outline or ordering another board.
 - Confirm the final PCB position and USB-C bottom cutout.

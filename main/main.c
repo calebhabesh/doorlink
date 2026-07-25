@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
@@ -16,12 +17,25 @@
 #include "config.h"
 #include "esp_http_client.h"
 #include "board_pins.h"
+#include "camera_power.h"
+#include "core_bringup.h"
 #include "camera_bringup.h"
 #include "mic_bringup.h"
+#include "speaker_bringup.h"
+#include "button_bringup.h"
+#include "pir_bringup.h"
 #include "wifi_bringup.h"
 
+#ifndef SMART_DOORBELL_CORE_BRINGUP
+#define SMART_DOORBELL_CORE_BRINGUP 1
+#endif
+
+#ifndef SMART_DOORBELL_CAMERA_ATTACHED_IDLE
+#define SMART_DOORBELL_CAMERA_ATTACHED_IDLE 0
+#endif
+
 #ifndef SMART_DOORBELL_CAMERA_BRINGUP
-#define SMART_DOORBELL_CAMERA_BRINGUP 1
+#define SMART_DOORBELL_CAMERA_BRINGUP 0
 #endif
 
 #ifndef SMART_DOORBELL_WIFI_BRINGUP
@@ -32,10 +46,23 @@
 #define SMART_DOORBELL_MIC_BRINGUP 0
 #endif
 
+#ifndef SMART_DOORBELL_SPEAKER_BRINGUP
+#define SMART_DOORBELL_SPEAKER_BRINGUP 0
+#endif
+
+#ifndef SMART_DOORBELL_BUTTON_BRINGUP
+#define SMART_DOORBELL_BUTTON_BRINGUP 0
+#endif
+
+#ifndef SMART_DOORBELL_PIR_BRINGUP
+#define SMART_DOORBELL_PIR_BRINGUP 0
+#endif
+
 static const char *TAG = "smart_doorbell";
 
 static i2s_chan_handle_t rx_chan; // Microphone
 static i2s_chan_handle_t tx_chan; // Speaker
+static bool s_camera_initialized;
 
 static esp_err_t __attribute__((unused)) init_camera(void)
 {
@@ -72,15 +99,37 @@ static esp_err_t __attribute__((unused)) init_camera(void)
         .grab_mode = CAMERA_GRAB_WHEN_EMPTY,
     };
 
-    // Initialize the camera
-    esp_err_t err = esp_camera_init(&camera_config);
+    esp_err_t err = camera_power_enable();
     if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Camera Init Failed");
+        ESP_LOGE(TAG, "Camera rail enable failed: %s", esp_err_to_name(err));
+        camera_power_disable();
         return err;
     }
 
+    // Initialize the camera only after CAM_3V3, +2V8, and +1V5 have settled.
+    err = esp_camera_init(&camera_config);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Camera Init Failed: %s", esp_err_to_name(err));
+        camera_power_disable();
+        return err;
+    }
+
+    s_camera_initialized = true;
     ESP_LOGI(TAG, "Camera Init Succeeded");
     return ESP_OK;
+}
+
+static void shutdown_camera(void)
+{
+    if (s_camera_initialized) {
+        esp_camera_deinit();
+        s_camera_initialized = false;
+    }
+
+    esp_err_t err = camera_power_disable();
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Camera rail shutdown failed: %s", esp_err_to_name(err));
+    }
 }
 
 static esp_err_t init_i2s(void)
@@ -396,6 +445,7 @@ static void run_bringup_tests(void) {
         } else {
             ESP_LOGE(TAG, "Capture Failed!");
         }
+        shutdown_camera();
     }
 
     // 4. I2S Audio Init Test
@@ -425,7 +475,10 @@ static void run_bringup_tests(void) {
 
 void app_main(void)
 {
-#if SMART_DOORBELL_CAMERA_BRINGUP
+#if SMART_DOORBELL_CORE_BRINGUP
+    run_core_bringup(SMART_DOORBELL_CAMERA_ATTACHED_IDLE);
+    return;
+#elif SMART_DOORBELL_CAMERA_BRINGUP
     run_camera_bringup();
     return;
 #elif SMART_DOORBELL_WIFI_BRINGUP
@@ -433,6 +486,15 @@ void app_main(void)
     return;
 #elif SMART_DOORBELL_MIC_BRINGUP
     run_mic_bringup();
+    return;
+#elif SMART_DOORBELL_SPEAKER_BRINGUP
+    run_speaker_bringup();
+    return;
+#elif SMART_DOORBELL_BUTTON_BRINGUP
+    run_button_bringup();
+    return;
+#elif SMART_DOORBELL_PIR_BRINGUP
+    run_pir_bringup();
     return;
 #endif
 
@@ -461,12 +523,12 @@ void app_main(void)
         ESP_LOGI(TAG, "Woke up from deep sleep (or normal boot). Starting network flow.");
         
         // 2. Initialize Hardware Peripherals
-        init_camera();
+        esp_err_t camera_err = init_camera();
         init_i2s();
         
         // 3. Capture Photo
         ESP_LOGI(TAG, "Capturing real-time JPEG...");
-        camera_fb_t *fb = esp_camera_fb_get();
+        camera_fb_t *fb = camera_err == ESP_OK ? esp_camera_fb_get() : NULL;
         if (!fb) {
             ESP_LOGE(TAG, "Camera capture failed");
             // Fallback to empty if needed, but here we just continue
@@ -499,6 +561,9 @@ void app_main(void)
         
         if (audio_buf) free(audio_buf);
 
+        // Camera rails are not needed during the audio-only interactive window.
+        shutdown_camera();
+
         // 7. Connect to MQTT Broker for Interactive Window
         esp_mqtt_client_handle_t mqtt_client = init_mqtt();
 
@@ -524,6 +589,7 @@ void app_main(void)
 
     ESP_LOGI(TAG, "Preparing to enter deep sleep...");
     gpio_set_level(AMP_EN_PIN, 0);
+    shutdown_camera();
 
     // 4. Configure wakeup source
     // Enable pullup on the button pin so it defaults to HIGH

@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "board_pins.h"
+#include "camera_power.h"
 #include "driver/gpio.h"
 #include "esp_camera.h"
 #include "esp_heap_caps.h"
@@ -41,13 +42,6 @@ static bool jpeg_has_markers(const camera_fb_t *fb)
            buf[fb->len - 2] == 0xff && buf[fb->len - 1] == 0xd9;
 }
 
-static void power_down_camera_pin(void)
-{
-    gpio_reset_pin(CAM_PIN_PWDN);
-    gpio_set_direction(CAM_PIN_PWDN, GPIO_MODE_OUTPUT);
-    gpio_set_level(CAM_PIN_PWDN, 1);
-}
-
 void run_camera_bringup(void)
 {
     configure_safe_outputs();
@@ -57,7 +51,8 @@ void run_camera_bringup(void)
              esp_psram_is_initialized() ? "yes" : "no",
              (unsigned)esp_psram_get_size(),
              (unsigned)heap_caps_get_total_size(MALLOC_CAP_SPIRAM));
-    ESP_LOGI(TAG, "Pins: XCLK=%d PCLK=%d VSYNC=%d HREF=%d SDA=%d SCL=%d RST=%d PWDN=%d",
+    ESP_LOGI(TAG, "Pins: PWR_EN=%d XCLK=%d PCLK=%d VSYNC=%d HREF=%d SDA=%d SCL=%d RST=%d PWDN=%d",
+             CAM_PWR_EN_PIN,
              CAM_PIN_XCLK, CAM_PIN_PCLK, CAM_PIN_VSYNC, CAM_PIN_HREF,
              CAM_PIN_SIOD, CAM_PIN_SIOC, CAM_PIN_RESET, CAM_PIN_PWDN);
 
@@ -89,30 +84,44 @@ void run_camera_bringup(void)
         .grab_mode = CAMERA_GRAB_WHEN_EMPTY,
     };
 
-    esp_err_t err = esp_camera_init(&camera_config);
+    esp_err_t err = camera_power_enable();
     if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Camera init failed: %s", esp_err_to_name(err));
-        power_down_camera_pin();
+        ESP_LOGE(TAG, "Camera rail enable failed: %s", esp_err_to_name(err));
+        esp_err_t disable_err = camera_power_disable();
+        if (disable_err != ESP_OK) {
+            ESP_LOGE(TAG, "Camera safe shutdown also failed: %s",
+                     esp_err_to_name(disable_err));
+        }
     } else {
-        sensor_t *sensor = esp_camera_sensor_get();
-        if (sensor) {
-            ESP_LOGI(TAG, "Sensor detected: PID=0x%04x MID=0x%02x%02x addr=0x%02x",
-                     sensor->id.PID, sensor->id.MIDH, sensor->id.MIDL, sensor->slv_addr);
-        }
-
-        camera_fb_t *fb = esp_camera_fb_get();
-        if (!fb) {
-            ESP_LOGE(TAG, "Frame capture failed");
+        err = esp_camera_init(&camera_config);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Camera init failed: %s", esp_err_to_name(err));
         } else {
-            ESP_LOGI(TAG, "Frame captured: %ux%u len=%u format=%d jpeg_markers=%s",
-                     (unsigned)fb->width, (unsigned)fb->height, (unsigned)fb->len,
-                     fb->format, jpeg_has_markers(fb) ? "valid" : "invalid");
-            esp_camera_fb_return(fb);
+            sensor_t *sensor = esp_camera_sensor_get();
+            if (sensor) {
+                ESP_LOGI(TAG, "Sensor detected: PID=0x%04x MID=0x%02x%02x addr=0x%02x",
+                         sensor->id.PID, sensor->id.MIDH, sensor->id.MIDL, sensor->slv_addr);
+            }
+
+            camera_fb_t *fb = esp_camera_fb_get();
+            if (!fb) {
+                ESP_LOGE(TAG, "Frame capture failed");
+            } else {
+                ESP_LOGI(TAG, "Frame captured: %ux%u len=%u format=%d jpeg_markers=%s",
+                         (unsigned)fb->width, (unsigned)fb->height, (unsigned)fb->len,
+                         fb->format, jpeg_has_markers(fb) ? "valid" : "invalid");
+                esp_camera_fb_return(fb);
+            }
+
+            ESP_LOGI(TAG, "Stopping camera driver after one-frame test");
+            esp_camera_deinit();
         }
 
-        ESP_LOGI(TAG, "Stopping camera driver after one-frame test");
-        esp_camera_deinit();
-        power_down_camera_pin();
+        esp_err_t disable_err = camera_power_disable();
+        if (disable_err != ESP_OK) {
+            ESP_LOGE(TAG, "Camera rail shutdown failed: %s",
+                     esp_err_to_name(disable_err));
+        }
     }
 
     for (uint32_t i = 0;; ++i) {

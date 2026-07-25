@@ -6,5 +6,9 @@ pcb/smart-doorbell/production/*.csv text eol=lf
 pcb/smart-doorbell/production/Smart_Doorbell_Project_B* -text -eol
 pcb/smart-doorbell/jlcpcb/gerber/* -text
 pcb/smart-doorbell/jlcpcb/production_files/* -text
+pcb/smart-doorbell/jlcpcb/rev-c/gerber/* -text
+pcb/smart-doorbell/jlcpcb/rev-c/production_files/* -text
+pcb/smart-doorbell/jlcpcb/rev-c/project.db -text
 pcb/smart-doorbell/production/Smart_Doorbell_Project_B*.csv whitespace=-trailing-space,cr-at-eol
 pcb/smart-doorbell/jlcpcb/production_files/*.csv whitespace=-trailing-space,cr-at-eol
+pcb/smart-doorbell/jlcpcb/rev-c/production_files/*.csv whitespace=-trailing-space,cr-at-eol

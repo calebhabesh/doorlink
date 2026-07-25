@@ -18,6 +18,22 @@ JLCPCB PCB order: `Y7-6841583A`. The signed-in PCBA order page displayed the
 prefix `SMT026071560509`. The order contained five PCBs and five top-side
 economic PCBA assemblies.
 
+## Delivered hardware
+
+The physical Smart Doorbell Rev B boards now in hand were received on
+2026-07-23 from the following retained JLCPCB order:
+
+| Item | Identifier |
+| --- | --- |
+| JLCPCB web order | `W2026071513150300` |
+| PCB order | `Y7-6841583A` |
+| PCBA order | `SMT026071560509` |
+
+This is the batch whose final DFM placement review was completed before
+shipment. It is the only valid physical baseline for Rev B bring-up. The later
+duplicate order (`W2026071513290609`, PCB `Y8-6841583A`, PCBA
+`SMT026071560541`) was cancelled and must not be used as a hardware reference.
+
 ## Source and generation provenance
 
 | Item | Saved/generated timestamp (America/Toronto) |
@@ -60,3 +76,8 @@ the result as a new release candidate and repeating the manufacturing review.
 At the time of this snapshot, JLCPCB data preparation was still pending. Final
 CAM/DFM files must be checked against this Rev B release before production-file
 approval.
+
+The corrected Rev C candidate is isolated under `rev-c/` with its own manifest
+and hashes. None of those files replaces the three Rev B uploads above.
+`sha256sum -c ORDERED_RELEASE.sha256` must continue to pass from this directory;
+run the separate Rev C hash check only from `rev-c/`.

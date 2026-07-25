@@ -1,4 +1,5 @@
 (sym_lib_table
-  (version 7)
-  (lib (name "smart-doorbell-power")(type "KiCad")(uri "${KIPRJMOD}/smart-doorbell-power.kicad_sym")(options "")(descr "Project-local power-management symbols"))
+	(version 7)
+	(lib (name "smart-doorbell-power") (type "KiCad") (uri "${KIPRJMOD}/smart-doorbell-power.kicad_sym") (options "") (descr "Project-local power-management symbols"))
+	(lib (name "ov5640_pinout") (type "KiCad") (uri "${KIPRJMOD}/ov5640_pinout.kicad_sym") (options "") (descr ""))
 )

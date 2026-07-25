@@ -20,6 +20,7 @@
 #define AMP_EN_PIN          GPIO_NUM_44  // /AMP_EN -> MAX98357A SD_MODE
 
 // OV5640 camera on 24-pin FPC J3
+#define CAM_PWR_EN_PIN      GPIO_NUM_42  // /GPIO42_AUX -> R37 -> /CAM_PWR_EN (Rev C)
 #define CAM_PIN_D0          18           // /CAM_D0
 #define CAM_PIN_D1          16           // /CAM_D1
 #define CAM_PIN_D2          15           // /CAM_D2
@@ -36,6 +37,11 @@
 #define CAM_PIN_SIOC        39           // /CAM_SCL
 #define CAM_PIN_RESET       40           // /CAM_RST
 #define CAM_PIN_VSYNC       41           // /CAM_VSYNC
+
+/*
+ * Rev C populates R37 and leaves R31 DNP, dedicating GPIO42 to camera power.
+ * Do not enable the GPIO42 PIR fallback while R37 is populated.
+ */
 
 // I2S audio
 #define I2S_AUDIO_WS        GPIO_NUM_4   // /GPIO4 -> ICS WS, MAX LRCLK

@@ -99,6 +99,7 @@ backups/
 *.zip
 !pcb/smart-doorbell/production/Smart_Doorbell_Project_B.zip
 !pcb/smart-doorbell/jlcpcb/production_files/GERBER-smart-doorbell.zip
+!pcb/smart-doorbell/jlcpcb/rev-c/production_files/GERBER-smart-doorbell.zip
 
 # Tooling and scripts
 .superpowers/

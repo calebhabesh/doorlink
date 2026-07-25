@@ -41,9 +41,25 @@ static void configure_safe_gpio_state(void)
     gpio_set_direction(STATUS_LED_PIN, GPIO_MODE_OUTPUT);
     gpio_set_level(STATUS_LED_PIN, 0);
 
+    gpio_reset_pin(BUTTON_LED_PIN);
+    gpio_set_direction(BUTTON_LED_PIN, GPIO_MODE_OUTPUT);
+    gpio_set_level(BUTTON_LED_PIN, 0);
+
     gpio_reset_pin(AMP_EN_PIN);
     gpio_set_direction(AMP_EN_PIN, GPIO_MODE_OUTPUT);
     gpio_set_level(AMP_EN_PIN, 0);
+
+    gpio_reset_pin((gpio_num_t)CAM_PIN_XCLK);
+    gpio_set_direction((gpio_num_t)CAM_PIN_XCLK, GPIO_MODE_OUTPUT);
+    gpio_set_level((gpio_num_t)CAM_PIN_XCLK, 0);
+
+    gpio_reset_pin((gpio_num_t)CAM_PIN_PWDN);
+    gpio_set_direction((gpio_num_t)CAM_PIN_PWDN, GPIO_MODE_OUTPUT);
+    gpio_set_level((gpio_num_t)CAM_PIN_PWDN, 0);
+
+    gpio_reset_pin((gpio_num_t)CAM_PIN_RESET);
+    gpio_set_direction((gpio_num_t)CAM_PIN_RESET, GPIO_MODE_OUTPUT);
+    gpio_set_level((gpio_num_t)CAM_PIN_RESET, 0);
 }
 
 static void fault_blink_loop(void)
