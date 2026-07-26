@@ -27,18 +27,19 @@ board. Rev B populated R36, left U9/R37 DNP, and used populated fixed R26 in
 place of real cell-temperature sensing; these facts describe only the ordered
 historical batch.
 
-## Rev C release candidate
+## Ordered Rev C release
 
-Rev C has a separate, non-ordered release directory:
+Rev C has a separate ordered-release directory:
 
 - `../jlcpcb/rev-c/production_files/GERBER-smart-doorbell.zip`
 - `../jlcpcb/rev-c/production_files/BOM-smart-doorbell.csv`
 - `../jlcpcb/rev-c/production_files/CPL-smart-doorbell.csv`
 
 Exact hashes, generation provenance, local verification results, and the
-remaining external JLCPCB preview gate are recorded in
-`../jlcpcb/rev-c/RELEASE_CANDIDATE.md`. Run
-`sha256sum -c RELEASE_CANDIDATE.sha256` from that directory before upload.
+signed-off JLCPCB BOM/preview evidence are recorded in
+`../jlcpcb/rev-c/ORDERED_RELEASE.md`. Run
+`sha256sum -c ORDERED_RELEASE.sha256` from that directory whenever verifying
+the submitted bytes.
 
 Rev C contains 85 populated references in both BOM and CPL. Existing protected
 Rev B references retain their exact value/LCSC assignment. The intentional
@@ -80,7 +81,7 @@ retained only as previously reviewed comparison evidence. They were not the
 files submitted for the 2026-07-15 order.
 
 Neither a local CPL inspection nor this manifest replaces JLCPCB's rendered
-assembly preview. Before paying for Rev C, verify all 85 placements, every DNP,
-package, side, and rotation in the actual preview, with special attention to U9
-pin 1 at the corrected 180-degree CPL rotation. Record that sign-off in the
-Rev C release manifest.
+assembly preview. The Rev C order passed that external gate before submission:
+all 85 top-side placements, every DNP, package, side, and rotation were checked,
+with special attention to U9 pin 1 at the corrected 180-degree CPL rotation.
+The retained evidence and sign-off are part of the ordered Rev C release.

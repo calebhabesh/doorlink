@@ -54,9 +54,8 @@ Depth math:
 - The selected enclosure has a catalogued `50 mm` base plus a `20 mm` lid.
 - Button internal protrusion when mounted correctly through the front lid is
   about `31 mm`.
-- PCB stack on short standoffs:
-  - `4 mm` standoff + `1.6 mm` PCB + `5 mm` tallest JST = `10.6 mm`
-  - `6 mm` standoff + `1.6 mm` PCB + `5 mm` tallest JST = `12.6 mm`
+- PCB stack on the selected standoffs:
+  - `10 mm` standoff + `1.6 mm` PCB + `5 mm` tallest JST = `16.6 mm`
 - The available depth works only when the battery uses the side-wall/depth
   volume described below rather than stacking behind the button or PCB.
 
@@ -162,12 +161,16 @@ Standoff process:
 
 Standoff height:
 
-- `4 mm` is the compact target and may work because the silicone mic tube can
-  compress.
-- `6 mm` is mechanically safer, especially around the mic tube.
-- The selected `70 mm` enclosure should tolerate either `4 mm` or `6 mm` when
-  the battery uses the right-side L-shaped placement and the button keepout is
-  kept clear.
+- Use `10 mm` M2.5 female-to-female standoffs, OD ideally `<=5 mm`.
+- Physical comparison with the received enclosure found that the existing
+  `6 mm` standoffs are about `1 mm` shorter than the unused molded bosses.
+  The `10 mm` selection provides useful tolerance above those bosses and more
+  comfortable clearance for the silicone mic tube.
+- The resulting PCB stack is about `16.6 mm` deep. The selected `70 mm`
+  enclosure has adequate depth when the battery uses the right-side L-shaped
+  placement and the button's rear keepout does not overlap the PCB laterally.
+- Confirm actual boss clearance, screw engagement, wiring bends, and lid
+  closure with a dry fit before bonding the standoffs.
 
 Consider adding an extra support near the upper-left/mic area if the tube
 preload causes board flex.
@@ -320,9 +323,8 @@ Details:
   adhesive.
 - Do not let adhesive block the PCB acoustic hole or tube bore.
 - Add PCB keepout around the under-board tube path.
-- If using `4 mm` standoffs, the tube will be lightly compressed. This is
-  acceptable if the PCB does not bow.
-- `6 mm` standoffs give more comfortable clearance.
+- The selected `10 mm` standoffs provide comfortable tube clearance. Retain
+  the tube without enough preload to bow the PCB.
 
 Avoid:
 
@@ -363,8 +365,8 @@ Existing light-pipe parts:
 Likely issue:
 
 - `21.1 mm` is a test/spare part, not a presumed final fit. With the PCB
-  mounted to the rear/deep base on 6 mm standoffs, the likely LED-to-inner-lid
-  distance is roughly `55-60 mm`; confirm this only with the actual enclosure
+  mounted to the rear/deep base on 10 mm standoffs, the likely LED-to-inner-lid
+  distance is roughly `51-56 mm`; confirm this only with the actual enclosure
   and installed PCB.
 
 Final light-pipe construction:
@@ -445,7 +447,8 @@ Core mechanical:
 
 - Black `DS-AG-0813`-style `80 x 130 x 70 mm` solid-cover ABS enclosure;
   preferably buy a spare.
-- M2.5 threaded standoffs, `4 mm` and/or `6 mm` length, OD ideally `<=5 mm`.
+- M2.5 female-to-female threaded standoffs, `10 mm` length, OD ideally
+  `<=5 mm`.
 - M2.5 machine screw assortment matched to standoff length.
 - M2.5 nylon washers.
 - Plastic-compatible epoxy or JB Weld Plastic Bonder.
@@ -504,7 +507,8 @@ Recommended KiCad process:
 - Dry-fit the unmodified PCB, including its USB-C connector, before changing
   the outline or ordering another board.
 - Confirm the final PCB position and USB-C bottom cutout.
-- Decide final standoff height: `4 mm` compact vs `6 mm` safer.
+- Dry-fit the selected `10 mm` standoffs and confirm molded-boss clearance,
+  screw engagement, component clearance, and lid closure.
 - Dry-fit the right-wall L-shaped battery placement, the lower-centre button,
   speaker, and left-side mic tube together.
 - Confirm whether to add a fifth support point near `MK1`.

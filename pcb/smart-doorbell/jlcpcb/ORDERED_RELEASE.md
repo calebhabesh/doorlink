@@ -77,7 +77,8 @@ At the time of this snapshot, JLCPCB data preparation was still pending. Final
 CAM/DFM files must be checked against this Rev B release before production-file
 approval.
 
-The corrected Rev C candidate is isolated under `rev-c/` with its own manifest
-and hashes. None of those files replaces the three Rev B uploads above.
+The corrected ordered Rev C package is isolated under `rev-c/` with its own
+manifest, hashes, and signed-off JLCPCB evidence. None of those files replaces
+the three Rev B uploads above.
 `sha256sum -c ORDERED_RELEASE.sha256` must continue to pass from this directory;
-run the separate Rev C hash check only from `rev-c/`.
+run the separate `ORDERED_RELEASE.sha256` check from `rev-c/` for Rev C.

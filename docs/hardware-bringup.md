@@ -44,7 +44,7 @@ that every accessory or connector is present.
 | Rev B PCBA | Five boards from the retained JLC order above | Received; select one first article |
 | Enclosure | Black solid-cover `DS-AG-0813`-style ABS, nominal `80 x 130 x 70 mm` | Received with the housing order; measure the actual clone before drilling |
 | Adhesive Velcro | Thin battery-retention material | Received; dry-fit only, do not attach during electrical bring-up |
-| PCB standoffs | M2.5, intended height `4 mm` or `6 mm`, outside diameter ideally no more than `5 mm` | Received; verify actual thread, height, screw engagement, and PCB clearance |
+| PCB standoffs | M2.5 female-to-female, selected height `10 mm`, outside diameter ideally no more than `5 mm` | To order; existing `6 mm` parts are about `1 mm` shorter than the unused molded bosses; verify actual thread, height, screw engagement, and PCB clearance |
 | U1 | `ESP32-S3-WROOM-1-N16R8`, previously purchased through AliExpress | Recorded purchased; verify the exact `N16R8` marking before reflow |
 | MK1 | TDK InvenSense `ICS-43434`, five previously purchased through AliExpress | Recorded purchased; verify dry-pack condition, package marking, and pin 1 |
 | Battery | 1S `103450`, nominal `3.7 V`, `50 x 34 x 10 mm`, JST-PH 2.0, advertised `2000 mAh` | Recorded existing; the record does not establish pack protection, so verify protection and polarity |
@@ -342,9 +342,10 @@ After the board is fully cool, cleaned, and unpowered:
 4. Check that the 22 mm button's approximately 31 mm rear keep-out, camera FPC,
    USB-C cable approach, speaker, wiring bends, and light-pipe lines do not
    intersect the PCB or battery.
-5. Photograph the stack and record whether 4 mm or 6 mm standoffs give the
-   better mic-tube clearance. Prefer 6 mm if both fit; use 4 mm only if the tube
-   is not crushed and the PCB remains flat.
+5. Dry-fit and photograph the stack with the selected `10 mm` standoffs.
+   Confirm that they clear the unused molded bosses with tolerance, the mic
+   tube is not crushed, the PCB remains flat, and the lid closes without the
+   button, camera FPC, wiring, or other front-mounted parts touching the PCB.
 
 Do not epoxy standoffs, apply Velcro, cut rods, or drill the enclosure yet.
 Camera, speaker, microphone, button, LED, PIR, and USB flashing tests can still
@@ -608,16 +609,17 @@ The in-repository Rev C gates now require all of the following:
    intentional population delta is added C35/R37/U9 and removed R26/R36.
 5. The Rev C Gerber ZIP matches its generated directory, passes archive
    integrity and mask-aperture checks, and is recorded with the exact BOM and
-   CPL hashes in `pcb/smart-doorbell/jlcpcb/rev-c/RELEASE_CANDIDATE.md`.
+   CPL hashes in `pcb/smart-doorbell/jlcpcb/rev-c/ORDERED_RELEASE.md`.
 6. The actual JLCPCB assembly preview is checked for 85 placements, all DNPs,
    and pin-1 orientation, especially U9 at the corrected 180-degree CPL
    rotation. This is an external upload-preview gate and cannot be replaced by
    a local KiCad or CSV inspection.
 
-The first five gates are reproducible locally. Gate 6 must be recorded in the
-release manifest before payment. Order only the minimum useful prototype
-quantity; corrected files do not establish that the twice-stressed Rev B
-camera or power path is undamaged.
+The first five gates are reproducible locally. Gate 6 passed against the actual
+JLCPCB BOM match and top-side preview before the minimum five-board Rev C
+prototype order was submitted on 2026-07-26; its evidence is retained in the
+ordered release directory. Corrected files do not establish that the
+twice-stressed Rev B camera or power path is undamaged.
 
 ## Rev C first-power and camera sequence
 
@@ -731,9 +733,9 @@ obscure basic board health:
    flash a minimal Rev B image using the exact N16R8 flash/PSRAM configuration.
 2. Recheck idle rails and current with firmware running.
 3. Treat the Rev B camera interface as a known physical pin-order mismatch.
-   Complete the PCB reorder gate above or provide a verified crossover; do not
-   reconnect the camera directly to Rev B J3. Establish a camera-disconnected
-   current baseline before any corrected, current-limited camera test.
+   Use a received Rev C board or provide a verified crossover; do not reconnect
+   the camera directly to Rev B J3. Establish a camera-disconnected current
+   baseline before any corrected, current-limited camera test.
 4. Capture and listen to a real MK1 audio recording before sealing its duct;
    the initial I2S electrical and acoustic-response test has passed.
 5. Validate higher-level speaker playback after enclosure positioning; the
@@ -750,7 +752,7 @@ obscure basic board health:
 ## References
 
 - [Ordered release record](../pcb/smart-doorbell/jlcpcb/ORDERED_RELEASE.md)
-- [Rev C release candidate](../pcb/smart-doorbell/jlcpcb/rev-c/RELEASE_CANDIDATE.md)
+- [Ordered Rev C release](../pcb/smart-doorbell/jlcpcb/rev-c/ORDERED_RELEASE.md)
 - [Protected Rev B assembly BOM](../pcb/smart-doorbell/production/Smart_Doorbell_Project_B_bom-JLCPCB_FINAL.csv)
 - [Rev B enclosure handoff](enclosure-rev-b-handoff.md)
 - [OV5640 seller drawing record](hardware/camera/README.md)

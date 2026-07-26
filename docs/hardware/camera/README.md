@@ -106,11 +106,10 @@ the exposed flex contacts on the bottom. Recovering Rev B requires a verified
 first powered camera test still requires a known-good camera and the staged,
 current-limited plan in `docs/hardware-bringup.md`.
 
-The Rev C KiCad correction and manufacturing release candidate now exist. The
-candidate remains blocked from ordering until its actual JLCPCB placement
-preview is checked and recorded, particularly U9 pin 1 and the 85-placement
-count. Its exact upload files and remaining external gate are recorded in
-`pcb/smart-doorbell/jlcpcb/rev-c/RELEASE_CANDIDATE.md`. Preserve the immutable
-Rev B upload files as fault history. Insert or remove any flex only with every
-power source disconnected, and keep R11 and R21 DNP for this fixed-focus
-module.
+The Rev C KiCad correction was submitted as the minimum five-board prototype
+order on 2026-07-26 after its actual JLCPCB BOM match and top-side assembly
+preview passed. Its exact upload files, hashes, and preview evidence are
+recorded in `pcb/smart-doorbell/jlcpcb/rev-c/ORDERED_RELEASE.md`. Preserve both
+immutable ordered releases: Rev B as fault history and Rev C as the corrected
+first-article package. Insert or remove any flex only with every power source
+disconnected, and keep R11 and R21 DNP for this fixed-focus module.
