@@ -29,6 +29,8 @@ static void configure_safe_gpio_state(void)
 {
     set_output_low(STATUS_LED_PIN);
     set_output_low(BUTTON_LED_PIN);
+    set_output_low(CAM_PWR_EN_PIN);
+    gpio_set_pull_mode(CAM_PWR_EN_PIN, GPIO_PULLDOWN_ONLY);
     set_output_low(AMP_EN_PIN);
     set_output_low((gpio_num_t)CAM_PIN_XCLK);
     set_output_low((gpio_num_t)CAM_PIN_PWDN);

@@ -19,6 +19,7 @@
 // Replace with the IP address of your Raspberry Pi running the Spring Boot Gateway
 #define GATEWAY_API_URL "http://192.168.1.10:8080/api/events"
 #define GATEWAY_API_KEY "YOUR_HARD_TO_GUESS_API_KEY"
+#define DEVICE_ID       "front-door"
 
 // ==========================================
 // Media Configuration

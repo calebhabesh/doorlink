@@ -1,0 +1,7 @@
+# Isolated button/PIR wake and deep-sleep diagnostic.
+# CONFIG_SMART_DOORBELL_PRODUCTION_APP is not set
+CONFIG_SMART_DOORBELL_WAKE_SLEEP_DIAGNOSTIC=y
+
+# Validate on cold boot/reset, but avoid re-hashing the unchanged application
+# on every deep-sleep event wake.
+CONFIG_BOOTLOADER_SKIP_VALIDATE_IN_DEEP_SLEEP=y

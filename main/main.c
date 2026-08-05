@@ -18,7 +18,11 @@
 #include "esp_http_client.h"
 #include "board_pins.h"
 #include "camera_power.h"
+#include "ov5640_mode_fix.h"
+#include "camera_power_gate_bringup.h"
 #include "core_bringup.h"
+#include "battery_bringup.h"
+#include "battery_camera_upload_bringup.h"
 #include "camera_bringup.h"
 #include "mic_bringup.h"
 #include "speaker_bringup.h"
@@ -30,12 +34,24 @@
 #define SMART_DOORBELL_CORE_BRINGUP 1
 #endif
 
+#ifndef SMART_DOORBELL_BATTERY_BRINGUP
+#define SMART_DOORBELL_BATTERY_BRINGUP 0
+#endif
+
+#ifndef SMART_DOORBELL_BATTERY_CAMERA_UPLOAD_BRINGUP
+#define SMART_DOORBELL_BATTERY_CAMERA_UPLOAD_BRINGUP 0
+#endif
+
 #ifndef SMART_DOORBELL_CAMERA_ATTACHED_IDLE
 #define SMART_DOORBELL_CAMERA_ATTACHED_IDLE 0
 #endif
 
 #ifndef SMART_DOORBELL_CAMERA_BRINGUP
 #define SMART_DOORBELL_CAMERA_BRINGUP 0
+#endif
+
+#ifndef SMART_DOORBELL_CAMERA_POWER_GATE_BRINGUP
+#define SMART_DOORBELL_CAMERA_POWER_GATE_BRINGUP 0
 #endif
 
 #ifndef SMART_DOORBELL_WIFI_BRINGUP
@@ -56,6 +72,18 @@
 
 #ifndef SMART_DOORBELL_PIR_BRINGUP
 #define SMART_DOORBELL_PIR_BRINGUP 0
+#endif
+
+#ifndef SMART_DOORBELL_CAMERA_XCLK_HZ
+#define SMART_DOORBELL_CAMERA_XCLK_HZ 10000000
+#endif
+
+#ifndef SMART_DOORBELL_CAMERA_MAINS_HZ
+#define SMART_DOORBELL_CAMERA_MAINS_HZ 60
+#endif
+
+#ifndef SMART_DOORBELL_CAMERA_AUTO_GAIN_CEILING
+#define SMART_DOORBELL_CAMERA_AUTO_GAIN_CEILING 0x0020
 #endif
 
 static const char *TAG = "smart_doorbell";
@@ -85,16 +113,15 @@ static esp_err_t __attribute__((unused)) init_camera(void)
         .pin_href = CAM_PIN_HREF,
         .pin_pclk = CAM_PIN_PCLK,
 
-        // XCLK 20MHz or 10MHz for OV2640 double FPS (Experimental)
-        .xclk_freq_hz = 20000000,
+        .xclk_freq_hz = SMART_DOORBELL_CAMERA_XCLK_HZ,
         .ledc_timer = LEDC_TIMER_0,
         .ledc_channel = LEDC_CHANNEL_0,
 
         .pixel_format = PIXFORMAT_JPEG, // YUV422,GRAYSCALE,RGB565,JPEG
-        .frame_size = FRAMESIZE_UXGA,   // QQVGA-UXGA. For OV5640 you can even go higher.
+        .frame_size = FRAMESIZE_QXGA,
 
         .jpeg_quality = 12, // 0-63, lower number means higher quality
-        .fb_count = 2,      // When jpeg mode is used, if fb_count more than one, the driver will work in continuous mode.
+        .fb_count = 1,
         .fb_location = CAMERA_FB_IN_PSRAM,
         .grab_mode = CAMERA_GRAB_WHEN_EMPTY,
     };
@@ -112,6 +139,100 @@ static esp_err_t __attribute__((unused)) init_camera(void)
         ESP_LOGE(TAG, "Camera Init Failed: %s", esp_err_to_name(err));
         camera_power_disable();
         return err;
+    }
+
+    sensor_t *sensor = esp_camera_sensor_get();
+    if (!sensor) {
+        ESP_LOGE(TAG, "Camera sensor handle unavailable after initialization");
+        esp_camera_deinit();
+        camera_power_disable();
+        return ESP_FAIL;
+    }
+
+    int sensor_err = sensor->set_vflip(sensor, 1);
+    sensor_err |= sensor->set_hmirror(sensor, 1);
+    if (sensor_err != 0) {
+        ESP_LOGE(TAG, "Camera orientation setup failed: %d", sensor_err);
+        esp_camera_deinit();
+        camera_power_disable();
+        return ESP_FAIL;
+    }
+
+    err = ov5640_apply_full_readout_fix(
+        sensor,
+        camera_config.frame_size,
+        OV5640_FULL_READOUT_BLC_FRAMES,
+        false);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "OV5640 full-readout setup failed: %s",
+                 esp_err_to_name(err));
+        esp_camera_deinit();
+        camera_power_disable();
+        return err;
+    }
+
+    ov5640_aec_timing_t aec_timing = {0};
+    err = ov5640_configure_aec_timing(
+        sensor,
+        camera_config.xclk_freq_hz,
+        SMART_DOORBELL_CAMERA_MAINS_HZ,
+        0,
+        &aec_timing);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "OV5640 AEC timing setup failed: %s",
+                 esp_err_to_name(err));
+        esp_camera_deinit();
+        camera_power_disable();
+        return err;
+    }
+    ESP_LOGI(TAG,
+             "OV5640 AEC timing: mains=%dHz sysclk=%u HTS=%u VTS=%u "
+             "max_exposure=%u B50=%u/%u B60=%u/%u",
+             SMART_DOORBELL_CAMERA_MAINS_HZ,
+             (unsigned)aec_timing.sysclk_hz,
+             (unsigned)aec_timing.hts_lines,
+             (unsigned)aec_timing.vts_lines,
+             (unsigned)aec_timing.max_exposure_lines,
+             (unsigned)aec_timing.band_step_50hz,
+             (unsigned)aec_timing.max_bands_50hz,
+             (unsigned)aec_timing.band_step_60hz,
+             (unsigned)aec_timing.max_bands_60hz);
+
+    err = ov5640_set_auto_gain_ceiling(
+        sensor, SMART_DOORBELL_CAMERA_AUTO_GAIN_CEILING);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "OV5640 automatic gain ceiling setup failed: %s",
+                 esp_err_to_name(err));
+        esp_camera_deinit();
+        camera_power_disable();
+        return err;
+    }
+    ESP_LOGI(TAG, "OV5640 automatic gain ceiling: 0x%03x",
+             SMART_DOORBELL_CAMERA_AUTO_GAIN_CEILING);
+
+    if (ov5640_uses_full_readout(camera_config.frame_size)) {
+        for (int i = 0; i < OV5640_FULL_READOUT_BLC_FRAMES; ++i) {
+            camera_fb_t *settling_fb = esp_camera_fb_get();
+            if (!settling_fb) {
+                ESP_LOGE(TAG, "OV5640 BLC settling frame %d/%d failed",
+                         i + 1, OV5640_FULL_READOUT_BLC_FRAMES);
+                esp_camera_deinit();
+                camera_power_disable();
+                return ESP_FAIL;
+            }
+            esp_camera_fb_return(settling_fb);
+        }
+        ESP_LOGI(TAG, "OV5640 full-readout/BLC fix settled over %d frames",
+                 OV5640_FULL_READOUT_BLC_FRAMES);
+
+        err = ov5640_finish_blc_recalibration(sensor);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "OV5640 BLC recalibration finish failed: %s",
+                     esp_err_to_name(err));
+            esp_camera_deinit();
+            camera_power_disable();
+            return err;
+        }
     }
 
     s_camera_initialized = true;
@@ -477,6 +598,15 @@ void app_main(void)
 {
 #if SMART_DOORBELL_CORE_BRINGUP
     run_core_bringup(SMART_DOORBELL_CAMERA_ATTACHED_IDLE);
+    return;
+#elif SMART_DOORBELL_BATTERY_BRINGUP
+    run_battery_bringup();
+    return;
+#elif SMART_DOORBELL_BATTERY_CAMERA_UPLOAD_BRINGUP
+    run_battery_camera_upload_bringup();
+    return;
+#elif SMART_DOORBELL_CAMERA_POWER_GATE_BRINGUP
+    run_camera_power_gate_bringup();
     return;
 #elif SMART_DOORBELL_CAMERA_BRINGUP
     run_camera_bringup();

@@ -40,7 +40,7 @@ static void set_output_low(gpio_num_t pin)
     ESP_ERROR_CHECK(gpio_set_level(pin, 0));
 }
 
-static void configure_safe_gpio_state(bool camera_attached)
+void core_bringup_configure_safe_gpio_state(bool camera_attached)
 {
     /*
      * Hold all currently unused outputs low. XCLK, PWDN, and RESET reach the
@@ -52,6 +52,12 @@ static void configure_safe_gpio_state(bool camera_attached)
     set_output_low(CAM_PWR_EN_PIN);
     ESP_ERROR_CHECK(gpio_set_pull_mode(CAM_PWR_EN_PIN, GPIO_PULLDOWN_ONLY));
     set_output_low(AMP_EN_PIN);
+    set_output_low(I2S_AUDIO_WS);
+    set_output_low(I2S_AUDIO_SCK);
+    set_output_low(I2S_SPK_SD);
+    ESP_ERROR_CHECK(gpio_reset_pin(I2S_MIC_SD));
+    ESP_ERROR_CHECK(gpio_set_direction(I2S_MIC_SD, GPIO_MODE_INPUT));
+    ESP_ERROR_CHECK(gpio_set_pull_mode(I2S_MIC_SD, GPIO_PULLDOWN_ONLY));
     set_output_low(STATUS_LED_PIN);
     set_output_low(BUTTON_LED_PIN);
     set_output_low((gpio_num_t)CAM_PIN_XCLK);
@@ -106,7 +112,7 @@ static void log_memory_configuration(void)
 
 void run_core_bringup(bool camera_attached)
 {
-    configure_safe_gpio_state(camera_attached);
+    core_bringup_configure_safe_gpio_state(camera_attached);
 
     /*
      * Native USB disconnects briefly across reset. Keep the safe GPIO state
@@ -117,6 +123,8 @@ void run_core_bringup(bool camera_attached)
 
     ESP_LOGI(TAG, "Smart Doorbell core-only bring-up image");
     ESP_LOGI(TAG, "Camera, I2S, amplifier, Wi-Fi, MQTT, and deep sleep are disabled");
+    ESP_LOGI(TAG, "I2S standby: WS=GPIO%d LOW, SCK=GPIO%d LOW, speaker data=GPIO%d LOW, mic data=GPIO%d input pulldown",
+             I2S_AUDIO_WS, I2S_AUDIO_SCK, I2S_SPK_SD, I2S_MIC_SD);
     ESP_LOGI(TAG, "Camera-attached idle=%s", camera_attached ? "yes" : "no");
     ESP_LOGI(TAG, "Camera controls: PWR_EN=GPIO%d LOW, XCLK=GPIO%d LOW, PWDN=GPIO%d %s, RESET=GPIO%d LOW",
              CAM_PWR_EN_PIN, CAM_PIN_XCLK, CAM_PIN_PWDN,

@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-void run_mic_bringup(void);
+void run_battery_bringup(void);
 
 #ifdef __cplusplus
 }

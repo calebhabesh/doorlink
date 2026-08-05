@@ -2,6 +2,10 @@
 
 #include "esp_err.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * Rev C camera rail sequencing.
  *
@@ -12,3 +16,7 @@
 esp_err_t camera_power_prepare(void);
 esp_err_t camera_power_enable(void);
 esp_err_t camera_power_disable(void);
+
+#ifdef __cplusplus
+}
+#endif

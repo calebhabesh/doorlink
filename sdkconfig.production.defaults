@@ -1,0 +1,8 @@
+# Layer this after sdkconfig.defaults for a production-application build:
+# idf.py -B build-production -D SDKCONFIG=sdkconfig.production \
+#   -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.production.defaults" build
+CONFIG_SMART_DOORBELL_PRODUCTION_APP=y
+
+# Validate on cold boot/reset, but avoid re-hashing the unchanged application
+# on every deep-sleep event wake.
+CONFIG_BOOTLOADER_SKIP_VALIDATE_IN_DEEP_SLEEP=y

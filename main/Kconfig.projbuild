@@ -1,0 +1,19 @@
+menu "Smart Doorbell application"
+
+config SMART_DOORBELL_PRODUCTION_APP
+    bool "Build the event-driven production application"
+    default n
+    help
+        Enable the C++ wake/capture/upload/deep-sleep controller. Leave this
+        disabled during hardware bring-up so the core-only safe image remains
+        the default.
+
+config SMART_DOORBELL_WAKE_SLEEP_DIAGNOSTIC
+    bool "Build the button/PIR wake and deep-sleep diagnostic"
+    default n
+    help
+        Build a bounded wake-only image. It never starts the camera, Wi-Fi,
+        MQTT, amplifier, or I2S and returns to deep sleep after reporting the
+        wake cause.
+
+endmenu

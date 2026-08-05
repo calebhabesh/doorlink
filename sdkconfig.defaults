@@ -1,5 +1,15 @@
 CONFIG_IDF_TARGET="esp32s3"
 
+# Hardware-safe default. Production builds layer sdkconfig.production.defaults.
+# CONFIG_SMART_DOORBELL_PRODUCTION_APP is not set
+# CONFIG_SMART_DOORBELL_WAKE_SLEEP_DIAGNOSTIC is not set
+
+# QXGA production-still candidate. A fixed 2 MiB receive buffer was required
+# for validated 2048x1536 captures; QSXGA remains deferred.
+# CONFIG_CAMERA_JPEG_MODE_FRAME_SIZE_AUTO is not set
+CONFIG_CAMERA_JPEG_MODE_FRAME_SIZE_CUSTOM=y
+CONFIG_CAMERA_JPEG_MODE_FRAME_SIZE=2097152
+
 # ESP32-S3-WROOM-1-N16R8 has 8MB octal PSRAM. Camera frame buffers need PSRAM.
 CONFIG_SPIRAM=y
 CONFIG_SPIRAM_MODE_OCT=y

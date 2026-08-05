@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-void run_mic_bringup(void);
+void wake_stub_install(void);
 
 #ifdef __cplusplus
 }

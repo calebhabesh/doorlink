@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-void run_mic_bringup(void);
+void run_camera_power_gate_bringup(void);
 
 #ifdef __cplusplus
 }
