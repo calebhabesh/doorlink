@@ -11,7 +11,7 @@ export default function MainLayout({
   children, 
   breadcrumbs, 
   status = 'disconnected',
-  batteryPercentage = 85
+  batteryPercentage
 }: { 
   children: React.ReactNode;
   breadcrumbs: { label: string; active?: boolean }[];

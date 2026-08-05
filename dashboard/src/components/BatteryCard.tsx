@@ -4,20 +4,16 @@ import { useState } from 'react';
 import { Battery, Info } from 'lucide-react';
 
 interface BatteryCardProps {
-  initialPercentage?: number;
-  voltage?: number;
+  percentage?: number | null;
+  voltage?: number | null;
 }
 
 export default function BatteryCard({ 
-  initialPercentage = 85, 
-  voltage = 4.02 
+  percentage,
+  voltage
 }: BatteryCardProps) {
-  const [percentage] = useState(initialPercentage);
-  
-  // Custom logic to estimate remaining days.
-  // 100% capacity is target 27 days. 
-  // Let's assume linear discharge based on typical usage.
-  const estimatedDays = Math.round((percentage / 100) * 27);
+  const [reportedPercentage] = useState(percentage);
+  const displayPercentage = reportedPercentage ?? 0;
   
   const getBatteryColor = (pct: number) => {
     if (pct > 50) return 'bg-emerald-500';
@@ -46,9 +42,8 @@ export default function BatteryCard({
           <Battery className="w-3.5 h-3.5 text-zinc-400" />
           Device Power
         </h3>
-        <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${getBatteryBgColor(percentage)} ${getBatteryTextColor(percentage)}`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${percentage > 20 ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></span>
-          {percentage > 20 ? 'Good' : 'Low Battery'}
+          <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${reportedPercentage === null || reportedPercentage === undefined ? 'bg-zinc-500/10 border-zinc-500/20 text-zinc-500' : `${getBatteryBgColor(displayPercentage)} ${getBatteryTextColor(displayPercentage)}`}`}>
+          {reportedPercentage === null || reportedPercentage === undefined ? 'Not reported' : displayPercentage > 20 ? 'Good' : 'Low Battery'}
         </span>
       </div>
 
@@ -56,7 +51,7 @@ export default function BatteryCard({
         {/* Percentage Indicator above the Bar */}
         <div className="flex justify-between items-end">
           <span className="text-2xl sm:text-3xl font-black text-white tracking-tight tabular-nums select-none">
-            {percentage}%
+            {reportedPercentage === null || reportedPercentage === undefined ? '—' : `${displayPercentage}%`}
           </span>
           <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
             Charge Level
@@ -66,26 +61,26 @@ export default function BatteryCard({
         {/* Visual Battery Bar */}
         <div className="w-full h-3 bg-zinc-900 rounded-full overflow-hidden border border-zinc-850 p-[1px]">
           <div 
-            className={`h-full rounded-full transition-all duration-1000 ${getBatteryColor(percentage)}`}
-            style={{ width: `${percentage}%` }}
+            className={`h-full rounded-full transition-all duration-1000 ${getBatteryColor(displayPercentage)}`}
+            style={{ width: `${displayPercentage}%` }}
           />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-zinc-900/30 border border-zinc-850 rounded-2xl p-3 text-left">
             <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block mb-0.5">Est. Remaining</span>
-            <span className="text-sm font-black text-zinc-200">~{estimatedDays} Days</span>
+            <span className="text-sm font-black text-zinc-200">Not measured</span>
           </div>
           <div className="bg-zinc-900/30 border border-zinc-850 rounded-2xl p-3 text-left">
             <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block mb-0.5">Voltage</span>
-            <span className="text-sm font-black text-zinc-200 font-mono">{voltage.toFixed(2)} V</span>
+            <span className="text-sm font-black text-zinc-200 font-mono">{voltage === null || voltage === undefined ? 'Not reported' : `${voltage.toFixed(2)} V`}</span>
           </div>
         </div>
       </div>
       
       <p className="text-[10px] text-zinc-500 font-mono flex items-center gap-1 leading-normal text-left">
         <Info className="w-3.5 h-3.5 text-zinc-650 shrink-0" />
-        Calculated from event-driven deep sleep telemetry.
+        Values appear only when reported by device telemetry.
       </p>
     </div>
   );
