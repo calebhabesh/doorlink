@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ExtendWith(SpringExtension.class)
 @DataJpaTest
@@ -32,5 +33,14 @@ public class EventRepositoryTest {
         Event saved = eventRepository.save(event);
         assertNotNull(saved.getId());
         assertEquals("audio/test.wav", saved.getAudioKey());
+    }
+
+    @Test
+    public void testFindEventByStableEventId() {
+        String eventId = "0123456789abcdef0123456789abcdef";
+        eventRepository.save(new Event(eventId, LocalDateTime.now(),
+                "DOORBELL_PRESS", "images/test.jpg", null));
+
+        assertTrue(eventRepository.findByEventId(eventId).isPresent());
     }
 }

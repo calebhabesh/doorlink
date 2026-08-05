@@ -1,6 +1,5 @@
 package com.smartdoorbell.gateway.service;
 
-import com.smartdoorbell.gateway.entity.Event;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,7 +10,6 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.client.RestTemplate;
 
-import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -35,16 +33,14 @@ public class NtfyServiceTest {
 
     @Test
     public void testSendNotification() {
-        Event event = new Event(LocalDateTime.now(), "DOORBELL_PRESS", "img.jpg");
-        
-        ntfyService.sendNotification(event);
+        ntfyService.sendNotification("DOORBELL_PRESS");
 
         ArgumentCaptor<HttpEntity> entityCaptor = ArgumentCaptor.forClass(HttpEntity.class);
         verify(restTemplate).postForEntity(eq("https://ntfy.sh/test_topic"), entityCaptor.capture(), eq(String.class));
         
         HttpHeaders headers = entityCaptor.getValue().getHeaders();
-        assertEquals("Someone is at the door!", headers.getFirst("Title"));
-        assertEquals("doorbell, camera", headers.getFirst("Tags"));
+        assertEquals("Someone rang the doorbell", headers.getFirst("Title"));
+        assertEquals("doorbell, bell", headers.getFirst("Tags"));
         assertTrue(headers.getFirst("Actions").contains("http://test.com"));
     }
 }

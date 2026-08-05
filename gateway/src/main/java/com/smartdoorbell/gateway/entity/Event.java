@@ -10,6 +10,9 @@ public class Event {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(unique = true, length = 64)
+    private String eventId;
+
     @Column(nullable = false)
     private LocalDateTime timestamp;
 
@@ -37,7 +40,16 @@ public class Event {
         this.audioKey = audioKey;
     }
 
+    public Event(String eventId, LocalDateTime timestamp, String eventType, String imageKey, String audioKey) {
+        this.eventId = eventId;
+        this.timestamp = timestamp;
+        this.eventType = eventType;
+        this.imageKey = imageKey;
+        this.audioKey = audioKey;
+    }
+
     public Long getId() { return id; }
+    public String getEventId() { return eventId; }
     public LocalDateTime getTimestamp() { return timestamp; }
     public String getEventType() { return eventType; }
     public String getImageKey() { return imageKey; }

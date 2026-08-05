@@ -11,6 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -45,5 +46,20 @@ public class MinioServiceTest {
         String key = minioService.uploadFile(multipartFile);
         assertNotNull(key);
         verify(amazonS3, times(1)).putObject(eq("test-bucket"), any(String.class), any(InputStream.class), any());
+    }
+
+    @Test
+    public void testUploadFileWithStableKey() throws Exception {
+        when(multipartFile.getInputStream()).thenReturn(new ByteArrayInputStream("test data".getBytes()));
+        when(multipartFile.getOriginalFilename()).thenReturn("test.jpg");
+        when(multipartFile.getContentType()).thenReturn("image/jpeg");
+        when(multipartFile.getSize()).thenReturn(9L);
+        when(amazonS3.doesBucketExistV2("test-bucket")).thenReturn(true);
+
+        String key = minioService.uploadFile(multipartFile, "event-id-image");
+
+        assertEquals("event-id-image.jpg", key);
+        verify(amazonS3).putObject(eq("test-bucket"), eq("event-id-image.jpg"),
+                any(InputStream.class), any());
     }
 }

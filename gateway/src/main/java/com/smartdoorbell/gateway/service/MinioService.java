@@ -26,13 +26,18 @@ public class MinioService {
     }
 
     public String uploadFile(MultipartFile file) throws IOException {
+        return uploadFile(file, null);
+    }
+
+    public String uploadFile(MultipartFile file, String stableBaseKey) throws IOException {
         if (!amazonS3.doesBucketExistV2(bucketName)) {
             amazonS3.createBucket(bucketName);
         }
 
         String originalFilename = file.getOriginalFilename();
         String extension = originalFilename != null && originalFilename.contains(".") ? originalFilename.substring(originalFilename.lastIndexOf(".")) : "";
-        String key = UUID.randomUUID().toString() + extension;
+        String key = (stableBaseKey == null || stableBaseKey.isBlank()
+                ? UUID.randomUUID().toString() : stableBaseKey) + extension;
 
         ObjectMetadata metadata = new ObjectMetadata();
         metadata.setContentType(file.getContentType());

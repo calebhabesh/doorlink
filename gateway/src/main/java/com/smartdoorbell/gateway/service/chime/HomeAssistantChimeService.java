@@ -1,6 +1,5 @@
 package com.smartdoorbell.gateway.service.chime;
 
-import com.smartdoorbell.gateway.entity.Event;
 import com.smartdoorbell.gateway.service.ChimeService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +35,7 @@ public class HomeAssistantChimeService implements ChimeService {
 
     @Override
     @Async
-    public void ring(Event event) {
+    public void ring(String eventType) {
         Instant now = Instant.now();
         Instant last = lastRingTime.get();
 

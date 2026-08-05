@@ -1,6 +1,5 @@
 package com.smartdoorbell.gateway.service;
 
-import com.smartdoorbell.gateway.entity.Event;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -19,6 +18,9 @@ public class NtfyService {
     @Value("${dashboard.url:http://localhost:3000}")
     private String dashboardUrl;
 
+    @Value("${ntfy.enabled:true}")
+    private boolean enabled = true;
+
     public NtfyService(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
@@ -32,15 +34,23 @@ public class NtfyService {
     }
 
     @Async
-    public void sendNotification(Event event) {
+    public void sendNotification(String eventType) {
+        if (!enabled) {
+            return;
+        }
         String url = "https://ntfy.sh/" + ntfyTopic;
         
         HttpHeaders headers = new HttpHeaders();
-        headers.set("Title", "Someone is at the door!");
-        headers.set("Tags", "doorbell, camera");
+        boolean motion = "PIR_MOTION".equals(eventType);
+        headers.set("Title", motion ? "Motion detected at the door" : "Someone rang the doorbell");
+        headers.set("Tags", motion ? "doorbell, motion" : "doorbell, bell");
         headers.set("Actions", "view, Open Dashboard, " + dashboardUrl);
 
-        String message = "Visitor presence detected at the main entry. Media captured and securely logged.";
+        // The fast trigger intentionally runs before camera capture, so never
+        // claim that media already exists in this notification.
+        String message = motion
+                ? "Presence was detected at the main entry. A snapshot is being prepared."
+                : "The front doorbell was pressed. A snapshot is being prepared.";
         HttpEntity<String> entity = new HttpEntity<>(message, headers);
 
         try {
