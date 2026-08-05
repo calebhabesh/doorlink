@@ -18,7 +18,7 @@
 
 # Build artifacts and directories
 **/build/
-build/
+/build*/
 *.o
 *.a
 *.out
@@ -30,6 +30,10 @@ build/
 *.map
 flasher_args.json # Generated in build directory
 sdkconfig.old
+sdkconfig.production
+sdkconfig.wake
+sdkconfig.production.fast-trigger
+sdkconfig.wake.fade
 sdkconfig
 
 # ESP-IDF dependencies

@@ -98,6 +98,11 @@ cell whose datasheet permits the designed approximately 213 mA charge current.
 Do not use a swollen, dented, punctured, deeply discharged, unprotected, or
 polarity-unknown pouch cell.
 
+J5 connects directly to the MCP73871 `THERM` charging-safety input. It is not
+routed to an ESP32 ADC and firmware cannot report thermistor temperature. The
+ESP32 can read only battery voltage, through the R7/R8 100 kOhm/100 kOhm
+divider and C10 filter on GPIO1.
+
 ## First-article record
 
 Create a record for the selected board before changing it:
@@ -257,10 +262,22 @@ Do this only after the USB-only test passes.
    J1 pin 1 must have continuity to TP4 (`+BATT`) and J1 pin 2 to TP9 (`GND`).
    Verify which harness contact reaches battery positive. Do not trust wire
    colour or generic JST-PH polarity.
-3. Connect the protected 1S LiPo with USB disconnected. Verify TP4 matches the
-   cell voltage, TP5 follows the battery path, and TP6, TP7, TP8, and TP10 are
-   regulated correctly.
-4. Disconnect the cell. Reconnect the current-limited 5 V source to TP3/TP9,
+3. With the camera, speaker, external button, and PIR disconnected, connect the
+   protected 1S LiPo with USB disconnected. Verify TP4 matches the cell voltage,
+   TP5 follows the battery path, and TP6, TP7, TP8, and TP10 are regulated
+   correctly.
+4. Flash the bounded battery diagnostic, disconnect USB, attach secure meter
+   leads at TP4/TP9, reset the board on battery-only power, and record the meter
+   reading. The image takes 64 samples once and then stops sampling. Because
+   the native USB console is unavailable during battery-only operation,
+   reconnect USB after the measurement; the diagnostic repeats the retained
+   result every five seconds without resampling. Do this only after the J5 NTC
+   is installed, because reconnecting USB enables the hardware charger. Record
+   the GPIO1 ADC result beside the TP4 reading. Calibrated millivolts are
+   reported when eFuse calibration is available, with only the nominal 2:1
+   divider ratio applied. Do not use this first comparison as a low-battery
+   cutoff. Reset the board for each additional comparison point.
+5. Disconnect the cell. Reconnect the current-limited 5 V source to TP3/TP9,
    using a limit that permits the approximately 213 mA programmed charge plus
    the measured system load; 400 mA is a reasonable initial ceiling after the
    USB-only check has passed. Reconnect the cell and observe the first few
@@ -268,11 +285,11 @@ Do this only after the USB-only test passes.
    213 mA but will vary with cell state, input limit, and system load. Watch
    battery voltage and U2 temperature; stop for unexpected heating, smell,
    swelling, or unstable rails.
-5. Record TP3-TP10, supply input current, battery voltage before/after, U2
+6. Record TP3-TP10, supply input current, battery voltage before/after, U2
    temperature if measurable, and D2 charge-indicator behavior. Supply current
    is not the same as battery charge current, and a nearly full cell may not
    enter constant-current charge.
-6. Do not leave this first charge unattended. Remove input power first, then the
+7. Do not leave this first charge unattended. Remove input power first, then the
    battery, before soldering either hand-installed component.
 
 ## 3. Solder U1: ESP32-S3-WROOM-1-N16R8
@@ -623,6 +640,423 @@ twice-stressed Rev B camera or power path is undamaged.
 
 ## Rev C first-power and camera sequence
 
+### Fresh Rev C article progress record
+
+Bring-up moved to a fresh Rev C article on 2026-08-04 after the first
+populated Rev C board was quarantined following intermittent U2/MK1 heating.
+The earlier symptom is treated as an isolated contamination or assembly fault,
+not as a cleared design issue on that board.
+
+- The fresh board has hand-installed U1 (`ESP32-S3-WROOM-1-N16R8`) and MK1
+  (`ICS-43434`). With USB as the only power source, TP6 measured `3.32 V`; U2
+  and MK1 remained cool and USB remained stable without resets.
+- The boot log detected 16 MiB DIO flash and 8 MiB octal PSRAM, and the PSRAM
+  memory test passed.
+- A microphone-only image ran for more than 60 seconds without I2S errors or
+  disconnects. MK1 produced changing data in the expected left slot while the
+  unused right slot remained zero, consistent with its grounded LR pin.
+- A speaker-only image kept camera power, camera controls, microphone RX,
+  Wi-Fi, MQTT, and sleep disabled. It completed 14 low-level 1 kHz tone bursts
+  over approximately 32 seconds without I2S errors, resets, brownouts, or USB
+  disconnects. The intentionally quiet tones were crisp and clearly audible;
+  U4 and U2 remained cool. The board was then returned to the core-only image,
+  which holds GPIO42/CAM_PWR_EN and AMP_EN low.
+- With that core-only image running, the Rev C camera-off rails measured TP10
+  `0.13 V`, TP7 `0 V`, TP8 `0 V`, and TP6 `3.3 V`. The small unloaded TP10
+  residual did not indicate an enabled camera rail; both downstream regulator
+  outputs remained fully off.
+- A Wi-Fi-only image kept camera power, camera controls, amplifier, I2S, MQTT,
+  gateway upload, and sleep disabled. It associated successfully, obtained a
+  DHCP lease, and held a stable `-29 dBm` link through repeated status checks
+  without disconnects, resets, brownouts, or heap loss. U1 and U2 remained
+  cool. The board was then returned to the core-only image with RF disabled.
+- With the camera disconnected, a rails-only image held RESET low, PWDN high,
+  XCLK low, and the camera data pins high-impedance. A bounded five-second U9
+  pulse produced TP10 `3.31 V`, TP7 `2.77 V`, and TP8 `1.50 V`; each rail rose
+  cleanly and discharged after U9 was disabled. No instability was reported.
+  Core-only firmware was restored after every pulse so GPIO42/CAM_PWR_EN could
+  not re-enable the rails on reset.
+- A new, previously unpowered `DCXYX-LZTKQJ-5M-357-V1 FF` camera was inserted
+  lens-up/contact-down in the corrected Rev C J3. With all power removed, TP10,
+  TP7, and TP8 each measured open circuit to TP9. Camera-attached standby tests
+  then passed at 100 ms, one second, and five seconds with RESET low, PWDN high,
+  XCLK low, and data pins high-impedance. Loaded five-second rail measurements
+  were TP10 `3.30 V`, TP7 `2.77 V`, and TP8 `1.50 V`; U2, U6, U7, U8/L1, and
+  the camera remained cool without whine, odour, USB instability, or other
+  fault indication.
+- A camera-only one-frame image detected the OV5640 at SCCB address `0x3c`
+  with PID `0x5640`, started 10 MHz XCLK, and captured a `160x120`, 2,600-byte
+  JPEG with valid start/end markers. Two initial `FB-OVF` notices preceded the
+  successful frame. The frame buffer was returned, the driver deinitialized,
+  and GPIO42 shut the camera rails off before the post-test heartbeat. The
+  board was then restored to core-only firmware.
+- A second one-frame diagnostic encoded its captured JPEG only after returning
+  the frame buffer, deinitializing the driver, and disabling GPIO42/U9. The
+  1,715-byte JPEG was reconstructed from 2,288 base64 characters with valid
+  `FFD8`/`FFD9` markers. Visual inspection showed a coherent room scene, bright
+  light, and person with plausible colour and no striping, torn geometry, or
+  obvious data-bit corruption. One initial `FB-OVF` notice preceded this
+  successful frame. Core-only firmware was restored after export.
+- A follow-up `320x240` QVGA capture completed without an `FB-OVF` notice. The
+  6,193-byte JPEG was reconstructed from 8,260 base64 characters with valid
+  markers after camera shutdown. Visual inspection showed recognizable room
+  objects, stable geometry, plausible colour, and no striping or data-line
+  artifacts; a bright foreground light was normally overexposed. Core-only
+  firmware was restored after the one-frame test.
+- A `640x480` VGA capture also completed without overflow. Its 12,600-byte
+  JPEG was reconstructed from 16,800 base64 characters after camera shutdown
+  and showed a coherent, artifact-free room/person scene. The image was upside
+  down in the current loose-module orientation; that is a later sensor `vflip`
+  configuration issue, not evidence of a data-path fault. Core-only firmware
+  was restored after the test.
+- A later XGA test selected `1024x768`, 10 MHz XCLK, `vflip=1`, `hmirror=1`,
+  and three discarded warm-up frames. Its 29,181-byte JPEG was coherent and
+  free of the severe coloured column artifact described below. QVGA, VGA, and
+  XGA therefore passed through the OV5640 driver's binned-readout path.
+- The automatic JPEG buffer was too small for initial QXGA attempts. A
+  diagnostic-only 2 MiB PSRAM JPEG buffer allowed structurally valid
+  `1600x1200` UXGA and `2048x1536` QXGA exports, but both were covered by
+  severe narrow coloured vertical columns. The artifact persisted with 20 MHz
+  and 10 MHz XCLK, three warm-up frames, and a brighter scene. Maximum QSXGA
+  and WQXGA attempts were stopped after timeouts and were not retried.
+- A `1600x1200` internal OV5640 colour-bar capture at the same 10 MHz XCLK was
+  clean. Because the pattern traversed the sensor JPEG encoder, 8-bit DVP bus,
+  ESP32-S3 camera peripheral, PSRAM buffer, base64 export, and USB serial path,
+  this strongly reduced the likelihood that those stages or their
+  PCLK/HREF/VSYNC transfer caused the scene-dependent columns. Its small,
+  highly compressible JPEG did not exercise the same transfer duration as the
+  noisy real-scene frame.
+- Review of the register tables found that Espressif changes sampling
+  increments when leaving binned mode but does not apply the corresponding
+  full-readout analog and black-level-correction recipe. A bounded UXGA test
+  applied the established full-readout values `0x3618=0x04`, `0x3612=0x29`,
+  `0x3708=0x21`, `0x3709=0x12`, `0x370c=0x00`, `0x4001=0x02`, and
+  `0x4004=0x06`. The resulting 92,270-byte `1600x1200` JPEG was coherent and
+  the severe coloured columns were gone. This confirms the mode-table delta
+  as the UXGA fix on this article.
+- QXGA was then recaptured with the same full-readout recipe, 10 MHz XCLK,
+  three warm-up frames, orientation correction, and the 2 MiB JPEG buffer. The
+  `2048x1536`, 488,692-byte JPEG had valid markers and coherent geometry, but
+  the severe coloured vertical columns remained. The recipe is therefore not
+  a QXGA fix. Before another ordinary QXGA scene capture, use a QXGA internal
+  colour bar to test the higher-volume digital path specifically, or measure
+  TP10/TP7/TP8 during the active QXGA readout.
+- The follow-up QXGA internal-colour-bar test kept those same settings and
+  produced a clean `2048x1536`, 81,165-byte JPEG with valid markers. There was
+  no narrow-column corruption in the solid bars. This strongly validates the
+  QXGA-rate DVP/PCLK/HREF/VSYNC transfer, ESP32-S3 capture, PSRAM, base64, and
+  USB export. It does not identically stress a noisy real scene: the solid bars
+  compressed to only 81,165 bytes, so a data-dependent or long-transfer fault
+  was not eliminated solely by this result. The fixed scene-wide one-pixel
+  columns nevertheless pointed primarily to sensor readout/BLC or active rail
+  quality rather than JPEG-stream corruption.
+- Explicitly redoing OV5640 black-level calibration after the full-readout
+  mode switch substantially reduced the original QXGA corruption. The bounded
+  test applied the full-readout
+  recipe, wrote `0x4003=0x88` to request BLC over eight frames, discarded ten
+  settling frames, explicitly cleared `0x4003[7]`, and read the redo bit back
+  as zero. Continuous BLC updates remained disabled (`0x4005=0x18`). The next
+  `2048x1536`, 128,243-byte low-detail JPEG was coherent and no longer had the
+  severe coloured columns. Mean absolute horizontal-neighbour RGB delta fell from
+  `18.380` in the failed full-readout-only control to `2.001`; the 95th
+  percentile fell from `60` to `9`. A separate test with continuous BLC
+  enabled also passed (`1.618` mean, `8` at the 95th percentile), but the
+  cleared one-shot result showed that continuous updates were unnecessary for
+  that particular scene.
+- A subsequent `2048x1536`, 310,057-byte capture containing a person exposed
+  strong residual vertical fixed-pattern banding across the wall, face, and
+  clothing. Its column/row high-frequency ratio was `15.18`, compared with
+  `2.28` for the clean XGA reference. The earlier low-detail metric therefore
+  overstated the result: the BLC sequence is a partial mitigation, not a QXGA
+  fix. Do not accept the present QXGA image quality as normal or production
+  ready.
+- A fixed-control QXGA capture then disabled automatic exposure/gain, set the
+  gain registers to minimum (`0x350a/0x350b=0x0000`), selected a 600-line
+  exposure (`0x3500..0x3502=0x002580`), and fixed office white balance. The
+  underexposed 113,487-byte image still showed vertical columns. Its high-pass
+  per-column profile correlated `0.738` with the earlier automatic-gain subject
+  frame despite the large brightness difference. The spatially recurring
+  columns rule out high automatic gain as the root cause and strengthen the
+  case for fixed sensor/readout/BLC offsets or fixed clock/power coupling.
+- A covered-lens capture with those identical fixed controls produced a nearly
+  uniform dark frame (mean `6.07/255`, standard deviation `0.71`). Its faint
+  high-pass column signature still correlated `0.664` with the minimum-gain
+  illuminated frame over the full width (`0.423` in the central crop), but its
+  absolute column variation was small. The visible artifact therefore has a
+  signal-dependent component, consistent with column/ADC gain mismatch or an
+  incomplete full-readout/BLC configuration, rather than being solely a large
+  additive dark offset. Fixed clock or rail coupling is not yet excluded.
+- A brighter minimum-gain check increased the fixed exposure from 600 to 1,800
+  lines while retaining fixed office white balance and all other QXGA settings.
+  The column profile remained strongly repeatable: it correlated `0.821` with
+  the 600-line image and `0.781` with the earlier automatic-control subject
+  image. This rules out underexposure in the first minimum-gain test as the
+  explanation for the recurring columns.
+- A controlled back-to-back comparison then changed only BLC continuous-update
+  bit `0x4005[1]`. Both images used minimum gain, 1,800-line exposure, fixed
+  office white balance, the same stationary scene, an eight-frame BLC redo,
+  and an explicitly cleared redo bit. On the central wall crop, changing
+  `0x4005` from `0x18` to `0x1a` reduced adjacent-pixel luminance variation
+  from `0.478` to `0.375` and reduced the high-pass column-profile standard
+  deviation from `0.909` to `0.827` (approximately 9%). The two column
+  profiles still correlated `0.976`, and the bands remained plainly visible.
+  Continuous BLC is therefore a small mitigation, not the QXGA fix, and has
+  not been enabled in the normal capture path on this evidence alone.
+- The suspect camera was then replaced, with power removed, by a second OV5640
+  module. Under the same minimum-gain, 1,800-line exposure, fixed-white-balance,
+  frozen-BLC QXGA recipe, the alternate module produced a coherent subject
+  image with dramatically less fixed-column structure. Comparable flat-wall
+  crops measured a high-pass column standard deviation of `0.353` on the
+  alternate module versus `0.909` on the original, while the column/row ratio
+  fell from `8.00` to `2.31`. This sensor-to-sensor result identifies the first
+  module as a substantial contributor; quarantine it rather than treating its
+  QXGA output as representative of the Rev C PCB.
+- Unrestricted automatic controls on the alternate module still amplified fine
+  vertical noise in the dim, strongly backlit subject scene, although much less
+  than the original module. On the same upper-left wall coordinates, the
+  high-pass column metric fell from `6.340` on the original automatic-control
+  subject image to `1.961` on the alternate module. A follow-up kept exposure
+  and white balance automatic but fixed analog gain at approximately 2x
+  (`0x350a/0x350b=0x001f`). The sensor selected an 885-line exposure and the
+  resulting flat-region column metric fell to `0.504`, with a column/row ratio
+  of `0.84`. This is the best practical QXGA result so far. It validates a
+  low-gain exposure policy as a software mitigation on the good module, but
+  longer exposure and subject-motion blur must be evaluated in realistic
+  doorway lighting before adopting it as a production setting.
+- A fixed-control alternate-module QXGA capture was repeated after moving the
+  otherwise unchanged USB connection from a motherboard USB 2.0 header to a
+  USB 3.2 header. The new 90,220-byte frame still showed the fine vertical
+  pattern, so the header change did not cure the artifact. The framing changed
+  between the saved USB-header captures, preventing a defensible numerical
+  A/B amplitude claim; this test also does not exclude ripple generated after
+  VBUS by the board power path and camera regulators.
+- The OV5640 automatic gain ceiling was then programmed directly through
+  `0x3a18/0x3a19`, because esp32-camera 2.1.6 passes the generic
+  `gainceiling_t` enum index to registers that require the OV5640 encoded gain.
+  With automatic exposure and white balance, a raw `0x0020` (2x) ceiling,
+  16 discarded convergence frames, JPEG quality 12, and the established QXGA
+  full-readout/BLC sequence, the alternate module selected an 885-line
+  exposure and reached gain `0x0020`. The valid 186,535-byte QXGA JPEG had
+  substantially more plausible full-scene colour than the fixed-office-WB
+  diagnostic, but colored fixed-column structure remained visible across the
+  face and smooth wall. An otherwise identical 94,021-byte UXGA capture made
+  the same residual structure visible; lowering resolution alone did not make
+  this 2x low-light profile production ready.
+- A follow-up used a raw `0x0010` (nominal 1x) ceiling with QXGA automatic
+  exposure and white balance. The ceiling registers read back `0x0010`; the
+  capture registers reported gain `0x0013` and the same 885-line exposure.
+  The validated retry produced a complete 142,941-byte JPEG and automatic AWB
+  gains `0x0563/0x0400/0x0699`. Its colour was no longer subject to the fixed
+  office-WB green cast, but the dim, strongly backlit scene was underexposed
+  and residual colored columns remained visible. This is not representative
+  of the intended well-lit corridor and must be repeated there before choosing
+  between the lower-noise 1x policy and the brighter 2x policy. The first 1x
+  serial export lost 1,224 JPEG bytes and showed a horizontal tear; the export
+  helper now rejects any base64 stream whose received length differs from the
+  firmware-reported length instead of accepting marker-valid partial data.
+- The low exposure was traced to stale OV5640 anti-flicker timing rather than
+  insufficient USB-header power. At 10 MHz XCLK the active QXGA registers
+  reported a 25 MHz sensor system clock, HTS `2844`, and VTS `1968`, while the
+  inherited table still limited exposure to 984 lines and used a 295-line
+  50 Hz band step. The observed 885 lines were exactly three of those stale
+  steps. The setup layer now derives 50/60 Hz band steps and maximum band counts
+  from the live PLL, HTS, and VTS registers, sets both AEC maximum-exposure
+  register pairs, explicitly selects the configured mains frequency, and
+  disables multi-frame night mode. A 60 Hz retest computed 73-line bands and a
+  1,964-line ceiling; automatic exposure selected 1,898 lines at the same raw
+  `0x0020` gain ceiling. At this timing that is approximately 216 ms instead of
+  the former 101 ms. The valid 158,011-byte QXGA capture was substantially
+  brighter and retained plausible automatic white balance. Its lamp and monitor
+  highlights clipped, and faint fixed vertical structure remained, so realistic
+  corridor testing must still balance face brightness against motion blur.
+  Normal camera initialization now enables the same timing calculation for the
+  configured 60 Hz mains frequency and programs the proven raw `0x0020`
+  automatic-gain ceiling. Normal camera initialization now uses the validated
+  10 MHz XCLK; it still needs a corridor capture, an 8 MHz comparison, and a
+  moving-subject check.
+- The partial correction currently lives in the tracked `ov5640_mode_fix`
+  setup layer.
+  It applies the analog/full-array values only to OV5640 modes that exceed the
+  driver's binned `1280x960` envelope, requests a bounded eight-frame BLC redo,
+  leaves continuous BLC updates off, and clears the redo request after the
+  settling frames. Normal camera initialization also applies the proven
+  `vflip=1`/`hmirror=1` orientation and discards the eight BLC settling frames
+  before returning a usable camera.
+- Diagnostic firmware now supports an internal colour bar, a manual DVP PCLK
+  divider, timing/readout register logging, and the bounded full-readout
+  recipe/BLC redo. The manual PCLK control was retained for diagnostics but did
+  not address the artifact. The component's temporarily extended
+  frame-get timeout was returned from 15 seconds to its original 4 seconds
+  after these tests, and the board was returned to core-only firmware.
+- R26 was confirmed absent and an external MF52D B3950 10 kOhm NTC was
+  soldered to J5 and attached to the battery with Kapton tape. It measured
+  approximately `7.6 kOhm` immediately after installation, inside the
+  MCP73871's charge-permitted THERM resistance window.
+- A bounded GPIO1 ADC image was built and flashed with ESP-IDF 6.0.1. It keeps
+  the external camera, speaker, button, PIR, amplifier, Wi-Fi, MQTT, and sleep
+  disabled, takes 64 ADC samples once, applies eFuse curve calibration and the
+  nominal R7/R8 2:1 divider, releases the ADC resources, and then holds the
+  safe GPIO state. With USB connected and no cell, it reported `4.140 V` on
+  `+BATT`, consistent with the charger's no-cell output.
+- Battery-only operation passed with the external peripherals disconnected.
+  The measured rails were TP4 `4.00 V`, TP5 `3.99 V`, TP6 `3.31 V`, TP10
+  `0.16 V` and decaying, TP7 `0 V`, and TP8 `0 V`. The camera gate therefore
+  remained off while SYS and 3.3 V operated normally.
+- Reconnecting USB with the protected cell and J5 NTC installed produced a
+  solid D2 charge indication. U2 and the battery remained cool. Opening the
+  native USB monitor reset the MCU and truncated the retained battery-only
+  voltage line after raw average `2324`; the post-reset charging-state sample
+  reported `4.028 V` while TP4 simultaneously measured `4.05 V`. The ADC was
+  therefore `22 mV` low (`0.54%`) at this first calibration point. Do not bake
+  a correction or production cutoff into firmware until a lower-voltage point
+  is also measured.
+- After approximately five minutes of attended charging, TP3 measured
+  `4.99 V`, TP4 `4.08 V`, TP5 `4.97 V`, and TP6 `3.31 V`. D2 remained solid
+  and U2 remained cool. Compared with the simultaneous first-charge TP4
+  reading, battery voltage rose by approximately `30 mV`; VBUS, SYS, and 3.3 V
+  remained stable. No inline USB current meter was available, so input and
+  battery charge current were not measured and remain open validation items.
+- A dedicated battery-only integration image then performed one bounded QXGA
+  capture/upload cycle. It copied the captured JPEG into owned PSRAM, returned
+  the camera frame, deinitialized the driver, disabled GPIO42/U9, started Wi-Fi,
+  uploaded one multipart event, stopped Wi-Fi, freed the JPEG copy, and entered
+  a safe result hold. Audio, amplifier, MQTT client, and sleep remained
+  disabled. The gateway health endpoint reported database, MQTT, storage, and
+  gateway all `UP` before the test.
+- The battery-powered cycle created gateway event `15` with event type
+  `BATTERY_QXGA_BRINGUP`. The stored JPEG was complete and structurally valid:
+  `2048x1536`, 184,999 bytes, baseline 8-bit sRGB. Doorlink displayed the image
+  and the configured devices produced the expected doorbell notification/chime.
+  Visual inspection showed coherent geometry, no tearing, and usable facial
+  detail. Fine vertical structure remained visible in darker regions but was
+  non-blocking. Bright lamp/monitor highlights clipped and the face was dark in
+  this strongly backlit room, so corridor exposure and moving-subject tests
+  remain necessary. The image was upside down only because the loose camera was
+  physically dangling upside down; final rotation must be judged in its intended
+  enclosure orientation.
+- After the successful upload, D3 held solid and the shutdown readings were
+  TP4 `3.99 V`, TP10 `0.10 V` and decaying, TP7 `0 V`, and TP8 `0 V`; U2, the
+  camera, and battery remained cool. MK1 was unexpectedly very warm even though
+  this image did not initialize I2S. Power was removed immediately. The
+  integration result proves the camera/network/gateway path, but the board is
+  not cleared for further powered testing until MK1 and the 3.3 V rail are
+  checked unpowered. The ICS-43434 normally draws only sub-milliamp current, so
+  perceptible heating is not normal.
+- Review after the MK1 observation found that non-audio firmware disabled I2S
+  but left GPIO4/WS and GPIO5/SCK floating. The ICS-43434 datasheet recommends
+  stopping both clocks and pulling them to ground for standby. The shared core
+  safe-state helper now explicitly drives WS, SCK, and speaker data low and
+  makes microphone data an input with a pulldown. This closes a firmware safety
+  gap but does not establish that floating clocks caused the heating; an
+  assembly fault or damaged microphone remains possible.
+- The operator then disclosed a recurring power-entry symptom that predates the
+  battery integration test. Slowly or partially inserting either USB-C or the
+  battery connector has sometimes produced a high-frequency whine perceived
+  near U2. Removing power and reconnecting once or twice has previously made
+  the sound disappear and allowed apparently normal operation. Because the
+  symptom occurs with both input sources, the motherboard USB port or cable
+  cannot be its sole cause. U2 is a linear charger; U8 is the switching
+  converter and its MODE pin is strapped low for light-load power-save
+  operation, so U8/L1 or a nearby ceramic capacitor is a more plausible
+  acoustic source. Contact bounce or a slow input ramp can also make the
+  always-enabled U8 repeatedly cross its startup threshold. Sound location was
+  not instrumented, however, and this mechanism does not explain away the hot
+  microphone. Stop partially engaging either connector and do not repower this
+  article from an unrestricted source. The earlier TP6-to-TP9 readings of
+  `OL` in one polarity and `4.81 kOhm` in the reverse polarity rule out a
+  persistent hard short only; they do not clear a startup, oscillation, or
+  powered semiconductor fault. The next powered test requires current limiting.
+- A subsequent USB-only reconnection, with battery and camera absent, reproduced
+  the startup symptom twice despite decisive connector insertion; power was
+  removed promptly on each whine. The third connection started quietly and
+  enumerated as the ESP32-S3 USB JTAG/serial device. The corrected core-only
+  image then reported its safe-state heartbeat with WS/GPIO4 and SCK/GPIO5 held
+  low. MK1 remained at ambient temperature during this quiet start. This is
+  evidence against a persistent MK1 short and supports a startup-dependent
+  fault, but the two immediately preceding whine events mean the power-entry
+  issue remains reproducible and unresolved.
+
+Battery-only operation, a five-minute attended USB charge, and the functional
+camera/gateway/notification portion of a battery-only QXGA cycle have passed on
+this article. Power was later resumed at the user's direction and MK1 remained
+at ambient temperature, but the intermittent startup whine remains unresolved
+and must stay in the bring-up record.
+
+The next firmware milestone was implemented without flashing it to the article.
+`app_main.cpp` now provides the C++ entry point and selects an explicit
+`DoorbellController` production mode. The controller classifies GPIO2 EXT0
+button and GPIO3 EXT1 PIR wakes, runs the proven QXGA capture into an RAII-owned
+PSRAM copy, shuts down GPIO42/U9 before starting Wi-Fi, uploads a bounded event,
+fully deinitializes Wi-Fi, and enters deep sleep. Held-button and latched-PIR
+states are excluded for one sleep cycle with a 30-second recovery timer to avoid
+rapid wake loops. The default build remains the core-only safe image. Separate
+safe and production ESP-IDF 6.0.1 builds pass. On 2026-08-05, an isolated
+wake-only image validated active-low GPIO2 EXT0 button wake and return to deep
+sleep repeatedly with the camera, PIR, speaker, Wi-Fi, MQTT, I2S, and amplifier
+disabled. D3 and the GPIO48 ring acknowledged each press. Skipping repeated
+image validation only on deep-sleep wake improved the response, and an
+RTC-fast wake stub made the acknowledgement subjectively much snappier by
+driving both LEDs before the bootloader. No instrumented latency measurement
+was made. With the AM312 subsequently connected, its startup activity settled
+and deliberate motion repeatedly produced the diagnostic's three-pulse GPIO3
+EXT1 wake indication before returning to deep sleep. The combined production
+button event was then flashed and exercised with the known-good OV5640 fitted
+and PIR, battery, and speaker absent. One press produced a `2048x1536`,
+`131797`-byte JPEG, received HTTP `200`, triggered the configured device
+notification, released Wi-Fi and camera resources, disabled GPIO42/U9, and
+returned to deep sleep. The resulting image appeared on the Doorlink site with
+correct orientation when the camera was held upright and framed a portrait.
+Device logging showed Wi-Fi had an IP at `17.91 s`, the
+upload took approximately `0.93 s`, and deep-sleep entry occurred at `18.89 s`
+after wake. This is a latency baseline, not an optimized result; add explicit
+camera-versus-association timing before changing the proven capture path.
+
+The first production PIR attempt did validate GPIO3 wake, QXGA capture, camera
+shutdown, Wi-Fi connection, retry handling, and return to deep sleep. It did
+not complete the event: the `180521`-byte JPEG received HTTP `401` on both
+upload attempts. A non-event empty POST from the Arch host using the firmware's
+configured key also returned `401`, as did the no-key control. The ignored
+Arch `.env` and `main/config.h` keys match each other, so the running Pi
+gateway's effective `GATEWAY_API_KEY` must be reconciled with the firmware
+before repeating this test. Read-only inspection over the configured `ssh rpi`
+alias established that the gateway had restarted at 18:47 and loaded a
+different key from its Pi `.env`; the file and running-process values matched.
+The ignored local `main/config.h` was synchronized without logging the secret,
+an empty authenticated probe passed the API-key filter, and production was
+rebuilt and reflashed. The retry completed a `PIR_MOTION` event with a
+`2048x1536`, `138608`-byte JPEG and HTTP `200` on its first attempt. Camera and
+Wi-Fi resources were released, both wake sources were rearmed, and deep sleep
+began at `21.74 s`. Doorlink display and notification observation for this PIR
+event were subsequently confirmed by the user. Both arrived with noticeable
+delay. The firmware now instruments early association, trigger acknowledgement,
+RF teardown, BLC, AEC/AWB, final capture, reconnect, and upload durations. An
+idempotent fast-trigger flow and an isolated GPIO48 fade diagnostic build
+successfully, but neither has been flashed or validated on hardware yet.
+
+Input-current measurement, a longer charge observation, and active/deep-sleep
+current remain pending. Camera bring-up is sufficiently
+complete to continue hardware validation: the
+alternate module's remaining faint vertical structure is not a blocker for a
+doorbell still image. Keep the first OV5640 module quarantined. QXGA
+`2048x1536` at 10 MHz is now the production-still candidate; compare it with
+8 MHz under actual corridor lighting and include a moving person before
+freezing exposure policy. The approximately 216 ms result belongs to the
+10 MHz diagnostic and motion blur remains unqualified. QSXGA `2560x1920` is
+deferred because prior attempts timed out and its buffer, upload, energy, and
+latency costs are not yet justified. If an
+oscilloscope becomes available, compare
+TP10/TP7/TP8 during VGA real-scene, QXGA colour-bar, and QXGA real-scene
+operation.
+
+After the USB-powered production button and PIR event paths passed, a planned
+full-production battery-only test was stopped immediately because MK1 again
+became very hot when J1 battery power was applied. The same assembled load did
+not heat MK1 from USB power. This source-dependent behavior strengthens the
+case for a battery-path or 3.3 V rail startup/oscillation fault and means the
+earlier battery-only functional pass cannot qualify normal battery operation.
+Battery testing remains blocked; do not repeatedly reconnect J1. Continue only
+with USB-powered validation while MK1 and the board remain at ambient.
+
 1. With no battery, camera, or U1 installed, inspect the population and perform
    resistance/continuity checks. Prove all 24 camera paths against the table in
    `docs/hardware/camera/README.md`.
@@ -678,6 +1112,19 @@ GPIO7 data, GPIO4/5 clock, and GPIO44 enable-path check. OUTP and OUTN remain
 a bridged output: neither terminal may ever be grounded. Higher-level playback
 and subjective enclosure-volume testing remain deferred.
 
+On 2026-08-05, J6 was reconnected alongside the camera, permanent button, and
+covered PIR while running the USB-powered production image. With the battery
+absent, the speaker remained silent and U4, MK1, U2, U8/L1, and the speaker all
+remained cool during the integrated idle/deep-sleep check. This validates the
+production safe state with the speaker physically fitted; production playback
+is still not implemented.
+
+A subsequent USB-powered production button event also completed normally with
+the speaker connected: the early ring acknowledgement, camera capture, upload,
+Doorlink path, and notification worked, while J6 remained silent as intended.
+This passes integration of every fitted external peripheral except battery
+power; it does not imply production audio playback.
+
 ### J8 button and ring-LED test
 
 The J8 external button and LED paths passed on 2026-07-25. With the PCB upright
@@ -695,10 +1142,9 @@ released and `0 ohm` when pressed. A button-only image kept camera, I2S,
 amplifier, Wi-Fi, MQTT, and sleep disabled. GPIO48 toggled the ring LED visibly
 on and off once per second, confirming the LED path and polarity. GPIO2
 initially read released/high and logged distinct active-low press and release
-transitions during repeated manual presses. The temporary terminal joins were
-individually insulated with electrical tape; they are not final enclosure
-wiring and still require soldered, heat-shrunk terminations after mechanical
-routing is proven.
+transitions during repeated manual presses. The permanent four-pin JST/button
+harness used for the 2026-08-05 wake test retained this same mapping. The
+button's unused red NC lead remains isolated.
 
 ### J7 AM312 PIR test
 

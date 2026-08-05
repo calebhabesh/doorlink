@@ -1,5 +1,10 @@
 # Doorlink: Half-Duplex Intercom Architecture
 
+> **Design proposal, not current functionality.** The production firmware path
+> currently uploads a still image and returns to deep sleep. Visitor recording,
+> the 60-second MQTT window, reply download, and speaker playback described
+> below have not been integrated or validated end to end.
+
 Because the ESP32-S3 is battery-powered, it spends most of its life in **Deep Sleep**. When a visitor presses the button, the board wakes up, captures a snapshot and records a brief visitor greeting, uploads them, and then enters a temporary **60-second turn-based intercom session** where it can play incoming voice turns before returning to sleep. 
 
 To avoid the need for complex, processor-heavy Acoustic Echo Cancellation (AEC) on the ESP32-S3, the audio flow is modeled as a **turn-based half-duplex voicemail-relay** system, utilizing discrete voice turns rather than a continuous live audio stream.

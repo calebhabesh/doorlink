@@ -4,7 +4,7 @@
 
 - Living in an apartment without a concierge, you're often left guessing who's at the door, and asking questions like "did my package arrive?". Providing an interface for visitors to communicate in real-time to notify me of package deliveries and general presence would be really convenient.
 
-- Doorlink is a self-hosted IoT smart doorbell built around a custom ESP32-S3-WROOM-1-N16R8 PCB, a Raspberry Pi gateway, local media storage, and real-time mobile notifications. The project is designed for image capture, visitor audio recording, and half-duplex reply audio without a proprietary subscription cloud.
+- Doorlink is a self-hosted IoT smart doorbell built around a custom ESP32-S3-WROOM-1-N16R8 PCB, a Raspberry Pi gateway, local media storage, and real-time mobile notifications. The validated path currently captures and uploads doorbell still images without a proprietary subscription cloud. Visitor recording and half-duplex reply audio remain later integration work.
 
 ## Demo
 
@@ -12,7 +12,23 @@
 
 ## Current Status
 
-**Note:** The gateway, dashboard, storage, MQTT event pipeline, and notification path are implemented and running on the Raspberry Pi gateway. The custom hardware PCB is currently in manufacturing. Firmware capture/audio behavior and battery-life estimates are designed targets pending empirical hardware validation after the board arrives.
+The Rev C PCB is assembled and in hardware bring-up. A battery-powered QXGA
+`2048x1536` capture reached the Raspberry Pi gateway, appeared in Doorlink, and
+triggered the configured notification/chime path. A subsequent production
+button wake also captured and displayed a correctly oriented QXGA portrait,
+delivered its notification, and returned to deep sleep. The gateway, dashboard,
+PostgreSQL, MinIO, MQTT, SSE, and notification services are implemented.
+
+The event-driven C++ firmware controller now builds. The isolated GPIO2 button
+and GPIO3 PIR wake/return-to-deep-sleep paths have passed on hardware,
+including early ring-LED acknowledgement for a button press. The complete
+production wake/capture/upload/sleep cycle has also passed from both button
+and PIR triggers, including Doorlink display and notifications. End-to-end
+notification latency remains an optimization target.
+Audio was validated only in isolated microphone/speaker diagnostics and is not
+part of the production event path. Battery life has not been measured. MK1
+overheats only during battery operation, so battery/J1 testing is suspended;
+see `docs/hardware-bringup.md`.
 
 ## Features
 
@@ -23,11 +39,18 @@
 - High-density Next.js Dashboard for viewing historical events and active feeds
 - Local network media storage without third-party vendor cloud lock-in
 
-**Designed Hardware Capabilities (Pending PCB Arrival):**
+**Validated Or Implemented Hardware/Firmware:**
 
-- Button-triggered image capture and visitor audio recording (OV5640 + ICS-43434)
-- Two-way audio - reply to visitors from dashboard via MQTT (MAX98357A)
-- Low power deep sleep between events (Target: ~27 day battery life)
+- OV5640 QXGA still capture at 10 MHz with bounded camera power sequencing
+- Battery-only capture, Wi-Fi upload, gateway persistence, dashboard display, and notifications
+- Individually validated ICS-43434 microphone and MAX98357A speaker paths
+- C++ wake/capture/upload/sleep controller with C hardware drivers
+
+**Still Pending Hardware Validation:**
+
+- Active, idle, and deep-sleep current
+- Corridor-lighting exposure and moving-person blur
+- Integrated visitor recording and half-duplex reply playback
 
 ## System Architecture
 
@@ -35,12 +58,16 @@
 
 ## Interaction Model (Audio & Wakeup)
 
-The target firmware model is an asynchronous "Record-and-Send" event flow followed by a short "Half-Duplex" interaction window. Full-duplex phone-call behavior is intentionally avoided to reduce ESP32-S3 processing load and avoid acoustic echo cancellation complexity.
+The current firmware model is a bounded still-image event followed immediately
+by shutdown. Full-duplex phone-call behavior is intentionally excluded. A later
+turn-based audio mode may be added only after the still-image/deep-sleep path is
+measured and reliable.
 
-1. **Initial Trigger:** A visitor single-presses the doorbell button. This wakes the ESP32 from deep sleep through the routed GPIO2 wake input.
-2. **Capture Phase:** The firmware will capture a JPEG from the OV5640, record a short visitor audio clip from the ICS-43434 microphone, and upload both to the gateway via HTTP POST.
-3. **Interactive Phase:** After upload, the ESP32 will connect to MQTT and stay awake for a short reply window. During this window, the homeowner receives the mobile notification, opens the dashboard, and uses push-to-talk to send audio back to the doorbell speaker.
-4. **Sleep Phase:** Once the interaction window expires without new activity, the ESP32 powers down peripherals and returns to deep sleep.
+1. **Trigger:** GPIO2 wakes on an active-low button press through EXT0. GPIO3 can wake on active-high PIR motion through EXT1.
+2. **Fast alert:** Firmware connects Wi-Fi immediately and sends an authenticated, idempotent event ID to `/api/events/trigger`, then fully releases Wi-Fi.
+3. **Capture:** With RF off, firmware enables U9, captures one QXGA JPEG, copies it into owned PSRAM, returns the camera frame, deinitializes the driver, and disables U9.
+4. **Upload:** Firmware reconnects and uploads the JPEG plus the same event ID to `/api/events`. The gateway avoids duplicate chime/ntfy delivery and falls back to notifying during upload if no early-trigger receipt exists.
+5. **Shutdown:** Wi-Fi and its network resources are released, the JPEG is freed, camera/audio controls are held safe, and the ESP32 enters deep sleep.
 
 ## Hardware
 
@@ -54,7 +81,9 @@ The target firmware model is an asynchronous "Record-and-Send" event flow follow
 | OV5640 (24-pin FPC)             | Camera                |
 | ICS-43434                       | Visitor microphone*   |
 | MAX98357A + Speaker             | Homeowner reply audio |
-| MCP73831 & AP2112K-3.3          | Battery Charger & 3.3V LDO |
+| MCP73871                        | LiPo charger and power-path manager |
+| TPS63802                        | 3.3 V buck-boost regulator |
+| TPS22919                        | Firmware-controlled camera power switch |
 | XC6206P282MR & XC6206P152MR     | 2.8V and 1.5V Camera LDOs |
 | SRV05-4                         | ESD Protection        |
 | 22mm Momentary Button           | Doorbell trigger      |
@@ -135,27 +164,38 @@ npm run lint
 
 ```bash
 cp main/config.example.h main/config.h
-# Set WiFi credentials, GATEWAY_API_URL, and MQTT_BROKER_URI for the Raspberry Pi gateway.
-idf.py build flash monitor
+# Set Wi-Fi credentials and GATEWAY_API_URL for the Raspberry Pi gateway.
+
+# Hardware-safe core-only build (default)
+idf.py build
+
+# Event-driven production build in an isolated directory
+idf.py -B build-production -D SDKCONFIG=sdkconfig.production \
+  -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.production.defaults' build
 ```
+
+The production build is intentionally separate from the safe build. Do not
+flash it as a substitute for the remaining wake/deep-sleep hardware test.
 
 ## Project Structure
 
 ```
-├── main/              # ESP-IDF firmware source, board pin map, and config template
+├── main/              # ESP-IDF C/C++ firmware, services, board pin map, and config template
 ├── gateway/           # Spring Boot backend
 ├── dashboard/         # Next.js dashboard
 ├── pcb/               # KiCad project, Gerbers, production files, and PCB notes
-├── docs/              # Pi deployment, Cloudflare tunnel, bring-up checklist, design notes
+├── docs/              # Firmware architecture, Pi deployment, bring-up checklist, design notes
 ├── scripts/           # Test assets, utility scripts, and Raspberry Pi systemd unit files
 ├── docker-compose.yml # PostgreSQL, Mosquitto, and MinIO infrastructure
-└── sdkconfig.defaults # ESP32-S3 firmware defaults
+├── sdkconfig.defaults # Hardware-safe ESP32-S3 defaults
+└── sdkconfig.production.defaults # Production-controller configuration layer
 ```
 
 ## Future Improvements
 
-- Hardware bring-up and measured battery-life validation after PCB arrival
-- Real OV5640 JPEG capture and ICS-43434 visitor audio recording
+- Complete button/PIR wake and measured deep-sleep-current validation
+- Corridor-lighting and moving-subject camera validation
+- Integrate ICS-43434 visitor audio recording after the still-image path is stable
 - Push-to-talk audio delivery from dashboard to MAX98357A speaker path
 - Backend media proxy or presigned URLs for MinIO objects
 - Motion detection as secondary wakeup trigger
