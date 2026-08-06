@@ -34,6 +34,8 @@ sdkconfig.production
 sdkconfig.wake
 sdkconfig.production.fast-trigger
 sdkconfig.wake.fade
+sdkconfig.mic
+sdkconfig.core
 sdkconfig
 
 # ESP-IDF dependencies

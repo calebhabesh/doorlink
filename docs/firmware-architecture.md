@@ -77,7 +77,7 @@ idf.py -B build-production -D SDKCONFIG=sdkconfig.production \
 ```
 
 Both configurations build with ESP-IDF 6.0.1. The safe image is approximately
-176 KiB. The production image is approximately 986 KiB and leaves about 68% of
+205 KiB. The production image is approximately 1004 KiB and leaves about 67% of
 the 3 MiB application partition free.
 
 ## Validation status
@@ -86,12 +86,27 @@ Implemented and independently proven hardware operations include QXGA capture,
 camera shutdown, battery-only Wi-Fi upload, gateway persistence, dashboard
 display, notifications, and isolated GPIO2 button and GPIO3 PIR wakes followed
 by return to deep sleep. An RTC-fast wake stub gives immediate visual acknowledgement on D3
-and the GPIO48 button ring before the bootloader; cold boots still validate the
+before the bootloader; GPIO48 begins its nonblocking ring animation as soon as
+the application starts. Cold boots still validate the
 application image. The pre-fast-trigger production controller has completed QXGA capture, HTTP
 upload, cleanup, and return to deep sleep from both button and PIR triggers on
 hardware; notification delivery and Doorlink display were observed for both
-event types. The fast-trigger/idempotent-upload flow and GPIO48 fade diagnostic
-build successfully but still require USB-powered hardware validation before
-production use. Their noticeable end-to-end delay remains an optimization target.
+event types. The fast-trigger/idempotent-upload flow was USB-validated on Rev C
+on 2026-08-05. Corrected PIR and button events received HTTP `200` for the early
+trigger in approximately 1.2-1.6 seconds, fully stopped Wi-Fi before camera
+startup, completed isolated QXGA capture, uploaded under the same event ID, and
+returned to deep sleep. The gateway stored one event per ID and did not invoke
+the chime again during upload. Production now leaves PIR event wake disabled
+unless `CONFIG_SMART_DOORBELL_ENABLE_PIR_EVENTS` is explicitly selected. The
+isolated GPIO48 diagnostic and production path both validated an off-to-full
+1.8-second fade, 2.5-second hold, and 1.8-second fade-out without delaying Wi-Fi
+or camera work. Camera
+convergence remains the dominant image-delivery delay.
 Deep-sleep current remains unmeasured. Audio remains outside the production
 path.
+
+Production has a single-event concurrency policy. EXT0 is re-armed only after
+capture, upload, cleanup, and a stable 100 ms button release. Button edges while
+that event is in flight are coalesced rather than queued, preventing rapid
+repeat chimes. A press after deep-sleep re-arm creates a fresh event ID and was
+validated in the sequential two-press hardware test.

@@ -1031,7 +1031,48 @@ event were subsequently confirmed by the user. Both arrived with noticeable
 delay. The firmware now instruments early association, trigger acknowledgement,
 RF teardown, BLC, AEC/AWB, final capture, reconnect, and upload durations. An
 idempotent fast-trigger flow and an isolated GPIO48 fade diagnostic build
-successfully, but neither has been flashed or validated on hardware yet.
+successfully. On 2026-08-05 the fast-trigger production image was flashed over
+native USB and validated on Rev C. The first button and PIR trials reached the
+gateway in `1.50-1.70 s`, but exposed an `ESP_ERR_NOT_SUPPORTED` return after
+otherwise successful Wi-Fi teardown. ESP-IDF 6.0.1 documents
+`esp_netif_deinit()` as unsupported once its process-global lwIP task exists;
+the firmware was incorrectly treating that expected result as an RF teardown
+failure and abandoning capture. The unsupported global deinit call was removed
+while retaining destruction of the Wi-Fi driver, station netif, event handlers,
+and default event loop.
+
+After rebuilding and reflashing, two PIR events and one button event completed
+the fast-trigger path. A fully traced PIR event associated at `1.14 s`, received
+early-trigger HTTP `200` at `1.56 s`, stopped RF at `1.69 s`, completed QXGA
+capture at `17.81 s`, uploaded a `146713`-byte JPEG with HTTP `200` at `20.40 s`,
+disabled GPIO42/U9, rearmed both wakes, and returned to deep sleep. The button
+event received early-trigger HTTP `200` at `1.40 s`, stopped RF at `1.45 s`, and
+persisted one `2048x1536`, `107095`-byte JPEG under the same event ID. Gateway
+telemetry reported the button event and `-31 dBm` RSSI; the chime log contained
+the early invocation and no second invocation during image upload. The isolated
+GPIO48 diagnostic subsequently validated a nonblocking fade-in on a true EXT0
+button wake. After user review, the production animation was finalized as a
+`1.8 s` fade in, `2.5 s` full-bright hold, and `1.8 s` fade out. D3 remains the
+immediate RTC-stub acknowledgement; GPIO48 no longer flashes full before its
+fade-in.
+
+Nearby movement during the initial tests showed that leaving GPIO3 armed made
+PIR events appear interleaved with manual button tests and caused apparently
+random chime webhook invocations. Production was changed to arm GPIO2 only by
+default. PIR remains proven and available through the explicit
+`CONFIG_SMART_DOORBELL_ENABLE_PIR_EVENTS` option and the isolated wake
+diagnostic. Button re-arm now also requires a stable HIGH level for `100 ms`.
+
+Two clean, sequential, button-only production events then completed after the
+previous cycle had returned to deep sleep. Event
+`5c7f18d29e2387bd8f81e393c5bba249` received early-trigger HTTP `200` at
+`1.83 s`, stopped RF at `1.95 s`, completed a `2048x1536`, `152126`-byte JPEG
+upload at `19.86 s`, and logged `PIR production wake disabled` before sleep.
+Event `1529017cecf3129dd9aebd25506105e8` independently received HTTP `200` at
+`1.60 s`, stopped RF at `1.67 s`, uploaded a `151562`-byte QXGA JPEG at
+`19.82 s`, and returned to button-only deep sleep. The Pi stored exactly one
+row and one image for each ID and logged exactly one early chime invocation per
+press; neither upload duplicated the chime.
 
 Input-current measurement, a longer charge observation, and active/deep-sleep
 current remain pending. Camera bring-up is sufficiently
@@ -1056,6 +1097,18 @@ case for a battery-path or 3.3 V rail startup/oscillation fault and means the
 earlier battery-only functional pass cannot qualify normal battery operation.
 Battery testing remains blocked; do not repeatedly reconnect J1. Continue only
 with USB-powered validation while MK1 and the board remain at ambient.
+
+Assembly review on 2026-08-06 identified a specific unverified MK1 joint. Paste
+was applied to the five rectangular signal/power pads but intentionally not to
+the circular annulus around the acoustic opening. That annulus is not merely a
+mechanical ring: it is MK1 pin 3 (`GND`). The KiCad footprint's paste layer has
+four curved apertures on the ground annulus while keeping the central 0.5 mm
+sound hole clear, matching the microphone datasheet's suggested stencil
+pattern. MK1 therefore may lack its intended ground connection even though its
+earlier USB I2S test passed. This is a strong assembly-fault candidate, not yet
+a proven explanation for the source-dependent heating or startup whine. Do not
+clear battery operation on the strength of another USB acoustic pass; remove
+and inspect MK1 before the next current-limited battery-path emulation.
 
 1. With no battery, camera, or U1 installed, inspect the population and perform
    resistance/continuity checks. Prove all 24 camera paths against the table in
@@ -1082,6 +1135,42 @@ with USB-powered validation while MK1 and the board remain at ambient.
 ## Rev B peripheral progress record
 
 ### MK1 I2S microphone test
+
+Build the isolated diagnostic with the production application disabled:
+
+```bash
+source /home/ethioking/.espressif/v6.0.1/esp-idf/export.sh
+idf.py -B build-mic -D SDKCONFIG=sdkconfig.mic \
+  -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.mic.defaults' build
+```
+
+For the current Rev C battery-start investigation, disconnect J1 and all
+external peripherals before flashing or running this image. Power only from a
+fully inserted USB-C connector. The expected output is changing `left`
+statistics with `status=ACTIVE` and an all-zero unused `right` slot. Speak and
+tap near the board's MK1 acoustic bore while watching `range` and `avg_abs`;
+both should rise substantially over the quiet baseline. This functional check
+does not clear MK1 or the 3.3 V power path for battery operation.
+
+The diagnostic first holds WS and SCK low for ten seconds before starting I2S.
+During this standby observation, touch-check MK1 and listen for whine; remove
+USB immediately for warming, whine, resets, or odour. Continue the acoustic
+test only if the board remains quiet and MK1 stays at ambient temperature.
+
+On 2026-08-06, the current Rev C article completed this USB-only diagnostic.
+The ten-second clock-low standby phase completed without a reset or USB fault.
+After I2S started, the expected left slot remained continuously `ACTIVE` and
+the unused right slot remained exactly `ALL_ZERO`. Quiet intervals fell to
+approximately `2,000-8,000` average absolute magnitude with sample ranges near
+`14,000-31,000`; speaking/tapping produced an average absolute magnitude up to
+`280,612` and a sample range up to `1,117,054`. The roughly one-minute run had
+no I2S errors, resets, or USB instability. This proves that MK1 still has a
+working USB-powered electrical path and strong acoustic response. Operator
+confirmation of temperature and audible whine during the run must be recorded
+separately. The board was then flashed back to the core-only safe image, which
+holds WS, SCK, and speaker data low and microphone data as an input with a
+pulldown. This result does not clear battery operation or validate the hidden
+pin-3 ground joint.
 
 MK1 passed an initial electrical and acoustic-response test on 2026-07-25 with
 the camera, battery, speaker, button, and PIR disconnected. A microphone-only

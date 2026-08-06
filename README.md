@@ -24,7 +24,11 @@ and GPIO3 PIR wake/return-to-deep-sleep paths have passed on hardware,
 including early ring-LED acknowledgement for a button press. The complete
 production wake/capture/upload/sleep cycle has also passed from both button
 and PIR triggers, including Doorlink display and notifications. End-to-end
-notification latency remains an optimization target.
+notification latency was reduced by the early-trigger flow. Production now
+arms only the GPIO2 button by default; PIR remains available behind an explicit
+build option and in its isolated diagnostic, but cannot generate normal
+doorbell events accidentally. GPIO48 fades in, holds, and fades out after a
+button press while D3 provides immediate wake acknowledgement.
 Audio was validated only in isolated microphone/speaker diagnostics and is not
 part of the production event path. Battery life has not been measured. MK1
 overheats only during battery operation, so battery/J1 testing is suspended;
@@ -63,11 +67,16 @@ by shutdown. Full-duplex phone-call behavior is intentionally excluded. A later
 turn-based audio mode may be added only after the still-image/deep-sleep path is
 measured and reliable.
 
-1. **Trigger:** GPIO2 wakes on an active-low button press through EXT0. GPIO3 can wake on active-high PIR motion through EXT1.
+1. **Trigger:** GPIO2 wakes on an active-low button press through EXT0. GPIO3 PIR wake is disabled in the normal production build and is opt-in for future motion events.
 2. **Fast alert:** Firmware connects Wi-Fi immediately and sends an authenticated, idempotent event ID to `/api/events/trigger`, then fully releases Wi-Fi.
 3. **Capture:** With RF off, firmware enables U9, captures one QXGA JPEG, copies it into owned PSRAM, returns the camera frame, deinitializes the driver, and disables U9.
 4. **Upload:** Firmware reconnects and uploads the JPEG plus the same event ID to `/api/events`. The gateway avoids duplicate chime/ntfy delivery and falls back to notifying during upload if no early-trigger receipt exists.
 5. **Shutdown:** Wi-Fi and its network resources are released, the JPEG is freed, camera/audio controls are held safe, and the ESP32 enters deep sleep.
+
+The controller processes one bounded event at a time. Additional button edges
+during the roughly 20-second capture/upload cycle are intentionally coalesced;
+they do not create extra chimes or queued snapshots. After the controller has
+returned to deep sleep, the next button press starts a new event normally.
 
 ## Hardware
 
@@ -193,7 +202,7 @@ flash it as a substitute for the remaining wake/deep-sleep hardware test.
 
 ## Future Improvements
 
-- Complete button/PIR wake and measured deep-sleep-current validation
+- Measure active and deep-sleep current after the battery-path fault is resolved
 - Corridor-lighting and moving-subject camera validation
 - Integrate ICS-43434 visitor audio recording after the still-image path is stable
 - Push-to-talk audio delivery from dashboard to MAX98357A speaker path
