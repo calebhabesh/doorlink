@@ -15,6 +15,7 @@ namespace doorbell {
 namespace {
 constexpr const char *kTag = "PowerManager";
 constexpr std::uint32_t kInputReleaseTimeoutMs = 5000;
+constexpr std::uint32_t kInputStableMs = 100;
 constexpr std::uint64_t kRecoveryWakeUs = 30ULL * 1000ULL * 1000ULL;
 constexpr std::uint64_t kPirWakeMask = 1ULL << static_cast<unsigned>(PIR_WAKE_PIN);
 }
@@ -62,18 +63,26 @@ WakeReason PowerManager::wake_reason() const
     return WakeReason::Other;
 }
 
-bool PowerManager::wait_for_level(int pin, int target_level,
-                                  std::uint32_t timeout_ms)
+bool PowerManager::wait_for_stable_level(int pin, int target_level,
+                                         std::uint32_t stable_ms,
+                                         std::uint32_t timeout_ms)
 {
-    const TickType_t delay = pdMS_TO_TICKS(10);
-    const std::uint32_t attempts = timeout_ms / 10U;
-    for (std::uint32_t i = 0; i < attempts; ++i) {
+    constexpr std::uint32_t sample_ms = 10;
+    const TickType_t delay = pdMS_TO_TICKS(sample_ms);
+    std::uint32_t stable_for_ms = 0;
+    for (std::uint32_t elapsed_ms = 0; elapsed_ms < timeout_ms;
+         elapsed_ms += sample_ms) {
         if (gpio_get_level(static_cast<gpio_num_t>(pin)) == target_level) {
-            return true;
+            stable_for_ms += sample_ms;
+            if (stable_for_ms >= stable_ms) {
+                return true;
+            }
+        } else {
+            stable_for_ms = 0;
         }
         vTaskDelay(delay);
     }
-    return gpio_get_level(static_cast<gpio_num_t>(pin)) == target_level;
+    return false;
 }
 
 esp_err_t PowerManager::configure_rtc_input(int pin)
@@ -94,7 +103,7 @@ esp_err_t PowerManager::configure_rtc_input(int pin)
     return rtc_gpio_pulldown_dis(gpio);
 }
 
-[[noreturn]] void PowerManager::enter_deep_sleep() const
+[[noreturn]] void PowerManager::enter_deep_sleep(bool enable_pir_wake) const
 {
     ESP_LOGI(kTag, "Preparing safe hardware state for deep sleep");
     (void)camera_power_disable();
@@ -103,9 +112,12 @@ esp_err_t PowerManager::configure_rtc_input(int pin)
     gpio_set_level(BUTTON_LED_PIN, 0);
 
     const bool button_released =
-        wait_for_level(DOORBELL_BUTTON_PIN, 1, kInputReleaseTimeoutMs);
-    const bool pir_idle = wait_for_level(PIR_WAKE_PIN, 0,
-                                         kInputReleaseTimeoutMs);
+        wait_for_stable_level(DOORBELL_BUTTON_PIN, 1, kInputStableMs,
+                              kInputReleaseTimeoutMs);
+    const bool pir_idle = !enable_pir_wake ||
+                          wait_for_stable_level(PIR_WAKE_PIN, 0,
+                                                kInputStableMs,
+                                                kInputReleaseTimeoutMs);
 
     esp_err_t err = esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
     if (err != ESP_OK) {
@@ -134,7 +146,9 @@ esp_err_t PowerManager::configure_rtc_input(int pin)
         ESP_LOGW(kTag, "Button remained LOW; suppressing immediate wake loop");
     }
 
-    if (pir_idle) {
+    if (!enable_pir_wake) {
+        ESP_LOGI(kTag, "PIR production wake disabled");
+    } else if (pir_idle) {
         err = configure_rtc_input(PIR_WAKE_PIN);
         if (err == ESP_OK) {
             err = esp_sleep_enable_ext1_wakeup_io(

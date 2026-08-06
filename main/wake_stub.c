@@ -33,9 +33,9 @@ void RTC_IRAM_ATTR esp_wake_deep_sleep(void)
     /* Espressif requires the default stub initialization to run first. */
     esp_default_wake_deep_sleep();
 
-    /* EXT0 is the active-low doorbell input on GPIO2. */
+    /* EXT0 is the active-low doorbell input on GPIO2. D3 provides immediate
+     * acknowledgement; the application owns GPIO48's gradual fade-in. */
     if ((esp_wake_stub_get_wakeup_cause() & RTC_EXT0_TRIG_EN) != 0) {
-        wake_stub_set_led(BUTTON_LED_PIN);
         wake_stub_set_led(STATUS_LED_PIN);
     }
 }

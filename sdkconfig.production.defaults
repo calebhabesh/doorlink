@@ -2,6 +2,7 @@
 # idf.py -B build-production -D SDKCONFIG=sdkconfig.production \
 #   -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.production.defaults" build
 CONFIG_SMART_DOORBELL_PRODUCTION_APP=y
+# CONFIG_SMART_DOORBELL_ENABLE_PIR_EVENTS is not set
 
 # Validate on cold boot/reset, but avoid re-hashing the unchanged application
 # on every deep-sleep event wake.

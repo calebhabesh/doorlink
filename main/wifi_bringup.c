@@ -611,10 +611,13 @@ esp_err_t wifi_bringup_stop_bounded(void)
         s_wifi_state.event_loop_created = false;
     }
     if (s_wifi_state.netif_initialized) {
-        esp_err_t err = esp_netif_deinit();
-        if (first_err == ESP_OK && err != ESP_OK) {
-            first_err = err;
-        }
+        /*
+         * ESP-IDF's lwIP-backed esp_netif_deinit() is deliberately not
+         * implemented and always returns ESP_ERR_NOT_SUPPORTED once the
+         * TCP/IP task exists. The stack is safe to initialize again, so keep
+         * that process-global task and release the per-connection netif,
+         * handlers, event loop, and Wi-Fi driver above.
+         */
         s_wifi_state.netif_initialized = false;
     }
     if (s_wifi_state.event_group) {
@@ -623,7 +626,8 @@ esp_err_t wifi_bringup_stop_bounded(void)
     }
     s_wifi_state.stopping = false;
 
-    ESP_LOGI(TAG, "Wi-Fi deinitialized; RF and network resources released");
+    ESP_LOGI(TAG,
+             "Wi-Fi deinitialized; RF, netif, and event resources released");
     return first_err;
 }
 

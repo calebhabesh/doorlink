@@ -17,6 +17,7 @@
 #define MIC_SAMPLE_RATE_HZ 16000
 #define MIC_READ_FRAMES    256
 #define MIC_SLOT_COUNT     2
+#define MIC_STANDBY_OBSERVATION_SECONDS 10
 
 #ifndef SMART_DOORBELL_MIC_BRINGUP_ENABLE_I2S
 #define SMART_DOORBELL_MIC_BRINGUP_ENABLE_I2S 1
@@ -48,6 +49,22 @@ static void configure_safe_gpio_state(void)
     gpio_reset_pin(AMP_EN_PIN);
     gpio_set_direction(AMP_EN_PIN, GPIO_MODE_OUTPUT);
     gpio_set_level(AMP_EN_PIN, 0);
+
+    gpio_reset_pin(I2S_AUDIO_WS);
+    gpio_set_direction(I2S_AUDIO_WS, GPIO_MODE_OUTPUT);
+    gpio_set_level(I2S_AUDIO_WS, 0);
+
+    gpio_reset_pin(I2S_AUDIO_SCK);
+    gpio_set_direction(I2S_AUDIO_SCK, GPIO_MODE_OUTPUT);
+    gpio_set_level(I2S_AUDIO_SCK, 0);
+
+    gpio_reset_pin(I2S_SPK_SD);
+    gpio_set_direction(I2S_SPK_SD, GPIO_MODE_OUTPUT);
+    gpio_set_level(I2S_SPK_SD, 0);
+
+    gpio_reset_pin(I2S_MIC_SD);
+    gpio_set_direction(I2S_MIC_SD, GPIO_MODE_INPUT);
+    gpio_set_pull_mode(I2S_MIC_SD, GPIO_PULLDOWN_ONLY);
 
     gpio_reset_pin((gpio_num_t)CAM_PIN_XCLK);
     gpio_set_direction((gpio_num_t)CAM_PIN_XCLK, GPIO_MODE_OUTPUT);
@@ -204,6 +221,15 @@ void run_mic_bringup(void)
     ESP_LOGI(TAG, "Camera, Wi-Fi, MQTT, speaker output, and deep sleep are disabled");
 
     configure_safe_gpio_state();
+
+    ESP_LOGW(TAG,
+             "USB-only standby observation: I2S clocks are LOW for %d seconds; disconnect immediately if MK1 warms or the board whines",
+             MIC_STANDBY_OBSERVATION_SECONDS);
+    for (unsigned second = 1; second <= MIC_STANDBY_OBSERVATION_SECONDS; ++second) {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        ESP_LOGI(TAG, "standby observation %u/%d", second,
+                 MIC_STANDBY_OBSERVATION_SECONDS);
+    }
 
 #if !SMART_DOORBELL_MIC_BRINGUP_ENABLE_I2S
     ESP_LOGI(TAG, "I2S is disabled for core USB/heartbeat isolation");

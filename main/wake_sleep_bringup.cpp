@@ -60,7 +60,7 @@ extern "C" void run_wake_sleep_bringup(void)
         ESP_LOGE(kTag, "Safe-state initialization failed: %s",
                  esp_err_to_name(err));
         pulse_leds(10, 75, 75);
-        power.enter_deep_sleep();
+        power.enter_deep_sleep(true);
     }
 
     const doorbell::WakeReason reason = power.wake_reason();
@@ -80,12 +80,12 @@ extern "C" void run_wake_sleep_bringup(void)
         ++s_wake_count;
         ESP_LOGI(kTag, "EXT0 BUTTON WAKE PASS: count=%u",
                  static_cast<unsigned>(s_wake_count));
-        const esp_err_t fade_err = ring_fade_start(1800);
+        const esp_err_t fade_err = ring_animation_start(1800, 1000, 1800);
         if (fade_err != ESP_OK) {
             ESP_LOGE(kTag, "GPIO48 fade start failed: %s",
                      esp_err_to_name(fade_err));
         }
-        vTaskDelay(pdMS_TO_TICKS(2000));
+        vTaskDelay(pdMS_TO_TICKS(4800));
         ring_fade_stop();
         gpio_set_level(STATUS_LED_PIN, 0);
     } else if (reason == doorbell::WakeReason::ColdBoot) {
@@ -103,5 +103,5 @@ extern "C" void run_wake_sleep_bringup(void)
 
     ESP_LOGI(kTag, "Diagnostic complete; waiting for inactive inputs then sleeping");
     ring_fade_stop();
-    power.enter_deep_sleep();
+    power.enter_deep_sleep(true);
 }

@@ -8,6 +8,15 @@ config SMART_DOORBELL_PRODUCTION_APP
         disabled during hardware bring-up so the core-only safe image remains
         the default.
 
+config SMART_DOORBELL_ENABLE_PIR_EVENTS
+    bool "Enable PIR-triggered production events"
+    depends on SMART_DOORBELL_PRODUCTION_APP
+    default n
+    help
+        Arm GPIO3 as a production wake source and generate PIR_MOTION events.
+        Leave this disabled for the normal button-only doorbell flow. The
+        isolated wake diagnostic can still exercise PIR independently.
+
 config SMART_DOORBELL_WAKE_SLEEP_DIAGNOSTIC
     bool "Build the button/PIR wake and deep-sleep diagnostic"
     default n
@@ -15,5 +24,15 @@ config SMART_DOORBELL_WAKE_SLEEP_DIAGNOSTIC
         Build a bounded wake-only image. It never starts the camera, Wi-Fi,
         MQTT, amplifier, or I2S and returns to deep sleep after reporting the
         wake cause.
+
+config SMART_DOORBELL_MIC_DIAGNOSTIC
+    bool "Build the USB-powered MK1 microphone diagnostic"
+    depends on !SMART_DOORBELL_PRODUCTION_APP && !SMART_DOORBELL_WAKE_SLEEP_DIAGNOSTIC
+    default n
+    help
+        Build the isolated ICS-43434 I2S receive diagnostic. It keeps the
+        camera, Wi-Fi, MQTT, speaker output, amplifier, and deep sleep
+        disabled, then reports per-slot sample range and average magnitude.
+        Use USB power only while investigating the Rev C battery-start fault.
 
 endmenu

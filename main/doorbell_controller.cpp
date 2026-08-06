@@ -12,6 +12,7 @@
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "ring_fade.h"
 #include "wake_stub.h"
 
 namespace doorbell {
@@ -20,6 +21,15 @@ constexpr const char *kTag = "DoorbellController";
 constexpr unsigned kCaptureAttempts = 2;
 constexpr unsigned kTriggerAttempts = 2;
 constexpr unsigned kUploadAttempts = 2;
+constexpr std::uint32_t kRingFadeInMs = 1800;
+constexpr std::uint32_t kRingHoldMs = 2500;
+constexpr std::uint32_t kRingFadeOutMs = 1800;
+
+#ifdef CONFIG_SMART_DOORBELL_ENABLE_PIR_EVENTS
+constexpr bool kPirEventsEnabled = true;
+#else
+constexpr bool kPirEventsEnabled = false;
+#endif
 
 #ifndef DEVICE_ID
 #define DEVICE_ID "smart-doorbell"
@@ -147,8 +157,9 @@ esp_err_t DoorbellController::trigger_with_retry(
 {
     set_state(DeviceState::ShuttingDown);
     (void)connectivity_.shutdown();
+    ring_fade_stop();
     gpio_set_level(STATUS_LED_PIN, 0);
-    power_.enter_deep_sleep();
+    power_.enter_deep_sleep(kPirEventsEnabled);
 }
 
 [[noreturn]] void DoorbellController::run()
@@ -165,17 +176,28 @@ esp_err_t DoorbellController::trigger_with_retry(
 
     const WakeReason reason = power_.wake_reason();
 
-    // Provide visible acknowledgement before logs, camera startup, or network
-    // work. A button press lights its ring; PIR motion only lights status D3.
+    // D3 was asserted by the RTC wake stub before the bootloader. Begin the
+    // button ring's gradual fade as soon as application GPIO is available.
     if (reason == WakeReason::Button) {
-        gpio_set_level(BUTTON_LED_PIN, 1);
         gpio_set_level(STATUS_LED_PIN, 1);
+        const esp_err_t fade_err = ring_animation_start(
+            kRingFadeInMs, kRingHoldMs, kRingFadeOutMs);
+        if (fade_err != ESP_OK) {
+            ESP_LOGE(kTag, "GPIO48 fade-in failed: %s",
+                     esp_err_to_name(fade_err));
+        }
     } else if (reason == WakeReason::Motion) {
         gpio_set_level(STATUS_LED_PIN, 1);
     }
 
     set_state(DeviceState::Booting);
     ESP_LOGI(kTag, "Wake reason: %s", wake_name(reason));
+
+    if (reason == WakeReason::Motion && !kPirEventsEnabled) {
+        ESP_LOGW(kTag, "Ignoring PIR wake because production PIR events are disabled");
+        set_state(DeviceState::IdlePreparation);
+        sleep();
+    }
 
     if (reason != WakeReason::Button && reason != WakeReason::Motion) {
         set_state(DeviceState::IdlePreparation);

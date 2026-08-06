@@ -1,0 +1,5 @@
+# Isolated USB-powered ICS-43434 diagnostic.
+# Battery power must remain disconnected during the current MK1 investigation.
+# CONFIG_SMART_DOORBELL_PRODUCTION_APP is not set
+# CONFIG_SMART_DOORBELL_WAKE_SLEEP_DIAGNOSTIC is not set
+CONFIG_SMART_DOORBELL_MIC_DIAGNOSTIC=y

@@ -6,6 +6,7 @@
 #include "driver/gpio.h"
 #include "driver/ledc.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 
 static const char *TAG = "ring_fade";
 
@@ -20,18 +21,43 @@ static const char *TAG = "ring_fade";
 
 static bool s_fade_installed;
 static bool s_channel_configured;
+static esp_timer_handle_t s_fade_out_timer;
+static uint32_t s_fade_out_ms;
 
-esp_err_t ring_fade_start(uint32_t fade_ms)
+static void start_fade_out(void *unused)
 {
-    if (fade_ms == 0) {
+    (void)unused;
+    if (!s_channel_configured) {
+        return;
+    }
+
+    esp_err_t err = ledc_set_fade_with_time(
+        RING_LEDC_MODE, RING_LEDC_CHANNEL, 0, s_fade_out_ms);
+    if (err == ESP_OK) {
+        err = ledc_fade_start(RING_LEDC_MODE, RING_LEDC_CHANNEL,
+                              LEDC_FADE_NO_WAIT);
+    }
+    if (err == ESP_OK) {
+        ESP_LOGI(TAG, "GPIO%d ring fade-out started over %u ms",
+                 BUTTON_LED_PIN, (unsigned)s_fade_out_ms);
+    } else {
+        ESP_LOGE(TAG, "GPIO%d ring fade-out failed: %s", BUTTON_LED_PIN,
+                 esp_err_to_name(err));
+    }
+}
+
+esp_err_t ring_animation_start(uint32_t fade_in_ms, uint32_t hold_ms,
+                               uint32_t fade_out_ms)
+{
+    if (fade_in_ms == 0 || fade_out_ms == 0) {
         return ESP_ERR_INVALID_ARG;
     }
 
     ring_fade_stop();
 
-    /* The wake stub and GPIO acknowledgement already made the ring fully
-     * bright. Configure PWM at the same perceived level before fading. */
-    gpio_set_level(BUTTON_LED_PIN, 1);
+    /* D3 provides the immediate RTC-stub acknowledgement. Start the button
+     * ring dark so its only visible transition is a smooth fade in. */
+    gpio_set_level(BUTTON_LED_PIN, 0);
 
     const ledc_timer_config_t timer = {
         .speed_mode = RING_LEDC_MODE,
@@ -52,7 +78,7 @@ esp_err_t ring_fade_start(uint32_t fade_ms)
         .channel = RING_LEDC_CHANNEL,
         .intr_type = LEDC_INTR_DISABLE,
         .timer_sel = RING_LEDC_TIMER,
-        .duty = RING_LEDC_MAX_DUTY,
+        .duty = 0,
         .hpoint = 0,
         .sleep_mode = LEDC_SLEEP_MODE_NO_ALIVE_NO_PD,
         .flags = {
@@ -72,8 +98,8 @@ esp_err_t ring_fade_start(uint32_t fade_ms)
     }
     s_fade_installed = true;
 
-    err = ledc_set_fade_with_time(RING_LEDC_MODE, RING_LEDC_CHANNEL, 0,
-                                  fade_ms);
+    err = ledc_set_fade_with_time(RING_LEDC_MODE, RING_LEDC_CHANNEL,
+                                  RING_LEDC_MAX_DUTY, fade_in_ms);
     if (err == ESP_OK) {
         err = ledc_fade_start(RING_LEDC_MODE, RING_LEDC_CHANNEL,
                               LEDC_FADE_NO_WAIT);
@@ -83,13 +109,39 @@ esp_err_t ring_fade_start(uint32_t fade_ms)
         return err;
     }
 
-    ESP_LOGI(TAG, "GPIO%d ring fade started: full to off over %u ms",
-             BUTTON_LED_PIN, (unsigned)fade_ms);
+    s_fade_out_ms = fade_out_ms;
+    const esp_timer_create_args_t timer_args = {
+        .callback = start_fade_out,
+        .arg = NULL,
+        .dispatch_method = ESP_TIMER_TASK,
+        .name = "ring-fade-out",
+        .skip_unhandled_events = true,
+    };
+    err = esp_timer_create(&timer_args, &s_fade_out_timer);
+    if (err == ESP_OK) {
+        const uint64_t delay_us =
+            ((uint64_t)fade_in_ms + (uint64_t)hold_ms) * 1000ULL;
+        err = esp_timer_start_once(s_fade_out_timer, delay_us);
+    }
+    if (err != ESP_OK) {
+        ring_fade_stop();
+        return err;
+    }
+
+    ESP_LOGI(TAG,
+             "GPIO%d ring animation: fade in %u ms, hold %u ms, fade out %u ms",
+             BUTTON_LED_PIN, (unsigned)fade_in_ms, (unsigned)hold_ms,
+             (unsigned)fade_out_ms);
     return ESP_OK;
 }
 
 void ring_fade_stop(void)
 {
+    if (s_fade_out_timer) {
+        (void)esp_timer_stop(s_fade_out_timer);
+        (void)esp_timer_delete(s_fade_out_timer);
+        s_fade_out_timer = NULL;
+    }
     if (s_channel_configured) {
         (void)ledc_stop(RING_LEDC_MODE, RING_LEDC_CHANNEL, 0);
         s_channel_configured = false;
