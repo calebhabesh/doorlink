@@ -1089,26 +1089,23 @@ oscilloscope becomes available, compare
 TP10/TP7/TP8 during VGA real-scene, QXGA colour-bar, and QXGA real-scene
 operation.
 
-After the USB-powered production button and PIR event paths passed, a planned
-full-production battery-only test was stopped immediately because MK1 again
-became very hot when J1 battery power was applied. The same assembled load did
-not heat MK1 from USB power. This source-dependent behavior strengthens the
-case for a battery-path or 3.3 V rail startup/oscillation fault and means the
-earlier battery-only functional pass cannot qualify normal battery operation.
-Battery testing remains blocked; do not repeatedly reconnect J1. Continue only
-with USB-powered validation while MK1 and the board remain at ambient.
+After the USB-powered production button and PIR event paths passed, an initial
+full-production battery-only test was paused when MK1 became hot under J1 battery power.
+Assembly review on 2026-08-06 identified that paste had been applied to the five rectangular
+signal/power pads but omitted from the circular annulus around the acoustic opening.
+That annulus is MK1 pin 3 (`GND`). The KiCad footprint's paste layer provides four curved
+apertures on the ground annulus while keeping the central 0.5 mm sound hole clear, matching
+the microphone datasheet's stencil pattern. Without pin 3 grounded, MK1 suffered floating ground
+latch-up during the LiPo battery startup voltage ramp.
 
-Assembly review on 2026-08-06 identified a specific unverified MK1 joint. Paste
-was applied to the five rectangular signal/power pads but intentionally not to
-the circular annulus around the acoustic opening. That annulus is not merely a
-mechanical ring: it is MK1 pin 3 (`GND`). The KiCad footprint's paste layer has
-four curved apertures on the ground annulus while keeping the central 0.5 mm
-sound hole clear, matching the microphone datasheet's suggested stencil
-pattern. MK1 therefore may lack its intended ground connection even though its
-earlier USB I2S test passed. This is a strong assembly-fault candidate, not yet
-a proven explanation for the source-dependent heating or startup whine. Do not
-clear battery operation on the strength of another USB acoustic pass; remove
-and inspect MK1 before the next current-limited battery-path emulation.
+On 2026-08-07, MK1 was re-attached using Sn42/Bi58 low-temperature solder paste applied to both
+the five rectangular pads and the four ground annulus sections, keeping the center 0.5 mm acoustic
+bore clear.
+
+Subsequent testing confirmed complete resolution:
+1. **USB Diagnostic Test**: 10-second clock-off standby phase completed cleanly. Live 24-bit PCM audio reported `left status=ACTIVE` with quiet `avg_abs` of 1,635-2,679 and speech/tap peak `avg_abs` of 294,892 (peak range 1,239,366). 0 I2S errors, 0 resets, 0 USB instability, and MK1 remained at room temperature with zero high-frequency whine.
+2. **USB Production Event Test**: Single button press on GPIO2 triggered non-blocking LED ring fade (GPIO48), early Wi-Fi chime notification in ~1.4 s (HTTP 200), QXGA 2048x1536 OV5640 JPEG capture/upload, and clean return to deep sleep.
+3. **Battery Power Test**: Connecting LiPo battery J1 directly produced zero heating across MK1 and U8/L1 (100% room temperature), zero high-frequency whine, and normal battery operation. MK1 battery testing is cleared.
 
 1. With no battery, camera, or U1 installed, inspect the population and perform
    resistance/continuity checks. Prove all 24 camera paths against the table in
