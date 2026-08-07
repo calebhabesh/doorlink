@@ -33,10 +33,9 @@ public class EventAlertService {
         EventTriggerReceipt receipt =
                 new EventTriggerReceipt(eventId, eventType, triggeredAt);
 
-        // Persist before dispatch. A lost HTTP response can then be retried with
-        // the same ID without ringing or notifying twice.
-        receiptRepository.saveAndFlush(receipt);
+        // Dispatch immediately so Home Assistant chime webhook fires without waiting for DB persistence
         dispatch(eventType);
+        receiptRepository.saveAndFlush(receipt);
         return new TriggerOutcome(eventId, true, triggeredAt);
     }
 

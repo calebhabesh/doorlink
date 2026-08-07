@@ -7,6 +7,13 @@
 #define WIFI_PASSWORD   "YOUR_WIFI_PASSWORD"
 #define WIFI_MAX_RETRY  5
 
+// Optional Static IP Configuration for sub-300ms Wi-Fi connection
+// #define WIFI_STATIC_IP   "192.168.1.30"
+// #define WIFI_NETMASK     "255.255.255.0"
+// #define WIFI_GATEWAY     "192.168.1.1"
+// #define WIFI_DNS         "192.168.1.1"
+// #define WIFI_CHANNEL     6
+
 // ==========================================
 // MQTT Configuration
 // ==========================================

@@ -12,6 +12,7 @@
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "chime_player.h"
 #include "ring_fade.h"
 #include "wake_stub.h"
 
@@ -185,6 +186,11 @@ esp_err_t DoorbellController::trigger_with_retry(
         if (fade_err != ESP_OK) {
             ESP_LOGE(kTag, "GPIO48 fade-in failed: %s",
                      esp_err_to_name(fade_err));
+        }
+        const esp_err_t chime_err = chime_player_play_async();
+        if (chime_err != ESP_OK) {
+            ESP_LOGE(kTag, "Local chime playback failed: %s",
+                     esp_err_to_name(chime_err));
         }
     } else if (reason == WakeReason::Motion) {
         gpio_set_level(STATUS_LED_PIN, 1);

@@ -1,8 +1,8 @@
 CONFIG_IDF_TARGET="esp32s3"
 
-# Hardware-safe default. Production builds layer sdkconfig.production.defaults.
-# CONFIG_SMART_DOORBELL_PRODUCTION_APP is not set
+CONFIG_SMART_DOORBELL_PRODUCTION_APP=y
 # CONFIG_SMART_DOORBELL_WAKE_SLEEP_DIAGNOSTIC is not set
+CONFIG_BOOTLOADER_SKIP_VALIDATE_IN_DEEP_SLEEP=y
 
 # QXGA production-still candidate. A fixed 2 MiB receive buffer was required
 # for validated 2048x1536 captures; QSXGA remains deferred.

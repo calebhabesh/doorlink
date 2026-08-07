@@ -206,7 +206,12 @@ static esp_err_t start_wifi_sta(void)
         .sta = {
             .ssid = WIFI_SSID,
             .password = WIFI_PASSWORD,
+            .scan_method = WIFI_FAST_SCAN,
+            .sort_method = WIFI_CONNECT_AP_BY_SIGNAL,
             .threshold.authmode = WIFI_AUTH_WPA2_PSK,
+#ifdef WIFI_CHANNEL
+            .channel = WIFI_CHANNEL,
+#endif
         },
     };
 
@@ -223,6 +228,26 @@ static esp_err_t start_wifi_sta(void)
         goto fail;
     }
     s_wifi_state.wifi_started = true;
+
+    // Disable modem sleep power save for minimum latency during active transfers
+    (void)esp_wifi_set_ps(WIFI_PS_NONE);
+
+#if defined(WIFI_STATIC_IP) && defined(WIFI_NETMASK) && defined(WIFI_GATEWAY)
+    esp_netif_dhcpc_stop(s_wifi_state.netif);
+    esp_netif_ip_info_t ip_info;
+    memset(&ip_info, 0, sizeof(ip_info));
+    ip_info.ip.addr = esp_ip4addr_aton(WIFI_STATIC_IP);
+    ip_info.netmask.addr = esp_ip4addr_aton(WIFI_NETMASK);
+    ip_info.gw.addr = esp_ip4addr_aton(WIFI_GATEWAY);
+    esp_netif_set_ip_info(s_wifi_state.netif, &ip_info);
+#if defined(WIFI_DNS)
+    esp_netif_dns_info_t dns_info;
+    dns_info.ip.u_addr.ip4.addr = esp_ip4addr_aton(WIFI_DNS);
+    dns_info.ip.type = ESP_IPADDR_TYPE_V4;
+    esp_netif_set_dns_info(s_wifi_state.netif, ESP_NETIF_DNS_MAIN, &dns_info);
+#endif
+    ESP_LOGI(TAG, "Configured static IP: %s", WIFI_STATIC_IP);
+#endif
 
     ESP_LOGI(TAG, "Wi-Fi STA started; waiting for connection");
     return ESP_OK;
