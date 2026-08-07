@@ -1105,7 +1105,7 @@ bore clear.
 Subsequent testing confirmed complete resolution:
 1. **USB Diagnostic Test**: 10-second clock-off standby phase completed cleanly. Live 24-bit PCM audio reported `left status=ACTIVE` with quiet `avg_abs` of 1,635-2,679 and speech/tap peak `avg_abs` of 294,892 (peak range 1,239,366). 0 I2S errors, 0 resets, 0 USB instability, and MK1 remained at room temperature with zero high-frequency whine.
 2. **USB Production Event Test**: Single button press on GPIO2 triggered non-blocking LED ring fade (GPIO48), early Wi-Fi chime notification in ~1.4 s (HTTP 200), QXGA 2048x1536 OV5640 JPEG capture/upload, and clean return to deep sleep.
-3. **Battery Power Test**: Connecting LiPo battery J1 directly produced zero heating across MK1 and U8/L1 (100% room temperature), zero high-frequency whine, and normal battery operation. MK1 battery testing is cleared.
+3. **Battery Power Test**: Connecting LiPo battery J1 directly produced zero heating across MK1 and U8/L1 (100% room temperature), zero high-frequency whine, and normal battery operation. The high-frequency switching whine occurred concurrently with MK1 heating during ungrounded latch-up; grounding Pin 3 resolved both symptoms in initial testing. The link between ungrounded MK1 latch-up current draw and U8/L1 switching noise is recorded as the primary suspected mechanism, subject to long-term monitoring across extended battery operational cycles. MK1 battery testing is cleared.
 
 1. With no battery, camera, or U1 installed, inspect the population and perform
    resistance/continuity checks. Prove all 24 camera paths against the table in
