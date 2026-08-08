@@ -216,7 +216,7 @@ esp_err_t DoorbellController::trigger_with_retry(
     return err;
 }
 
-esp_err_t DoorbellController::handle_early_notify(const char *event_type, const char *firmware_version, int remaining_ms)
+esp_err_t DoorbellController::handle_early_notify(const char *event_id, const char *event_type, const char *firmware_version, int remaining_ms)
 {
     set_state(DeviceState::EarlyNotify);
     int wifi_timeout = (std::min)(10000, remaining_ms);
@@ -224,7 +224,7 @@ esp_err_t DoorbellController::handle_early_notify(const char *event_type, const 
     if (err == ESP_OK) {
         int trigger_timeout = (std::min)(5000, remaining_ms);
         esp_err_t trigger_err = trigger_with_retry(
-            session_.session_id, event_type, DEVICE_ID, firmware_version, trigger_timeout);
+            event_id, event_type, DEVICE_ID, firmware_version, trigger_timeout);
         if (trigger_err == ESP_OK) {
             session_.early_notified = true;
         } else {
@@ -250,7 +250,6 @@ esp_err_t DoorbellController::handle_rf_quiesce()
 esp_err_t DoorbellController::handle_camera_capture(CapturedImage &image, int remaining_ms)
 {
     set_state(DeviceState::CameraPowerUp);
-    vTaskDelay(pdMS_TO_TICKS(50)); // LDO stabilization
 
     set_state(DeviceState::Capturing);
     int capture_timeout = (std::min)(4000, remaining_ms);
@@ -266,6 +265,7 @@ esp_err_t DoorbellController::handle_camera_capture(CapturedImage &image, int re
 }
 
 esp_err_t DoorbellController::handle_upload(const CapturedImage &image,
+                                             const char *event_id,
                                              const char *event_type,
                                              const char *firmware_version,
                                              int remaining_ms)
@@ -280,15 +280,16 @@ esp_err_t DoorbellController::handle_upload(const CapturedImage &image,
 
     set_state(DeviceState::Uploading);
     int upload_timeout = (std::min)(30000, remaining_ms);
-    err = upload_with_retry(image, event_type, session_.session_id, DEVICE_ID,
+    err = upload_with_retry(image, event_type, event_id, DEVICE_ID,
                             firmware_version, upload_timeout);
     if (err == ESP_OK) {
         session_.image_uploaded = true;
-        ESP_LOGI(kTag, "%s event completed (%ux%u, %u bytes)",
+        ESP_LOGI(kTag, "%s event completed (%ux%u, %u bytes, event_id=%s)",
                  event_type,
                  static_cast<unsigned>(image.width()),
                  static_cast<unsigned>(image.height()),
-                 static_cast<unsigned>(image.size()));
+                 static_cast<unsigned>(image.size()),
+                 event_id);
     } else {
         ESP_LOGE(kTag, "%s event failed: %s", event_type, esp_err_to_name(err));
     }
@@ -321,7 +322,7 @@ void DoorbellController::start_button_monitor()
             if (current_raw != candidate_btn_level) {
                 candidate_btn_level = current_raw;
                 candidate_start_us = now_us;
-            } else if ((now_us - candidate_start_us) >= 15000LL &&
+            } else if ((now_us - candidate_start_us) >= 10000LL &&
                        candidate_btn_level != stable_btn_level) {
                 stable_btn_level = candidate_btn_level;
                 if (stable_btn_level == 1) {
@@ -369,51 +370,50 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
     }
 
     session_.alert_cycle_count++;
-    session_.last_remote_alert_us = now_start_us;
+    session_.last_remote_alert_start_us = now_start_us;
     session_.followup_pending = false;
     alert_cycle_in_progress_ = true;
     alert_cycles_started_++;
 
-    ESP_LOGI(kTag, "session=%s cycle=%" PRIu32 " ALERT_START type=%s remaining_time=%.1fs",
-             session_.session_id, session_.alert_cycle_count, event_type,
+    char cycle_event_id[40];
+    std::snprintf(cycle_event_id, sizeof(cycle_event_id), "%s-%" PRIu32,
+                  session_.session_id, session_.alert_cycle_count);
+
+    ESP_LOGI(kTag, "[MONOTONIC_TIMING] t=%.1f ms | ALERT_START session=%s event_id=%s cycle=%" PRIu32 " type=%s remaining_time=%.1fs",
+             static_cast<double>(now_start_us - session_.session_start_us) / 1000.0,
+             session_.session_id, cycle_event_id, session_.alert_cycle_count, event_type,
              static_cast<double>(remaining_ms) / 1000.0);
 
-    // 1. Early Notification (bounded by remaining_ms)
-    (void)handle_early_notify(event_type, firmware_version, remaining_ms);
+    // 1. Instant Early Notification (bounded by remaining_ms)
+    (void)handle_early_notify(cycle_event_id, event_type, firmware_version, remaining_ms);
+    ESP_LOGI(kTag, "[MONOTONIC_TIMING] t=%.1f ms | STAGE_COMPLETE: Early Notification (Wi-Fi connected & HTTP trigger sent)",
+             static_cast<double>(esp_timer_get_time() - session_.session_start_us) / 1000.0);
 
-    // TIME-MAX check prior to RF Quiescence
     int64_t now_us = esp_timer_get_time();
     remaining_ms = static_cast<int>(session_.remaining_us(now_us) / 1000LL);
     if (remaining_ms <= 0) {
         ESP_LOGW(kTag, "session=%s cycle=%" PRIu32 " ALERT_ABORTED stage=early_notify reason=session_deadline_reached",
                  session_.session_id, session_.alert_cycle_count);
+        session_.last_remote_alert_end_us = esp_timer_get_time();
         alert_cycle_in_progress_ = false;
         alert_cycles_finished_++;
         return;
     }
 
-    // 2. RF Quiescence (PWR-01 Boundary: Wi-Fi RF off before camera power-up)
+    // 2. RF Quiescence (PWR-01 Boundary: Ensure Wi-Fi RF is off before camera power-up)
     const esp_err_t shutdown_err = handle_rf_quiesce();
     if (shutdown_err != ESP_OK) {
         ESP_LOGE(kTag, "session=%s cycle=%" PRIu32 " ALERT_FAILED reason=rf_quiesce_failed",
                  session_.session_id, session_.alert_cycle_count);
+        session_.last_remote_alert_end_us = esp_timer_get_time();
         alert_cycle_in_progress_ = false;
         alert_cycles_finished_++;
         return;
     }
+    ESP_LOGI(kTag, "[MONOTONIC_TIMING] t=%.1f ms | STAGE_COMPLETE: RF Quiesced (Wi-Fi disabled for camera capture)",
+             static_cast<double>(esp_timer_get_time() - session_.session_start_us) / 1000.0);
 
-    // TIME-MAX check prior to Camera Power-up & Capture
-    now_us = esp_timer_get_time();
-    remaining_ms = static_cast<int>(session_.remaining_us(now_us) / 1000LL);
-    if (remaining_ms <= 0) {
-        ESP_LOGW(kTag, "session=%s cycle=%" PRIu32 " ALERT_ABORTED stage=rf_quiesce reason=session_deadline_reached",
-                 session_.session_id, session_.alert_cycle_count);
-        alert_cycle_in_progress_ = false;
-        alert_cycles_finished_++;
-        return;
-    }
-
-    // 3. Camera Power Up & QXGA Capture into PSRAM (bounded by remaining_ms)
+    // 3. Fast Camera Power Up & QXGA Capture into PSRAM (bounded by remaining_ms)
     CapturedImage image;
     const esp_err_t capture_err = handle_camera_capture(image, remaining_ms);
 
@@ -421,10 +421,13 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
         ESP_LOGE(kTag, "session=%s cycle=%" PRIu32 " ALERT_FAILED reason=camera_capture_failed",
                  session_.session_id, session_.alert_cycle_count);
         image.reset();
+        session_.last_remote_alert_end_us = esp_timer_get_time();
         alert_cycle_in_progress_ = false;
         alert_cycles_finished_++;
         return;
     }
+    ESP_LOGI(kTag, "[MONOTONIC_TIMING] t=%.1f ms | STAGE_COMPLETE: Camera Photo Captured & Copied to PSRAM (SHUTTER CLOSE)",
+             static_cast<double>(esp_timer_get_time() - session_.session_start_us) / 1000.0);
 
     // TIME-MAX check prior to Wi-Fi Reconnect & Upload
     now_us = esp_timer_get_time();
@@ -433,18 +436,22 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
         ESP_LOGW(kTag, "session=%s cycle=%" PRIu32 " ALERT_ABORTED stage=camera_capture reason=session_deadline_reached",
                  session_.session_id, session_.alert_cycle_count);
         image.reset();
+        session_.last_remote_alert_end_us = esp_timer_get_time();
         alert_cycle_in_progress_ = false;
         alert_cycles_finished_++;
         return;
     }
 
     // 4. Wi-Fi Reconnect & Multipart Upload (bounded by remaining_ms)
-    const esp_err_t upload_err = handle_upload(image, event_type, firmware_version, remaining_ms);
+    const esp_err_t upload_err = handle_upload(image, cycle_event_id, event_type, firmware_version, remaining_ms);
     image.reset();
+    ESP_LOGI(kTag, "[MONOTONIC_TIMING] t=%.1f ms | STAGE_COMPLETE: Full QXGA Image Uploaded to Gateway",
+             static_cast<double>(esp_timer_get_time() - session_.session_start_us) / 1000.0);
 
     // Re-enforce RF Quiescence after upload completes
     (void)handle_rf_quiesce();
 
+    session_.last_remote_alert_end_us = esp_timer_get_time();
     alert_cycle_in_progress_ = false;
     alert_cycles_finished_++;
 
@@ -461,11 +468,15 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
 void DoorbellController::process_button_press_event(int64_t event_time_us)
 {
     session_.press_count++;
+    session_.last_button_press_us = event_time_us;
     session_.touch_activity(event_time_us);
 
-    const int64_t elapsed_since_last_alert_us = event_time_us - session_.last_remote_alert_us;
-    const double elapsed_sec = static_cast<double>(elapsed_since_last_alert_us) / 1000000.0;
-    const bool cooldown_expired = (elapsed_since_last_alert_us >= VisitorSession::kRealertCooldownUs);
+    const int64_t elapsed_since_last_alert_start_us = (session_.last_remote_alert_start_us > 0)
+                                                           ? (event_time_us - session_.last_remote_alert_start_us)
+                                                           : 0;
+    const double elapsed_sec = static_cast<double>(elapsed_since_last_alert_start_us) / 1000000.0;
+    const bool cooldown_expired = (session_.last_remote_alert_start_us > 0) &&
+                                  (elapsed_since_last_alert_start_us >= VisitorSession::kRealertCooldownUs);
     const bool under_cycle_limit = (session_.alert_cycle_count < VisitorSession::kMaxAlertCyclesPerSession);
 
     if (!under_cycle_limit) {
@@ -474,17 +485,12 @@ void DoorbellController::process_button_press_event(int64_t event_time_us)
         return;
     }
 
-    if (!cooldown_expired) {
-        ESP_LOGI(kTag, "session=%s cycle=%" PRIu32 " BUTTON_PRESS local=retrigger remote=suppressed reason=cooldown_active elapsed=%.1fs",
-                 session_.session_id, session_.alert_cycle_count, elapsed_sec);
-        return;
-    }
-
-    // Both cooldown_expired and under_cycle_limit are TRUE
-    if (alert_cycle_in_progress_) {
+    if (alert_cycle_in_progress_ || !cooldown_expired) {
         session_.followup_pending = true;
-        ESP_LOGI(kTag, "session=%s cycle=%" PRIu32 " BUTTON_PRESS local=retrigger remote=pending reason=pipeline_busy elapsed=%.1fs",
-                 session_.session_id, session_.alert_cycle_count, elapsed_sec);
+        ESP_LOGI(kTag, "session=%s cycle=%" PRIu32 " BUTTON_PRESS local=retrigger remote=pending reason=%s elapsed=%.1fs",
+                 session_.session_id, session_.alert_cycle_count,
+                 alert_cycle_in_progress_ ? "pipeline_busy" : "cooldown_active",
+                 elapsed_sec);
     } else {
         ESP_LOGI(kTag, "session=%s cycle=%" PRIu32 " BUTTON_PRESS local=retrigger remote=execute_now elapsed=%.1fs",
                  session_.session_id, session_.alert_cycle_count, elapsed_sec);
@@ -516,16 +522,22 @@ void DoorbellController::handle_ptt_session()
             }
         }
 
-        // 3. Check if a follow-up alert cycle is pending and the pipeline is free
+        // 3. Check if a follow-up alert cycle is pending and eligible
         const int64_t now_us = esp_timer_get_time();
-        if (session_.followup_pending &&
-            !alert_cycle_in_progress_ &&
-            (now_us - session_.last_remote_alert_us >= VisitorSession::kRealertCooldownUs) &&
-            (session_.alert_cycle_count < VisitorSession::kMaxAlertCyclesPerSession)) {
-            ESP_LOGI(kTag, "session=%s cycle=%" PRIu32 " ALERT_START_PENDING type=DOORBELL_REPRESS",
-                     session_.session_id, session_.alert_cycle_count + 1);
-            execute_alert_cycle("DOORBELL_REPRESS", firmware_version);
-            set_state(DeviceState::PttSession);
+        if (session_.followup_pending && !alert_cycle_in_progress_) {
+            const int64_t cooldown_elapsed_us = (session_.last_remote_alert_start_us > 0)
+                                                     ? (now_us - session_.last_remote_alert_start_us)
+                                                     : 0;
+
+            if (session_.last_remote_alert_start_us > 0 &&
+                cooldown_elapsed_us >= VisitorSession::kRealertCooldownUs &&
+                session_.alert_cycle_count < VisitorSession::kMaxAlertCyclesPerSession) {
+                ESP_LOGI(kTag, "session=%s cycle=%" PRIu32 " ALERT_START_PENDING type=DOORBELL_REPRESS elapsed_from_first_press=%.1fs",
+                         session_.session_id, session_.alert_cycle_count + 1,
+                         static_cast<double>(cooldown_elapsed_us) / 1000000.0);
+                execute_alert_cycle("DOORBELL_REPRESS", firmware_version);
+                set_state(DeviceState::PttSession);
+            }
         }
     }
 
@@ -595,6 +607,7 @@ void DoorbellController::handle_ptt_session()
     session_ = VisitorSession{};
     make_event_id(session_.session_id);
     session_.session_start_us = started_us;
+    session_.last_button_press_us = started_us;
     session_.touch_activity(started_us);
     session_.press_count = 1;
 

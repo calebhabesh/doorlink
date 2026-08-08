@@ -13,10 +13,26 @@
 
 static const char *TAG = "camera_capture";
 
+#ifndef CAMERA_XCLK_HZ
 #define CAMERA_XCLK_HZ 10000000
+#endif
 #define CAMERA_MAINS_HZ 60
-#define CAMERA_GAIN_CEILING 0x0020
-#define CAMERA_POST_BLC_CONVERGENCE_FRAMES 8
+
+#ifndef CAMERA_GAIN_CEILING
+#define CAMERA_GAIN_CEILING 0x0050 /* 5.0x real gain ceiling (80 / 16 = 5.0x) */
+#endif
+
+#ifndef CAMERA_MAX_EXPOSURE_LINES
+#define CAMERA_MAX_EXPOSURE_LINES 900 /* ~1/16s shutter limit at 10MHz XCLK */
+#endif
+
+#ifndef CAMERA_POST_BLC_CONVERGENCE_FRAMES
+#define CAMERA_POST_BLC_CONVERGENCE_FRAMES 2
+#endif
+
+#ifndef CAMERA_DENOISE_LEVEL
+#define CAMERA_DENOISE_LEVEL 0
+#endif
 
 static bool jpeg_has_markers(const camera_fb_t *frame)
 {
@@ -26,7 +42,53 @@ static bool jpeg_has_markers(const camera_fb_t *frame)
            frame->buf[frame->len - 1] == 0xd9;
 }
 
-static esp_err_t discard_frames(unsigned count, const char *reason)
+static void log_sensor_diag(sensor_t *sensor, const char *stage, unsigned frame_idx, int64_t capture_started_us)
+{
+    if (!sensor) return;
+
+    int r3500 = sensor->get_reg(sensor, 0x3500, 0xff);
+    int r3501 = sensor->get_reg(sensor, 0x3501, 0xff);
+    int r3502 = sensor->get_reg(sensor, 0x3502, 0xff);
+    int r350a = sensor->get_reg(sensor, 0x350a, 0xff);
+    int r350b = sensor->get_reg(sensor, 0x350b, 0xff);
+    int r380c = sensor->get_reg(sensor, 0x380c, 0xff);
+    int r380d = sensor->get_reg(sensor, 0x380d, 0xff);
+    int r380e = sensor->get_reg(sensor, 0x380e, 0xff);
+    int r380f = sensor->get_reg(sensor, 0x380f, 0xff);
+
+    if (r3500 < 0 || r3501 < 0 || r3502 < 0 || r350a < 0 || r350b < 0 ||
+        r380c < 0 || r380d < 0 || r380e < 0 || r380f < 0) {
+        ESP_LOGE(TAG, "[AEC_DIAG] Failed to read sensor registers at stage '%s'", stage);
+        return;
+    }
+
+    int r3a02 = sensor->get_reg(sensor, 0x3a02, 0xff);
+    int r3a03 = sensor->get_reg(sensor, 0x3a03, 0xff);
+    int r3a18 = sensor->get_reg(sensor, 0x3a18, 0xff);
+    int r3a19 = sensor->get_reg(sensor, 0x3a19, 0xff);
+
+    uint32_t exp_raw = ((uint32_t)(r3500 & 0x0f) << 12) | ((uint32_t)r3501 << 4) | ((uint32_t)(r3502 & 0xf0) >> 4);
+    uint16_t gain_raw = ((uint16_t)(r350a & 0x03) << 8) | (uint16_t)r350b;
+    float gain_x = (float)gain_raw / 16.0f;
+    uint16_t hts = ((uint16_t)r380c << 8) | (uint16_t)r380d;
+    uint16_t vts = ((uint16_t)r380e << 8) | (uint16_t)r380f;
+    uint16_t aec_max = ((uint16_t)r3a02 << 8) | (uint16_t)r3a03;
+    uint16_t gain_ceil = ((uint16_t)(r3a18 & 0x03) << 8) | (uint16_t)r3a19;
+
+    double elapsed_ms = (double)(esp_timer_get_time() - capture_started_us) / 1000.0;
+
+    ESP_LOGI(TAG,
+             "[AEC_DIAG] stage=%-14s frame=%u t=%6.1fms | "
+             "exp=%4u lines (max=%4u) | "
+             "gain=%5.2fx (ceil=0x%03x) | "
+             "HTS=%4u VTS=%4u",
+             stage, frame_idx, elapsed_ms,
+             (unsigned)exp_raw, (unsigned)aec_max,
+             (double)gain_x, (unsigned)gain_ceil,
+             (unsigned)hts, (unsigned)vts);
+}
+
+static esp_err_t discard_frames(sensor_t *sensor, unsigned count, const char *reason, int64_t capture_started_us)
 {
     for (unsigned i = 0; i < count; ++i) {
         camera_fb_t *frame = esp_camera_fb_get();
@@ -34,6 +96,7 @@ static esp_err_t discard_frames(unsigned count, const char *reason)
             ESP_LOGE(TAG, "%s frame %u/%u failed", reason, i + 1U, count);
             return ESP_FAIL;
         }
+        log_sensor_diag(sensor, "CONVERGENCE", i + 1U, capture_started_us);
         esp_camera_fb_return(frame);
     }
 
@@ -64,7 +127,7 @@ esp_err_t camera_capture_qxga_owned_timeout(camera_owned_jpeg_t *result, int tim
     }
     camera_capture_release(result);
 
-    const int max_capture_ms = (timeout_ms > 0) ? timeout_ms : 4000;
+    (void)timeout_ms;
 
     bool camera_initialized = false;
     camera_fb_t *frame = NULL;
@@ -98,9 +161,9 @@ esp_err_t camera_capture_qxga_owned_timeout(camera_owned_jpeg_t *result, int tim
         .pixel_format = PIXFORMAT_JPEG,
         .frame_size = FRAMESIZE_QXGA,
         .jpeg_quality = 12,
-        .fb_count = 1,
+        .fb_count = 2,
         .fb_location = CAMERA_FB_IN_PSRAM,
-        .grab_mode = CAMERA_GRAB_WHEN_EMPTY,
+        .grab_mode = CAMERA_GRAB_LATEST,
     };
 
     err = esp_camera_init(&config);
@@ -127,6 +190,12 @@ esp_err_t camera_capture_qxga_owned_timeout(camera_owned_jpeg_t *result, int tim
     sensor_err |= sensor->set_whitebal(sensor, 1);
     sensor_err |= sensor->set_awb_gain(sensor, 1);
     sensor_err |= sensor->set_wb_mode(sensor, 0);
+    sensor_err |= sensor->set_denoise(sensor, CAMERA_DENOISE_LEVEL);
+    int r5306 = sensor->get_reg(sensor, 0x5306, 0xff);
+    int r5308 = sensor->get_reg(sensor, 0x5308, 0xff);
+    ESP_LOGI(TAG, "OV5640 ISP denoise level=%d | reg[0x5308]=0x%02x (bit4_dns_en=%d) | reg[0x5306]=0x%02x (offset1=%d)",
+             CAMERA_DENOISE_LEVEL, r5308, (r5308 >= 0 && (r5308 & 0x10)) ? 1 : 0, r5306, r5306);
+
     if (sensor_err != 0) {
         ESP_LOGE(TAG, "OV5640 automatic/orientation setup failed: %d", sensor_err);
         err = ESP_FAIL;
@@ -134,7 +203,7 @@ esp_err_t camera_capture_qxga_owned_timeout(camera_owned_jpeg_t *result, int tim
     }
 
     err = ov5640_apply_full_readout_fix(
-        sensor, FRAMESIZE_QXGA, OV5640_FULL_READOUT_BLC_FRAMES, false);
+        sensor, FRAMESIZE_QXGA, 0, false);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "OV5640 full-readout setup failed: %s",
                  esp_err_to_name(err));
@@ -143,7 +212,7 @@ esp_err_t camera_capture_qxga_owned_timeout(camera_owned_jpeg_t *result, int tim
 
     ov5640_aec_timing_t timing = {0};
     err = ov5640_configure_aec_timing(
-        sensor, CAMERA_XCLK_HZ, CAMERA_MAINS_HZ, 0, &timing);
+        sensor, CAMERA_XCLK_HZ, CAMERA_MAINS_HZ, CAMERA_MAX_EXPOSURE_LINES, &timing);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "OV5640 AEC timing setup failed: %s",
                  esp_err_to_name(err));
@@ -157,22 +226,11 @@ esp_err_t camera_capture_qxga_owned_timeout(camera_owned_jpeg_t *result, int tim
         goto cleanup;
     }
 
+    log_sensor_diag(sensor, "POST_INIT", 0, capture_started_us);
+
     int64_t stage_started_us = esp_timer_get_time();
-    err = discard_frames(OV5640_FULL_READOUT_BLC_FRAMES, "BLC settling");
-    if (err != ESP_OK) {
-        goto cleanup;
-    }
-    ESP_LOGI(TAG, "Camera timing BLC=%0.1f ms total=%0.1f ms",
-             (double)(esp_timer_get_time() - stage_started_us) / 1000.0,
-             (double)(esp_timer_get_time() - capture_started_us) / 1000.0);
-    err = ov5640_finish_blc_recalibration(sensor);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "OV5640 BLC finish failed: %s", esp_err_to_name(err));
-        goto cleanup;
-    }
-    stage_started_us = esp_timer_get_time();
-    err = discard_frames(CAMERA_POST_BLC_CONVERGENCE_FRAMES,
-                         "AEC/AWB convergence");
+    err = discard_frames(sensor, CAMERA_POST_BLC_CONVERGENCE_FRAMES,
+                         "AEC/AWB convergence", capture_started_us);
     if (err != ESP_OK) {
         goto cleanup;
     }
@@ -196,6 +254,8 @@ esp_err_t camera_capture_qxga_owned_timeout(camera_owned_jpeg_t *result, int tim
         goto cleanup;
     }
 
+    log_sensor_diag(sensor, "FINAL_CAPTURE", CAMERA_POST_BLC_CONVERGENCE_FRAMES + 1, capture_started_us);
+
     result->data = heap_caps_malloc(frame->len,
                                     MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     if (!result->data) {
@@ -212,14 +272,9 @@ esp_err_t camera_capture_qxga_owned_timeout(camera_owned_jpeg_t *result, int tim
              (double)(esp_timer_get_time() - stage_started_us) / 1000.0,
              (double)(esp_timer_get_time() - capture_started_us) / 1000.0);
     ESP_LOGI(TAG,
-             "Copied QXGA JPEG to owned PSRAM: %ux%u len=%u exposure=%02x/%02x/%02x gain=%02x/%02x",
+             "Copied QXGA JPEG to owned PSRAM: %ux%u len=%u",
              (unsigned)frame->width, (unsigned)frame->height,
-             (unsigned)frame->len,
-             sensor->get_reg(sensor, 0x3500, 0x0f),
-             sensor->get_reg(sensor, 0x3501, 0xff),
-             sensor->get_reg(sensor, 0x3502, 0xf0),
-             sensor->get_reg(sensor, 0x350a, 0x03),
-             sensor->get_reg(sensor, 0x350b, 0xff));
+             (unsigned)frame->len);
     err = ESP_OK;
 
 cleanup:

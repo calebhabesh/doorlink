@@ -52,6 +52,17 @@ enum class AlertCycleOutcome : std::uint8_t {
 };
 
 /**
+ * Doorbell Product Policy Configuration.
+ * Centralized policy limits governing visitor interaction and remote alerts.
+ */
+namespace DoorbellPolicy {
+    constexpr int64_t kPttIdleTimeoutUs = 60000000LL;       // 60 seconds idle PTT session timeout
+    constexpr int64_t kSessionAbsoluteMaxUs = 90000000LL;   // 90 seconds absolute session hard cap
+    constexpr int64_t kRealertCooldownUs = 15000000LL;      // 15 seconds minimum spacing between remote alert cycles
+    constexpr std::uint32_t kMaxAlertCyclesPerSession = 3;  // Max 3 remote alert cycles per visitor session
+}
+
+/**
  * Visitor Session state tracking.
  * Encapsulates multi-press interactions within a bounded time window.
  */
@@ -61,7 +72,9 @@ struct VisitorSession {
     std::uint32_t alert_cycle_count{0};
     int64_t session_start_us{0};
     int64_t last_activity_us{0};
-    int64_t last_remote_alert_us{0};
+    int64_t last_remote_alert_start_us{0};
+    int64_t last_remote_alert_end_us{0};
+    int64_t last_button_press_us{0};
 
     bool early_notified{false};
     bool image_captured{false};
@@ -69,10 +82,10 @@ struct VisitorSession {
     bool ptt_active{false};
     bool followup_pending{false};
 
-    static constexpr int64_t kPttIdleTimeoutUs = 60000000LL;       // 60 seconds
-    static constexpr int64_t kSessionAbsoluteMaxUs = 90000000LL;   // 90 seconds hard max
-    static constexpr int64_t kRealertCooldownUs = 15000000LL;      // 15 seconds re-alert cooldown
-    static constexpr std::uint32_t kMaxAlertCyclesPerSession = 2;  // Max 2 remote alert cycles per session
+    static constexpr int64_t kPttIdleTimeoutUs = DoorbellPolicy::kPttIdleTimeoutUs;
+    static constexpr int64_t kSessionAbsoluteMaxUs = DoorbellPolicy::kSessionAbsoluteMaxUs;
+    static constexpr int64_t kRealertCooldownUs = DoorbellPolicy::kRealertCooldownUs;
+    static constexpr std::uint32_t kMaxAlertCyclesPerSession = DoorbellPolicy::kMaxAlertCyclesPerSession;
 
     int64_t hard_deadline_us() const {
         if (session_start_us == 0) return 0;

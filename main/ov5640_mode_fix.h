@@ -6,7 +6,7 @@
 #include "esp_err.h"
 #include "sensor.h"
 
-#define OV5640_FULL_READOUT_BLC_FRAMES 8
+#define OV5640_FULL_READOUT_BLC_FRAMES 4
 
 #ifdef __cplusplus
 extern "C" {

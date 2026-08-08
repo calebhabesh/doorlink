@@ -37,10 +37,11 @@ public:
 
 private:
     void set_state(DeviceState state);
-    esp_err_t handle_early_notify(const char *event_type, const char *firmware_version, int remaining_ms = 30000);
+    esp_err_t handle_early_notify(const char *event_id, const char *event_type, const char *firmware_version, int remaining_ms = 30000);
     esp_err_t handle_rf_quiesce();
     esp_err_t handle_camera_capture(CapturedImage &image, int remaining_ms = 4000);
     esp_err_t handle_upload(const CapturedImage &image,
+                             const char *event_id,
                              const char *event_type,
                              const char *firmware_version,
                              int remaining_ms = 30000);
