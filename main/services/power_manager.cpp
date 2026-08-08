@@ -96,6 +96,13 @@ esp_err_t PowerManager::configure_rtc_input(int pin)
     if (err != ESP_OK) {
         return err;
     }
+    if (gpio == static_cast<gpio_num_t>(DOORBELL_BUTTON_PIN)) {
+        err = rtc_gpio_pullup_en(gpio);
+        if (err != ESP_OK) {
+            return err;
+        }
+        return rtc_gpio_pulldown_dis(gpio);
+    }
     err = rtc_gpio_pullup_dis(gpio);
     if (err != ESP_OK) {
         return err;
@@ -112,12 +119,11 @@ esp_err_t PowerManager::configure_rtc_input(int pin)
     gpio_set_level(BUTTON_LED_PIN, 0);
 
     const bool button_released =
-        wait_for_stable_level(DOORBELL_BUTTON_PIN, 1, kInputStableMs,
-                              kInputReleaseTimeoutMs);
+        wait_for_stable_level(DOORBELL_BUTTON_PIN, 1, 30, 500);
+    (void)button_released;
     const bool pir_idle = !enable_pir_wake ||
                           wait_for_stable_level(PIR_WAKE_PIN, 0,
-                                                kInputStableMs,
-                                                kInputReleaseTimeoutMs);
+                                                30, 500);
 
     esp_err_t err = esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
     if (err != ESP_OK) {
@@ -127,23 +133,19 @@ esp_err_t PowerManager::configure_rtc_input(int pin)
 
     bool recovery_timer_needed = false;
     bool wake_source_enabled = false;
-    if (button_released) {
-        err = configure_rtc_input(DOORBELL_BUTTON_PIN);
-        if (err == ESP_OK) {
-            err = esp_sleep_enable_ext0_wakeup(DOORBELL_BUTTON_PIN, 0);
-        }
-        if (err == ESP_OK) {
-            wake_source_enabled = true;
-            ESP_LOGI(kTag, "EXT0 button wake enabled on GPIO%d LOW",
-                     DOORBELL_BUTTON_PIN);
-        } else {
-            recovery_timer_needed = true;
-            ESP_LOGE(kTag, "Button wake setup failed: %s",
-                     esp_err_to_name(err));
-        }
+    
+    err = configure_rtc_input(DOORBELL_BUTTON_PIN);
+    if (err == ESP_OK) {
+        err = esp_sleep_enable_ext0_wakeup(DOORBELL_BUTTON_PIN, 0);
+    }
+    if (err == ESP_OK) {
+        wake_source_enabled = true;
+        ESP_LOGI(kTag, "EXT0 button wake enabled on GPIO%d LOW",
+                 DOORBELL_BUTTON_PIN);
     } else {
         recovery_timer_needed = true;
-        ESP_LOGW(kTag, "Button remained LOW; suppressing immediate wake loop");
+        ESP_LOGE(kTag, "Button wake setup failed: %s",
+                 esp_err_to_name(err));
     }
 
     if (!enable_pir_wake) {

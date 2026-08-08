@@ -7,6 +7,7 @@
 
 #include "board_pins.h"
 #include "doorbell_chime_pcm.h"
+#include "ring_fade.h"
 #include "driver/gpio.h"
 #include "driver/i2s_std.h"
 #include "esp_err.h"
@@ -15,10 +16,11 @@
 #include "freertos/task.h"
 
 #define CHIME_SAMPLE_RATE_HZ 44100
-#define CHIME_WRITE_CHUNK_BYTES 4096
+#define CHIME_WRITE_CHUNK_BYTES 1024
 
 static const char *TAG = "chime_player";
 static volatile bool s_is_playing = false;
+static volatile bool s_retrigger_requested = false;
 
 static esp_err_t init_speaker_i2s(i2s_chan_handle_t *tx_chan)
 {
@@ -73,10 +75,16 @@ static esp_err_t init_speaker_i2s(i2s_chan_handle_t *tx_chan)
 esp_err_t chime_player_play_sync(void)
 {
     if (s_is_playing) {
-        ESP_LOGW(TAG, "Chime already playing; skipping");
-        return ESP_ERR_INVALID_STATE;
+        ESP_LOGI(TAG, "Chime already playing; retriggering from sample 0");
+        s_retrigger_requested = true;
+        return ESP_OK;
     }
     s_is_playing = true;
+    s_retrigger_requested = false;
+
+    // Ensure DOORBELL_BUTTON_PIN is input mode for live polling
+    gpio_reset_pin(DOORBELL_BUTTON_PIN);
+    gpio_set_direction(DOORBELL_BUTTON_PIN, GPIO_MODE_INPUT);
 
     // Configure AMP_EN_PIN as output and enable MAX98357A amp
     gpio_reset_pin(AMP_EN_PIN);
@@ -97,14 +105,32 @@ esp_err_t chime_player_play_sync(void)
 
     size_t offset = 0;
     size_t bytes_written = 0;
+    bool button_was_released = (gpio_get_level(DOORBELL_BUTTON_PIN) == 1);
+
     while (offset < g_doorbell_chime_pcm_len) {
+        // Live poll physical button state on GPIO2 before writing each 5.8ms chunk
+        int btn_level = gpio_get_level(DOORBELL_BUTTON_PIN);
+        if (btn_level == 1) {
+            button_was_released = true;
+        } else if (btn_level == 0 && button_was_released) {
+            button_was_released = false;
+            s_retrigger_requested = true;
+        }
+
+        if (s_retrigger_requested) {
+            s_retrigger_requested = false;
+            offset = 0;
+            ESP_LOGI(TAG, "⚡ BUTTON RETRIGGER DETECTED! Rewinding local chime to sample 0");
+            ring_animation_start(150, 1000, 300);
+        }
+
         size_t chunk_len = g_doorbell_chime_pcm_len - offset;
         if (chunk_len > CHIME_WRITE_CHUNK_BYTES) {
             chunk_len = CHIME_WRITE_CHUNK_BYTES;
         }
 
         err = i2s_channel_write(tx_chan, g_doorbell_chime_pcm + offset,
-                                chunk_len, &bytes_written, pdMS_TO_TICKS(500));
+                                chunk_len, &bytes_written, pdMS_TO_TICKS(100));
         if (err != ESP_OK) {
             ESP_LOGE(TAG, "I2S write failed at offset %u: %s", (unsigned)offset,
                      esp_err_to_name(err));
@@ -113,18 +139,20 @@ esp_err_t chime_player_play_sync(void)
         offset += bytes_written;
     }
 
-    // Flush with silence to avoid click/pop when disabling amp
+    // Flush with silence and wait for DMA to drain to avoid click/pop or repeating buffer noise
     int16_t silence[256 * 2] = {0};
     i2s_channel_write(tx_chan, silence, sizeof(silence), &bytes_written,
                       pdMS_TO_TICKS(100));
+    vTaskDelay(pdMS_TO_TICKS(50)); // Allow hardware DMA buffer to complete playback
 
-    // Disable amp & tear down I2S channel
+    // Mute amp first, then tear down I2S channel
     gpio_set_level(AMP_EN_PIN, 0);
     i2s_channel_disable(tx_chan);
     i2s_del_channel(tx_chan);
 
-    ESP_LOGI(TAG, "Local doorbell chime playback completed");
+    ESP_LOGI(TAG, "Local doorbell chime playback completed cleanly");
     s_is_playing = false;
+    s_retrigger_requested = false;
     return ESP_OK;
 }
 
@@ -138,7 +166,9 @@ static void chime_play_task(void *pvParameters)
 esp_err_t chime_player_play_async(void)
 {
     if (s_is_playing) {
-        return ESP_ERR_INVALID_STATE;
+        ESP_LOGI(TAG, "Async chime retrigger requested");
+        s_retrigger_requested = true;
+        return ESP_OK;
     }
 
     BaseType_t ret = xTaskCreate(chime_play_task, "chime_play_task", 4096, NULL,
@@ -150,3 +180,4 @@ esp_err_t chime_player_play_async(void)
 
     return ESP_OK;
 }
+
