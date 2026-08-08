@@ -48,7 +48,7 @@ public class EventController {
     private static final Pattern EVENT_ID_PATTERN =
             Pattern.compile("[A-Za-z0-9_-]{8,64}");
     private static final Set<String> TRIGGER_EVENT_TYPES =
-            Set.of("DOORBELL_PRESS", "PIR_MOTION");
+            Set.of("DOORBELL_PRESS", "DOORBELL_REPRESS", "PIR_MOTION");
 
     public EventController(MinioService minioService,
                            EventRepository eventRepository,

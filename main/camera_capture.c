@@ -54,10 +54,17 @@ void camera_capture_release(camera_owned_jpeg_t *result)
 
 esp_err_t camera_capture_qxga_owned(camera_owned_jpeg_t *result)
 {
+    return camera_capture_qxga_owned_timeout(result, 4000);
+}
+
+esp_err_t camera_capture_qxga_owned_timeout(camera_owned_jpeg_t *result, int timeout_ms)
+{
     if (!result) {
         return ESP_ERR_INVALID_ARG;
     }
     camera_capture_release(result);
+
+    const int max_capture_ms = (timeout_ms > 0) ? timeout_ms : 4000;
 
     bool camera_initialized = false;
     camera_fb_t *frame = NULL;

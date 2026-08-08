@@ -24,6 +24,7 @@ typedef struct {
  * after ESP_OK and must release it with camera_capture_release().
  */
 esp_err_t camera_capture_qxga_owned(camera_owned_jpeg_t *result);
+esp_err_t camera_capture_qxga_owned_timeout(camera_owned_jpeg_t *result, int timeout_ms);
 void camera_capture_release(camera_owned_jpeg_t *result);
 
 #ifdef __cplusplus

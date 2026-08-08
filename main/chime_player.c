@@ -1,5 +1,6 @@
 #include "chime_player.h"
 
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -12,15 +13,17 @@
 #include "driver/i2s_std.h"
 #include "esp_err.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
 #define CHIME_SAMPLE_RATE_HZ 44100
 #define CHIME_WRITE_CHUNK_BYTES 1024
+#define CHIME_DEBOUNCE_TIME_US (15ULL * 1000ULL) // 15 ms debounce window
 
 static const char *TAG = "chime_player";
-static volatile bool s_is_playing = false;
-static volatile bool s_retrigger_requested = false;
+static atomic_bool s_is_playing = false;
+static atomic_bool s_retrigger_requested = false;
 
 static esp_err_t init_speaker_i2s(i2s_chan_handle_t *tx_chan)
 {
@@ -74,17 +77,13 @@ static esp_err_t init_speaker_i2s(i2s_chan_handle_t *tx_chan)
 
 esp_err_t chime_player_play_sync(void)
 {
-    if (s_is_playing) {
+    if (atomic_load(&s_is_playing)) {
         ESP_LOGI(TAG, "Chime already playing; retriggering from sample 0");
-        s_retrigger_requested = true;
+        atomic_store(&s_retrigger_requested, true);
         return ESP_OK;
     }
-    s_is_playing = true;
-    s_retrigger_requested = false;
-
-    // Ensure DOORBELL_BUTTON_PIN is input mode for live polling
-    gpio_reset_pin(DOORBELL_BUTTON_PIN);
-    gpio_set_direction(DOORBELL_BUTTON_PIN, GPIO_MODE_INPUT);
+    atomic_store(&s_is_playing, true);
+    atomic_store(&s_retrigger_requested, false);
 
     // Configure AMP_EN_PIN as output and enable MAX98357A amp
     gpio_reset_pin(AMP_EN_PIN);
@@ -96,7 +95,7 @@ esp_err_t chime_player_play_sync(void)
     esp_err_t err = init_speaker_i2s(&tx_chan);
     if (err != ESP_OK) {
         gpio_set_level(AMP_EN_PIN, 0);
-        s_is_playing = false;
+        atomic_store(&s_is_playing, false);
         return err;
     }
 
@@ -105,20 +104,9 @@ esp_err_t chime_player_play_sync(void)
 
     size_t offset = 0;
     size_t bytes_written = 0;
-    bool button_was_released = (gpio_get_level(DOORBELL_BUTTON_PIN) == 1);
 
     while (offset < g_doorbell_chime_pcm_len) {
-        // Live poll physical button state on GPIO2 before writing each 5.8ms chunk
-        int btn_level = gpio_get_level(DOORBELL_BUTTON_PIN);
-        if (btn_level == 1) {
-            button_was_released = true;
-        } else if (btn_level == 0 && button_was_released) {
-            button_was_released = false;
-            s_retrigger_requested = true;
-        }
-
-        if (s_retrigger_requested) {
-            s_retrigger_requested = false;
+        if (atomic_exchange(&s_retrigger_requested, false)) {
             offset = 0;
             ESP_LOGI(TAG, "⚡ BUTTON RETRIGGER DETECTED! Rewinding local chime to sample 0");
             ring_animation_start(150, 1000, 300);
@@ -151,8 +139,8 @@ esp_err_t chime_player_play_sync(void)
     i2s_del_channel(tx_chan);
 
     ESP_LOGI(TAG, "Local doorbell chime playback completed cleanly");
-    s_is_playing = false;
-    s_retrigger_requested = false;
+    atomic_store(&s_is_playing, false);
+    atomic_store(&s_retrigger_requested, false);
     return ESP_OK;
 }
 
@@ -165,9 +153,9 @@ static void chime_play_task(void *pvParameters)
 
 esp_err_t chime_player_play_async(void)
 {
-    if (s_is_playing) {
+    if (atomic_load(&s_is_playing)) {
         ESP_LOGI(TAG, "Async chime retrigger requested");
-        s_retrigger_requested = true;
+        atomic_store(&s_retrigger_requested, true);
         return ESP_OK;
     }
 
@@ -181,3 +169,7 @@ esp_err_t chime_player_play_async(void)
     return ESP_OK;
 }
 
+bool chime_player_is_playing(void)
+{
+    return atomic_load(&s_is_playing);
+}

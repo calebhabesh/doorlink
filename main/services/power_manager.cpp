@@ -18,7 +18,8 @@ constexpr std::uint32_t kInputReleaseTimeoutMs = 5000;
 constexpr std::uint32_t kInputStableMs = 100;
 constexpr std::uint64_t kRecoveryWakeUs = 30ULL * 1000ULL * 1000ULL;
 constexpr std::uint64_t kPirWakeMask = 1ULL << static_cast<unsigned>(PIR_WAKE_PIN);
-}
+RTC_DATA_ATTR bool s_ext0_wake_on_high_armed = false;
+}  // namespace
 
 esp_err_t PowerManager::initialize_safe_state() const
 {
@@ -44,6 +45,7 @@ esp_err_t PowerManager::initialize_safe_state() const
     return first_err;
 }
 
+
 WakeReason PowerManager::wake_reason() const
 {
     const std::uint32_t causes = esp_sleep_get_wakeup_causes();
@@ -51,6 +53,11 @@ WakeReason PowerManager::wake_reason() const
         return WakeReason::ColdBoot;
     }
     if ((causes & (1U << ESP_SLEEP_WAKEUP_EXT0)) != 0) {
+        if (s_ext0_wake_on_high_armed) {
+            s_ext0_wake_on_high_armed = false;
+            ESP_LOGI(kTag, "EXT0 wake on button release guard triggered; ignoring event trigger");
+            return WakeReason::Other;
+        }
         return WakeReason::Button;
     }
     if ((causes & (1U << ESP_SLEEP_WAKEUP_EXT1)) != 0 &&
@@ -120,7 +127,6 @@ esp_err_t PowerManager::configure_rtc_input(int pin)
 
     const bool button_released =
         wait_for_stable_level(DOORBELL_BUTTON_PIN, 1, 30, 500);
-    (void)button_released;
     const bool pir_idle = !enable_pir_wake ||
                           wait_for_stable_level(PIR_WAKE_PIN, 0,
                                                 30, 500);
@@ -136,17 +142,30 @@ esp_err_t PowerManager::configure_rtc_input(int pin)
     
     err = configure_rtc_input(DOORBELL_BUTTON_PIN);
     if (err == ESP_OK) {
-        err = esp_sleep_enable_ext0_wakeup(DOORBELL_BUTTON_PIN, 0);
+        if (button_released) {
+            s_ext0_wake_on_high_armed = false;
+            err = esp_sleep_enable_ext0_wakeup(DOORBELL_BUTTON_PIN, 0); // Wake on LOW (press)
+            if (err == ESP_OK) {
+                wake_source_enabled = true;
+                ESP_LOGI(kTag, "EXT0 button wake enabled on GPIO%d LOW (normal press)",
+                         DOORBELL_BUTTON_PIN);
+            }
+        } else {
+            s_ext0_wake_on_high_armed = true;
+            err = esp_sleep_enable_ext0_wakeup(DOORBELL_BUTTON_PIN, 1); // SLEEP-01: Wake on HIGH (release)
+            if (err == ESP_OK) {
+                wake_source_enabled = true;
+                ESP_LOGW(kTag, "SLEEP-01: Button held LOW; EXT0 configured on GPIO%d HIGH (release guard)",
+                         DOORBELL_BUTTON_PIN);
+            }
+        }
     }
-    if (err == ESP_OK) {
-        wake_source_enabled = true;
-        ESP_LOGI(kTag, "EXT0 button wake enabled on GPIO%d LOW",
-                 DOORBELL_BUTTON_PIN);
-    } else {
+    if (err != ESP_OK) {
         recovery_timer_needed = true;
         ESP_LOGE(kTag, "Button wake setup failed: %s",
                  esp_err_to_name(err));
     }
+
 
     if (!enable_pir_wake) {
         ESP_LOGI(kTag, "PIR production wake disabled");

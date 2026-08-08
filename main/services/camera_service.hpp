@@ -32,7 +32,7 @@ private:
 
 class CameraService final {
 public:
-    esp_err_t capture(CapturedImage &image) const;
+    esp_err_t capture(CapturedImage &image, int timeout_ms = 4000) const;
 };
 
 }  // namespace doorbell

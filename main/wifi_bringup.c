@@ -302,10 +302,11 @@ esp_err_t wifi_bringup_get_rssi(int *rssi_dbm)
     return err;
 }
 
-esp_err_t wifi_bringup_trigger_event(const char *event_id,
-                                     const char *event_type,
-                                     const char *device_id,
-                                     const char *firmware_version)
+esp_err_t wifi_bringup_trigger_event_timeout(const char *event_id,
+                                             const char *event_type,
+                                             const char *device_id,
+                                             const char *firmware_version,
+                                             int timeout_ms)
 {
     if (!event_id || strlen(event_id) < 8 || !event_type ||
         event_type[0] == '\0') {
@@ -340,7 +341,7 @@ esp_err_t wifi_bringup_trigger_event(const char *event_id,
     esp_http_client_config_t config = {
         .url = GATEWAY_TRIGGER_URL,
         .method = HTTP_METHOD_POST,
-        .timeout_ms = 5000,
+        .timeout_ms = timeout_ms > 0 ? timeout_ms : 5000,
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
     if (!client) {
@@ -353,7 +354,7 @@ esp_err_t wifi_bringup_trigger_event(const char *event_id,
 #endif
     esp_http_client_set_post_field(client, body, body_len);
 
-    ESP_LOGI(TAG, "Sending early %s trigger id=%s", event_type, event_id);
+    ESP_LOGI(TAG, "Sending early %s trigger id=%s (timeout=%d ms)", event_type, event_id, config.timeout_ms);
     esp_err_t err = esp_http_client_perform(client);
     if (err == ESP_OK) {
         int status_code = esp_http_client_get_status_code(client);
@@ -370,12 +371,22 @@ esp_err_t wifi_bringup_trigger_event(const char *event_id,
     return err;
 }
 
-esp_err_t wifi_bringup_upload_jpeg(const uint8_t *jpeg,
-                                   size_t jpeg_len,
-                                   const char *event_type,
-                                   const char *event_id,
-                                   const char *device_id,
-                                   const char *firmware_version)
+esp_err_t wifi_bringup_trigger_event(const char *event_id,
+                                     const char *event_type,
+                                     const char *device_id,
+                                     const char *firmware_version)
+{
+    return wifi_bringup_trigger_event_timeout(event_id, event_type, device_id,
+                                               firmware_version, 5000);
+}
+
+esp_err_t wifi_bringup_upload_jpeg_timeout(const uint8_t *jpeg,
+                                           size_t jpeg_len,
+                                           const char *event_type,
+                                           const char *event_id,
+                                           const char *device_id,
+                                           const char *firmware_version,
+                                           int timeout_ms)
 {
     if (!jpeg || jpeg_len < 4 || !event_type || event_type[0] == '\0') {
         return ESP_ERR_INVALID_ARG;
@@ -430,11 +441,11 @@ esp_err_t wifi_bringup_upload_jpeg(const uint8_t *jpeg,
     esp_http_client_config_t config = {
         .url = GATEWAY_API_URL,
         .method = HTTP_METHOD_POST,
-        .timeout_ms = 30000,
+        .timeout_ms = timeout_ms > 0 ? timeout_ms : 30000,
     };
 
-    ESP_LOGI(TAG, "Uploading QXGA event (%u-byte JPEG, %u-byte body)",
-             (unsigned)jpeg_len, (unsigned)total_len);
+    ESP_LOGI(TAG, "Uploading QXGA event (%u-byte JPEG, %u-byte body, timeout=%d ms)",
+             (unsigned)jpeg_len, (unsigned)total_len, config.timeout_ms);
 
     esp_http_client_handle_t client = esp_http_client_init(&config);
     if (!client) {
@@ -449,7 +460,7 @@ esp_err_t wifi_bringup_upload_jpeg(const uint8_t *jpeg,
     esp_http_client_set_header(client, "X-API-Key", GATEWAY_API_KEY);
 #endif
 
-    esp_err_t err = esp_http_client_open(client, total_len);
+    esp_err_t err = esp_http_client_open(client, (int)total_len);
     if (err == ESP_OK) {
         err = write_http_part(client, "event head", event_head,
                               (size_t)event_head_len);
@@ -470,7 +481,7 @@ esp_err_t wifi_bringup_upload_jpeg(const uint8_t *jpeg,
     if (err == ESP_OK) {
         (void)esp_http_client_fetch_headers(client);
         status_code = esp_http_client_get_status_code(client);
-        ESP_LOGI(TAG, "QXGA battery upload HTTP status=%d", status_code);
+        ESP_LOGI(TAG, "QXGA upload HTTP status=%d", status_code);
         if (status_code < 200 || status_code >= 300) {
             err = ESP_FAIL;
         }
@@ -562,7 +573,7 @@ static esp_err_t upload_diagnostic_event(void)
 }
 #endif
 
-esp_err_t wifi_bringup_connect_bounded(void)
+esp_err_t wifi_bringup_connect_bounded_timeout(int timeout_ms)
 {
     esp_err_t err = init_nvs_for_wifi();
     if (err != ESP_OK) {
@@ -574,11 +585,12 @@ esp_err_t wifi_bringup_connect_bounded(void)
         return err;
     }
 
+    int wait_ticks = timeout_ms > 0 ? pdMS_TO_TICKS(timeout_ms) : pdMS_TO_TICKS(20000);
     EventBits_t bits = xEventGroupWaitBits(s_wifi_state.event_group,
                                            WIFI_CONNECTED_BIT | WIFI_FAILED_BIT,
                                            pdFALSE,
                                            pdFALSE,
-                                           pdMS_TO_TICKS(20000));
+                                           wait_ticks);
     if (!(bits & WIFI_CONNECTED_BIT)) {
         err = bits & WIFI_FAILED_BIT ? ESP_FAIL : ESP_ERR_TIMEOUT;
         (void)wifi_bringup_stop_bounded();
@@ -587,6 +599,11 @@ esp_err_t wifi_bringup_connect_bounded(void)
 
     log_wifi_status();
     return ESP_OK;
+}
+
+esp_err_t wifi_bringup_connect_bounded(void)
+{
+    return wifi_bringup_connect_bounded_timeout(20000);
 }
 
 esp_err_t wifi_bringup_stop_bounded(void)

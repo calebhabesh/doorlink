@@ -18,6 +18,12 @@ esp_err_t chime_player_play_async(void);
  */
 esp_err_t chime_player_play_sync(void);
 
+/**
+ * @brief Check if local chime playback (or retrigger window) is currently active.
+ * @return true if currently playing or retriggering, false if idle.
+ */
+bool chime_player_is_playing(void);
+
 #ifdef __cplusplus
 }
 #endif
