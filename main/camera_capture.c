@@ -19,15 +19,15 @@ static const char *TAG = "camera_capture";
 #define CAMERA_MAINS_HZ 60
 
 #ifndef CAMERA_GAIN_CEILING
-#define CAMERA_GAIN_CEILING 0x0050 /* 5.0x real gain ceiling (80 / 16 = 5.0x) */
+#define CAMERA_GAIN_CEILING 0x0020 /* 2.0x real gain ceiling (32 / 16 = 2.0x) - eliminates vertical FPN line noise */
 #endif
 
 #ifndef CAMERA_MAX_EXPOSURE_LINES
-#define CAMERA_MAX_EXPOSURE_LINES 900 /* ~1/16s shutter limit at 10MHz XCLK */
+#define CAMERA_MAX_EXPOSURE_LINES 0 /* Full AEC shutter integration for max image quality */
 #endif
 
 #ifndef CAMERA_POST_BLC_CONVERGENCE_FRAMES
-#define CAMERA_POST_BLC_CONVERGENCE_FRAMES 2
+#define CAMERA_POST_BLC_CONVERGENCE_FRAMES 5
 #endif
 
 #ifndef CAMERA_DENOISE_LEVEL
