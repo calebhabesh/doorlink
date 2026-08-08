@@ -58,7 +58,7 @@ enum class AlertCycleOutcome : std::uint8_t {
 namespace DoorbellPolicy {
     constexpr int64_t kPttIdleTimeoutUs = 60000000LL;       // 60 seconds idle PTT session timeout
     constexpr int64_t kSessionAbsoluteMaxUs = 90000000LL;   // 90 seconds absolute session hard cap
-    constexpr int64_t kRealertCooldownUs = 15000000LL;      // 15 seconds minimum spacing between remote alert cycles
+    constexpr int64_t kRealertCooldownUs = 6000000LL;       // 6 seconds minimum spacing between remote alert cycles
     constexpr std::uint32_t kMaxAlertCyclesPerSession = 3;  // Max 3 remote alert cycles per visitor session
 }
 

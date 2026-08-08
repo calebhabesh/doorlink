@@ -69,7 +69,7 @@ The device groups physical button interactions into a cohesive **Visitor Session
 * **Subsequent Press (Press #2+ during active session):**
   * **Fast Path:** Instantly rewinds and plays local I2S PCM chime buffer (<20ms).
   * **Fast Path:** Restarts GPIO48 LED ring animation.
-  * **FSM Control Path:** Increments `press_count` and extends `PTT_IDLE_TIMEOUT` by a 15-second grace window, but **does not** trigger duplicate camera captures or duplicate cloud upload requests.
+  * **FSM Control Path:** Increments `press_count` and queues follow-up remote alert cycles (`DOORBELL_REPRESS`) at a 6-second minimum spacing (`kRealertCooldownUs = 6.0s`), up to a maximum of 3 remote alert cycles per visitor session. Local chime feedback remains active for all represses.
 * **Session Termination:**
   * Session termination calculation:
     `effective_session_end = min(last_ptt_activity + 60000ms, session_start + 90000ms)`
