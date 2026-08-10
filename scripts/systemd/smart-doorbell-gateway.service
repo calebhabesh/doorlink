@@ -7,12 +7,12 @@ Requires=smart-doorbell-infra.service
 [Service]
 Type=simple
 User=ethioprince
-WorkingDirectory=/home/ethioprince/dev/smart-doorbell
+WorkingDirectory=/home/ethioprince/dev/smart-doorbell/.pi-production/gateway/current
 # Load environment variables from the shared .env file
 EnvironmentFile=-/home/ethioprince/dev/smart-doorbell/.env
 Environment=SPRING_PROFILES_ACTIVE=prod
-# Run the packaged application. Build it with scripts/build-pi-production.sh after pulling changes.
-ExecStart=/usr/bin/java -Xms64m -Xmx512m -XX:ActiveProcessorCount=2 -Djava.security.egd=file:/dev/urandom -jar /home/ethioprince/dev/smart-doorbell/gateway/target/gateway-0.0.1-SNAPSHOT.jar
+# Run the portable JAR built and deployed from the Arch development machine.
+ExecStart=/usr/bin/java -Xms64m -Xmx512m -XX:ActiveProcessorCount=2 -Djava.security.egd=file:/dev/urandom -jar /home/ethioprince/dev/smart-doorbell/.pi-production/gateway/current/gateway.jar
 Restart=on-failure
 RestartSec=10
 SuccessExitStatus=143

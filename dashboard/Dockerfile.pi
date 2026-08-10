@@ -1,0 +1,19 @@
+# Next.js uses native SWC only while compiling. Build on the fast native Arch
+# CPU; the exported standalone server is checked for host-native ELF files by
+# build-pi-production.sh before it can be deployed to ARM64.
+FROM --platform=$BUILDPLATFORM node:20-bookworm-slim AS dependencies
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+
+FROM --platform=$BUILDPLATFORM node:20-bookworm-slim AS builder
+WORKDIR /app
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+COPY --from=dependencies /app/node_modules ./node_modules
+COPY . .
+RUN npm run build
+
+FROM scratch AS artifact
+COPY --from=builder /app/.next/standalone /
+COPY --from=builder /app/.next/static /.next/static

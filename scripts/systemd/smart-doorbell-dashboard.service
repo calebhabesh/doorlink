@@ -6,14 +6,16 @@ After=network-online.target smart-doorbell-gateway.service
 [Service]
 Type=simple
 User=ethioprince
-WorkingDirectory=/home/ethioprince/dev/smart-doorbell/dashboard
+WorkingDirectory=/home/ethioprince/dev/smart-doorbell/.pi-production/dashboard/current
 # Load environment variables from the shared .env file
 EnvironmentFile=-/home/ethioprince/dev/smart-doorbell/.env
-# Run the prebuilt Next.js production server. Build it with scripts/build-pi-production.sh after pulling changes.
+# Run the ARM64 standalone server built and deployed from the Arch development machine.
 Environment=NODE_ENV=production
 Environment=NEXT_TELEMETRY_DISABLED=1
 Environment=NODE_OPTIONS=--max-old-space-size=256
-ExecStart=/usr/bin/npm run start -- -p 3000
+Environment=HOSTNAME=0.0.0.0
+Environment=PORT=3000
+ExecStart=/usr/bin/node server.js
 Restart=on-failure
 RestartSec=10
 Nice=5

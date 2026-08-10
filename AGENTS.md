@@ -7,7 +7,7 @@ This file is the working guide for AI agents editing this repository. Treat the 
 - Development/editing happens on the Arch server at `/home/ethioking/dev/smart-doorbell`.
 - Runtime services are deployed on the Raspberry Pi gateway, not on the Arch development machine.
 - The Raspberry Pi runs Docker Compose infrastructure, Spring Boot, and Next.js through systemd service units tracked in `scripts/systemd/`.
-- Normal deployment flow: make edits on Arch, verify locally where possible, commit/push, then the user pulls the branch on the Raspberry Pi over SSH, runs `./scripts/build-pi-production.sh` when gateway/dashboard code changed, and restarts only the affected systemd service.
+- Normal application deployment flow: make edits on Arch, verify locally where possible, then cross-build and deploy only the affected component with `./scripts/build-pi-production.sh --gateway-only --restart` or `--dashboard-only --restart`. Commit/push after verification. Pull on the Pi only when tracked infrastructure or systemd configuration changed.
 - Do not edit files directly on the Raspberry Pi unless explicitly asked. Treat the Arch checkout as the source working tree.
 - Do not start or stop persistent gateway services on the Pi unless explicitly asked.
 - **Rules of Engagement Exception:** Running local dev servers and local docker compose on Arch is permitted *only* when explicitly requested or doing local verification in "Local Dev Mode". To avoid conflict with other local projects like Fintrak, always use the isolated port configurations detailed below.
@@ -40,9 +40,16 @@ Alternatively, you can run them manually in separate panes:
 
 ### Arch-to-Pi Deployment Loop
 
-- Commit and push changes from the Arch checkout.
-- SSH into Raspberry Pi, pull latest changes, and run `./scripts/build-pi-production.sh` if gateway or dashboard code changed.
-- Restart the affected service:
+- Build, transfer, and restart only the affected application from Arch. The
+  default command builds without touching the Pi; `--deploy` transfers without
+  restarting; `--restart` transfers and restarts:
+  - Gateway: `./scripts/build-pi-production.sh --gateway-only --restart`
+  - Dashboard: `./scripts/build-pi-production.sh --dashboard-only --restart`
+  - Both: `./scripts/build-pi-production.sh --restart`
+- Commit and push changes after verification.
+- Pull on the Pi only for tracked infrastructure/systemd changes. Install changed
+  units and run `sudo systemctl daemon-reload` before the next artifact deploy.
+- Manual service controls remain:
   - Infrastructure: `sudo systemctl restart smart-doorbell-infra.service`
   - Gateway: `sudo systemctl restart smart-doorbell-gateway.service`
   - Dashboard: `sudo systemctl restart smart-doorbell-dashboard.service`

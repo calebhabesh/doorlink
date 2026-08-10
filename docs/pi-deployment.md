@@ -31,23 +31,55 @@ cd /home/ethioprince/dev/smart-doorbell
 docker compose up -d
 ```
 
-### 2. Build Production Artifacts
+### 2. Build Production Artifacts On Arch
 
 The Raspberry Pi systemd services are production runtime services. They must not run `./mvnw spring-boot:run` or `npm run dev`; those commands keep build/watch tooling alive and can cause large CPU spikes on the Pi.
 
-After pulling gateway or dashboard changes on the Pi, build the runtime artifacts once:
+Build the runtime artifacts in the Arch development checkout. The gateway JAR is
+architecture-neutral. The dashboard is built as a traced standalone server
+through Docker Buildx. Compilation runs natively on the fast Arch CPU, and the
+script refuses to deploy the result if tracing ever introduces an x86 runtime
+binary. The current standalone runtime is portable JavaScript and assets.
 
 ```bash
-cd /home/ethioprince/dev/smart-doorbell
+cd /home/ethioking/dev/smart-doorbell
 ./scripts/build-pi-production.sh
 ```
 
 This creates:
 
-- `gateway/target/gateway-0.0.1-SNAPSHOT.jar`
-- `dashboard/.next`
+- `dist/pi-production/gateway/gateway.jar`
+- `dist/pi-production/dashboard/server.js` and its traced standalone runtime
 
-The build script runs Maven, npm, and Next.js under reduced CPU/IO priority so the Pi remains more responsive during deployment. The runtime services also run at a lower scheduler priority while avoiding cgroup, sandbox, and external pre-start checks that can fail service startup on some Raspberry Pi OS/systemd combinations.
+Native compilation and Docker layer caching make later dashboard builds
+substantially faster. The Pi does not need Maven, npm dependency installation,
+TypeScript compilation, or a Next.js production build.
+
+Build and deploy both components without restarting them:
+
+```bash
+./scripts/build-pi-production.sh --deploy
+```
+
+For the quickest edit/build/deploy/restart loop, target only the changed part:
+
+```bash
+./scripts/build-pi-production.sh --dashboard-only --restart
+./scripts/build-pi-production.sh --gateway-only --restart
+```
+
+`--restart` is the only option that restarts Pi services. The default command
+only builds local artifacts. The host defaults to the `rpi` SSH alias; override
+it with `DOORBELL_PI_HOST` if needed. Releases are installed under
+`.pi-production/<component>/releases/`, and an atomic `current` symlink keeps
+each systemd service on a complete artifact set. Unchanged files in consecutive
+releases are hard-linked to reduce transfer time and disk use.
+
+The first time this workflow is installed, pull the tracked changes on the Pi,
+copy the gateway and dashboard units as described below, and run
+`sudo systemctl daemon-reload`. The build script checks the installed unit paths
+before it permits `--restart`, so an old unit cannot silently launch a stale
+artifact.
 
 ### 3. Install Or Refresh Systemd Units
 
@@ -86,7 +118,9 @@ sudo systemctl restart smart-doorbell-dashboard.service
 journalctl -u smart-doorbell-dashboard.service -f
 ```
 
-After pulling new changes on the Pi, run `./scripts/build-pi-production.sh`, then restart only the service affected by the change. Backend changes generally require restarting `smart-doorbell-gateway.service`; dashboard changes generally require restarting `smart-doorbell-dashboard.service`.
+Application builds no longer run on the Pi. Pull source changes only when the
+tracked deployment configuration changed. Normal application iteration uses the
+Arch build command with `--restart` and targets only the changed component.
 
 ## Emergency CPU Recovery
 
@@ -96,16 +130,16 @@ If SSH or the local TTY is already sluggish because the old dev-mode services ar
 sudo systemctl stop smart-doorbell-dashboard.service smart-doorbell-gateway.service
 cd /home/ethioprince/dev/smart-doorbell
 git pull
-./scripts/build-pi-production.sh
 sudo cp scripts/systemd/smart-doorbell-gateway.service /etc/systemd/system/
 sudo cp scripts/systemd/smart-doorbell-dashboard.service /etc/systemd/system/
 sudo cp scripts/systemd/smart-doorbell-infra.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable smart-doorbell-infra.service
 sudo systemctl restart smart-doorbell-infra.service
-sudo systemctl restart smart-doorbell-gateway.service
-sudo systemctl restart smart-doorbell-dashboard.service
 ```
+
+Then return to Arch and deploy prebuilt artifacts with
+`./scripts/build-pi-production.sh --restart`.
 
 If CPU spikes persist after this, capture evidence while the spike is happening:
 

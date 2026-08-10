@@ -127,11 +127,11 @@ Development happens from this Arch server checkout. The Raspberry Pi is the alwa
 Normal workflow:
 
 1. Edit and verify changes on the Arch development machine.
-2. Commit and push changes.
-3. SSH into the Raspberry Pi gateway.
-4. Pull the branch in the Pi checkout.
-5. Run `./scripts/build-pi-production.sh` if gateway or dashboard code changed.
-6. Restart only the affected systemd service.
+2. Build and deploy only the changed application from Arch:
+   `./scripts/build-pi-production.sh --dashboard-only --restart` or
+   `./scripts/build-pi-production.sh --gateway-only --restart`.
+3. Commit and push changes after verification.
+4. Pull on the Pi only when tracked infrastructure or systemd configuration changed.
 
 See `docs/pi-deployment.md` for the current Pi topology,
 `docs/hardware-bringup.md` for the board bring-up record, and
@@ -153,10 +153,13 @@ See `docs/pi-deployment.md` for the current Pi topology,
 git clone https://github.com/calebhabesh/smart-doorbell
 cd smart-doorbell
 docker compose up -d
-./scripts/build-pi-production.sh
 ```
 
 This starts PostgreSQL, Mosquitto, and MinIO. On the Pi, `smart-doorbell-infra.service` runs the same compose bootstrap during boot before the gateway starts. Spring Boot and Next.js run as separate systemd services; see `docs/pi-deployment.md`.
+
+Application artifacts are cross-built and deployed from Arch with
+`./scripts/build-pi-production.sh --restart`; production application builds do
+not run on the Pi.
 
 ### Backend Verification
 
