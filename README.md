@@ -72,8 +72,8 @@ turn-based reply window. Full-duplex phone-call behavior is intentionally
 excluded; MQTT carries control messages while HTTP carries WAV media.
 
 1. **Trigger:** GPIO2 wakes on an active-low button press through EXT0. GPIO3 PIR wake is disabled in the normal production build and is opt-in for future motion events.
-2. **Fast alert:** Firmware connects Wi-Fi immediately and sends an authenticated, idempotent event ID to `/api/events/trigger`, then fully releases Wi-Fi.
-3. **Capture and greeting:** With RF off, firmware enables U9 and captures one QXGA JPEG. In parallel, the greeting task waits for the local chime to release the shared I2S clocks, then records five seconds from the ICS-43434 into a 16 kHz mono PCM WAV. Camera power is disabled as soon as capture finishes.
+2. **Fast alert and immediate greeting:** Firmware launches the authenticated `/api/events/trigger` request and visitor-audio path together. The local acknowledgement chime is shortened after roughly 400 ms so the shared half-duplex I2S bus can switch to the ICS-43434; the five-second visitor WAV then records while the early Wi-Fi alert proceeds.
+3. **Capture:** After the early alert and RF shutdown, firmware enables U9 and captures one QXGA JPEG while visitor recording continues. Camera power is disabled as soon as capture finishes.
 4. **Upload:** Firmware reconnects and uploads the JPEG, WAV, and the same event ID to `/api/events`. The gateway avoids duplicate chime/ntfy delivery and falls back to notifying during upload if no early-trigger receipt exists.
 5. **Reply window:** Firmware subscribes to `doorbell/commands/audio`. Dashboard PTT press/cancel commands arm the half-duplex state, while released replies are stored in MinIO and downloaded by the ESP32 over HTTP for I2S playback.
 6. **Shutdown:** At the 60-second idle or 90-second absolute deadline, Wi-Fi and its network resources are released, media buffers are freed, camera/audio controls are held safe, and the ESP32 enters deep sleep.
@@ -209,7 +209,7 @@ flash it as a substitute for the remaining wake/deep-sleep hardware test.
 
 - Measure active and deep-sleep current after the battery-path fault is resolved
 - Corridor-lighting and moving-subject camera validation
-- Retest the overlapped camera/greeting schedule and measure button-to-microphone latency
+- Retest the immediate greeting schedule and measure button-to-microphone latency
 - Measure reply latency, recorded speech level, and active-session current
 - Backend media proxy or presigned URLs for MinIO objects
 - Motion detection as secondary wakeup trigger

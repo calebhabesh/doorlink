@@ -1112,10 +1112,14 @@ The uploaded visitor greeting played from the dashboard's **Play Audio** control
 with subjectively good microphone quality, and a dashboard **Push to Talk**
 reply played successfully through the doorbell speaker. The test also exposed
 a noticeable delay between the button press and the start of visitor speech
-capture. Firmware was changed to start the greeting task as soon as the local
-chime releases the shared I2S bus while camera initialization/capture proceeds
-in parallel. That scheduling change passes the ESP-IDF 6.0.1 production build
-but has not yet been flashed or latency-measured on the board.
+capture. A first scheduling change overlapped the full local chime with camera
+initialization/capture. A count test after flashing that build captured speech
+starting around "4", confirming roughly four seconds of remaining button-to-mic
+latency. The follow-up firmware now shortens the local acknowledgement chime at
+roughly 400 ms, switches the shared half-duplex I2S bus to the microphone, and
+records while early notification and camera work proceed. This second latency
+change passes the ESP-IDF 6.0.1 production build and still requires a
+flashed-board measurement.
 
 1. With no battery, camera, or U1 installed, inspect the population and perform
    resistance/continuity checks. Prove all 24 camera paths against the table in

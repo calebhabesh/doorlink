@@ -25,6 +25,7 @@
 static const char *TAG = "chime_player";
 static atomic_bool s_is_playing = false;
 static atomic_bool s_retrigger_requested = false;
+static atomic_bool s_stop_requested = false;
 
 static esp_err_t init_speaker_i2s(i2s_chan_handle_t *tx_chan)
 {
@@ -76,19 +77,17 @@ static esp_err_t init_speaker_i2s(i2s_chan_handle_t *tx_chan)
     return ESP_OK;
 }
 
-esp_err_t chime_player_play_sync(void)
+static esp_err_t play_claimed_chime(void)
 {
-    if (atomic_load(&s_is_playing)) {
-        ESP_LOGI(TAG, "Chime already playing; retriggering from sample 0");
-        atomic_store(&s_retrigger_requested, true);
-        return ESP_OK;
-    }
-    atomic_store(&s_is_playing, true);
-    atomic_store(&s_retrigger_requested, false);
-
     if (!audio_bus_acquire(portMAX_DELAY)) {
         atomic_store(&s_is_playing, false);
         return ESP_ERR_TIMEOUT;
+    }
+
+    if (atomic_load(&s_stop_requested)) {
+        atomic_store(&s_is_playing, false);
+        audio_bus_release();
+        return ESP_OK;
     }
 
     // Configure AMP_EN_PIN as output and enable MAX98357A amp
@@ -113,6 +112,10 @@ esp_err_t chime_player_play_sync(void)
     size_t bytes_written = 0;
 
     while (offset < g_doorbell_chime_pcm_len) {
+        if (atomic_load(&s_stop_requested)) {
+            ESP_LOGI(TAG, "Local chime shortened to release I2S for visitor microphone");
+            break;
+        }
         if (atomic_exchange(&s_retrigger_requested, false)) {
             offset = 0;
             ESP_LOGI(TAG, "⚡ BUTTON RETRIGGER DETECTED! Rewinding local chime to sample 0");
@@ -148,22 +151,42 @@ esp_err_t chime_player_play_sync(void)
     ESP_LOGI(TAG, "Local doorbell chime playback completed cleanly");
     atomic_store(&s_is_playing, false);
     atomic_store(&s_retrigger_requested, false);
+    atomic_store(&s_stop_requested, false);
     audio_bus_release();
     return ESP_OK;
+}
+
+static bool claim_chime_playback(void)
+{
+    bool expected = false;
+    if (!atomic_compare_exchange_strong(&s_is_playing, &expected, true)) {
+        ESP_LOGI(TAG, "Chime already playing; retriggering from sample 0");
+        atomic_store(&s_retrigger_requested, true);
+        return false;
+    }
+    atomic_store(&s_retrigger_requested, false);
+    atomic_store(&s_stop_requested, false);
+    return true;
+}
+
+esp_err_t chime_player_play_sync(void)
+{
+    if (!claim_chime_playback()) {
+        return ESP_OK;
+    }
+    return play_claimed_chime();
 }
 
 static void chime_play_task(void *pvParameters)
 {
     (void)pvParameters;
-    chime_player_play_sync();
+    play_claimed_chime();
     vTaskDelete(NULL);
 }
 
 esp_err_t chime_player_play_async(void)
 {
-    if (atomic_load(&s_is_playing)) {
-        ESP_LOGI(TAG, "Async chime retrigger requested");
-        atomic_store(&s_retrigger_requested, true);
+    if (!claim_chime_playback()) {
         return ESP_OK;
     }
 
@@ -171,6 +194,7 @@ esp_err_t chime_player_play_async(void)
                                  configMAX_PRIORITIES - 2, NULL);
     if (ret != pdPASS) {
         ESP_LOGE(TAG, "Failed to create chime_play_task");
+        atomic_store(&s_is_playing, false);
         return ESP_ERR_NO_MEM;
     }
 
@@ -180,4 +204,10 @@ esp_err_t chime_player_play_async(void)
 bool chime_player_is_playing(void)
 {
     return atomic_load(&s_is_playing);
+}
+
+void chime_player_request_stop(void)
+{
+    atomic_store(&s_retrigger_requested, false);
+    atomic_store(&s_stop_requested, true);
 }

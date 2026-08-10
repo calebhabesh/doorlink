@@ -24,6 +24,14 @@ esp_err_t chime_player_play_sync(void);
  */
 bool chime_player_is_playing(void);
 
+/**
+ * @brief Ask the asynchronous chime to stop at the next PCM chunk boundary.
+ *
+ * The amplifier is muted and the shared I2S bus is released before playback
+ * finishes. Safe to call when no chime is active.
+ */
+void chime_player_request_stop(void);
+
 #ifdef __cplusplus
 }
 #endif

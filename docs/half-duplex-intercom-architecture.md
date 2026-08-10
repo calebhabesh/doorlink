@@ -24,14 +24,15 @@ sequenceDiagram
     actor Homeowner
 
     Visitor->>ESP32: Press Doorbell Button
-    Note over ESP32: Wake from Deep Sleep (EXT0)<br/>Send early authenticated alert
-    par RF-off camera path
-        ESP32->>ESP32: Capture Single JPEG Frame
-    and Visitor greeting path
-        Note over ESP32: Wait for local chime to release shared I2S
+    Note over ESP32: Wake from Deep Sleep (EXT0)
+    par Alert and camera path
+        ESP32->>GW: Send early authenticated alert
+        ESP32->>ESP32: RF off; capture single JPEG frame
+    and Immediate visitor greeting path
+        Note over ESP32: Short acknowledgement chime (~400 ms)<br/>then release shared I2S
         ESP32->>ESP32: Record 5s WAV (Mic)
     end
-    Note over ESP32: Turn on Wi-Fi
+    Note over ESP32: Reconnect Wi-Fi for media upload
     ESP32->>GW: HTTP POST /api/events (JPEG + WAV)
     GW->>DB: Store Media in MinIO & Event in Postgres
     GW-->>DBard: Broadcast event via SSE (Stream)

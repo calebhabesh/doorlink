@@ -28,7 +28,7 @@ constexpr std::uint32_t kRingFadeInMs = 1800;
 constexpr std::uint32_t kRingHoldMs = 2500;
 constexpr std::uint32_t kRingFadeOutMs = 1800;
 constexpr std::uint32_t kVisitorGreetingMs = 5000;
-constexpr std::uint32_t kChimeReleaseWaitMs = 3500;
+constexpr std::uint32_t kVisitorMicStartTargetMs = 400;
 
 #ifdef CONFIG_SMART_DOORBELL_ENABLE_PIR_EVENTS
 constexpr bool kPirEventsEnabled = true;
@@ -94,6 +94,7 @@ struct GreetingCaptureTaskContext {
     SemaphoreHandle_t completion;
     std::uint32_t duration_ms;
     std::int64_t session_start_us;
+    std::int64_t microphone_target_us;
     esp_err_t result{ESP_FAIL};
 };
 
@@ -101,12 +102,14 @@ void record_greeting_task(void *arg)
 {
     auto *context = static_cast<GreetingCaptureTaskContext *>(arg);
 
-    // The local chime and microphone share the I2S clocks. Camera capture does
-    // not, so wait here while the controller starts the camera in parallel.
-    for (std::uint32_t wait_ms = 0;
-         chime_player_is_playing() && wait_ms < kChimeReleaseWaitMs;
-         wait_ms += 20) {
+    // Give the visitor a short local acknowledgement, then let microphone
+    // capture take priority on the shared half-duplex I2S bus.
+    while (chime_player_is_playing() &&
+           esp_timer_get_time() < context->microphone_target_us) {
         vTaskDelay(pdMS_TO_TICKS(20));
+    }
+    if (chime_player_is_playing()) {
+        chime_player_request_stop();
     }
 
     ESP_LOGI(kTag,
@@ -429,35 +432,6 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
              session_.session_id, cycle_event_id, session_.alert_cycle_count, event_type,
              static_cast<double>(remaining_ms) / 1000.0);
 
-    // 1. Instant Early Notification (bounded by remaining_ms)
-    (void)handle_early_notify(cycle_event_id, event_type, firmware_version, remaining_ms);
-    ESP_LOGI(kTag, "[MONOTONIC_TIMING] t=%.1f ms | STAGE_COMPLETE: Early Notification (Wi-Fi connected & HTTP trigger sent)",
-             static_cast<double>(esp_timer_get_time() - session_.session_start_us) / 1000.0);
-
-    int64_t now_us = esp_timer_get_time();
-    remaining_ms = static_cast<int>(session_.remaining_us(now_us) / 1000LL);
-    if (remaining_ms <= 0) {
-        ESP_LOGW(kTag, "session=%s cycle=%" PRIu32 " ALERT_ABORTED stage=early_notify reason=session_deadline_reached",
-                 session_.session_id, session_.alert_cycle_count);
-        session_.last_remote_alert_end_us = esp_timer_get_time();
-        alert_cycle_in_progress_ = false;
-        alert_cycles_finished_++;
-        return;
-    }
-
-    // 2. RF Quiescence (PWR-01 Boundary: Ensure Wi-Fi RF is off before camera power-up)
-    const esp_err_t shutdown_err = handle_rf_quiesce();
-    if (shutdown_err != ESP_OK) {
-        ESP_LOGE(kTag, "session=%s cycle=%" PRIu32 " ALERT_FAILED reason=rf_quiesce_failed",
-                 session_.session_id, session_.alert_cycle_count);
-        session_.last_remote_alert_end_us = esp_timer_get_time();
-        alert_cycle_in_progress_ = false;
-        alert_cycles_finished_++;
-        return;
-    }
-    ESP_LOGI(kTag, "[MONOTONIC_TIMING] t=%.1f ms | STAGE_COMPLETE: RF Quiesced (Wi-Fi disabled for camera capture)",
-             static_cast<double>(esp_timer_get_time() - session_.session_start_us) / 1000.0);
-
     RecordedAudio greeting;
     const bool doorbell_event = std::strncmp(event_type, "DOORBELL_", 9) == 0;
     const int greeting_budget_ms = static_cast<int>((std::min)(
@@ -478,6 +452,10 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
             .completion = greeting_completion,
             .duration_ms = static_cast<std::uint32_t>(greeting_budget_ms),
             .session_start_us = session_.session_start_us,
+            .microphone_target_us =
+                (session_.alert_cycle_count == 1 ? session_.session_start_us
+                                                 : now_start_us) +
+                static_cast<std::int64_t>(kVisitorMicStartTargetMs) * 1000LL,
             .result = ESP_FAIL,
         };
         greeting_task_started =
@@ -486,16 +464,14 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
                         nullptr) == pdPASS;
         if (!greeting_task_started) {
             ESP_LOGW(kTag,
-                     "Could not start parallel visitor recording; using sequential fallback");
+                     "Could not start immediate visitor recording; using sequential fallback");
         }
     }
 
-    // 3. Capture the photo while the visitor greeting starts as soon as the
-    // local chime releases the shared I2S bus.
-    CapturedImage image;
-    const esp_err_t capture_err = handle_camera_capture(image, remaining_ms);
-
-    if (greeting_task_started) {
+    auto finish_greeting_task = [&]() {
+        if (!greeting_task_started) {
+            return;
+        }
         // record_greeting() is bounded by its duration and I2S read timeouts.
         // Joining also keeps the stack-owned context alive until the task exits.
         xSemaphoreTake(greeting_completion, portMAX_DELAY);
@@ -508,7 +484,44 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
             ESP_LOGW(kTag, "Visitor greeting unavailable; continuing image-only: %s",
                      esp_err_to_name(greeting_context.result));
         }
+    };
+
+    // 1. Start the early notification while the visitor microphone records.
+    (void)handle_early_notify(cycle_event_id, event_type, firmware_version, remaining_ms);
+    ESP_LOGI(kTag, "[MONOTONIC_TIMING] t=%.1f ms | STAGE_COMPLETE: Early Notification (Wi-Fi connected & HTTP trigger sent)",
+             static_cast<double>(esp_timer_get_time() - session_.session_start_us) / 1000.0);
+
+    int64_t now_us = esp_timer_get_time();
+    remaining_ms = static_cast<int>(session_.remaining_us(now_us) / 1000LL);
+    if (remaining_ms <= 0) {
+        ESP_LOGW(kTag, "session=%s cycle=%" PRIu32 " ALERT_ABORTED stage=early_notify reason=session_deadline_reached",
+                 session_.session_id, session_.alert_cycle_count);
+        finish_greeting_task();
+        session_.last_remote_alert_end_us = esp_timer_get_time();
+        alert_cycle_in_progress_ = false;
+        alert_cycles_finished_++;
+        return;
     }
+
+    // 2. RF Quiescence (PWR-01 Boundary: Ensure Wi-Fi RF is off before camera power-up)
+    const esp_err_t shutdown_err = handle_rf_quiesce();
+    if (shutdown_err != ESP_OK) {
+        ESP_LOGE(kTag, "session=%s cycle=%" PRIu32 " ALERT_FAILED reason=rf_quiesce_failed",
+                 session_.session_id, session_.alert_cycle_count);
+        finish_greeting_task();
+        session_.last_remote_alert_end_us = esp_timer_get_time();
+        alert_cycle_in_progress_ = false;
+        alert_cycles_finished_++;
+        return;
+    }
+    ESP_LOGI(kTag, "[MONOTONIC_TIMING] t=%.1f ms | STAGE_COMPLETE: RF Quiesced (Wi-Fi disabled for camera capture)",
+             static_cast<double>(esp_timer_get_time() - session_.session_start_us) / 1000.0);
+
+    // 3. Capture the photo while the visitor greeting continues in parallel.
+    CapturedImage image;
+    const esp_err_t capture_err = handle_camera_capture(image, remaining_ms);
+
+    finish_greeting_task();
 
     if (capture_err != ESP_OK || !image.valid()) {
         ESP_LOGE(kTag, "session=%s cycle=%" PRIu32 " ALERT_FAILED reason=camera_capture_failed",
