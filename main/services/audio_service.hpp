@@ -39,10 +39,14 @@ public:
     void stop();
 
 private:
+    static constexpr std::size_t kReadFrames = 256;
+
     esp_err_t start_microphone();
 
     i2s_chan_handle_t rx_channel_{nullptr};
     bool owns_audio_bus_{false};
+    // I2S scratch storage must not consume the ESP-IDF main-task stack.
+    std::int32_t sample_slots_[kReadFrames * 2]{};
 };
 
 }  // namespace doorbell

@@ -82,7 +82,9 @@ extern "C" void app_main(void)
 #if SMART_DOORBELL_WAKE_SLEEP_DIAGNOSTIC
     run_wake_sleep_bringup();
 #elif SMART_DOORBELL_PRODUCTION_APP
-    doorbell::DoorbellController controller;
+    // The controller owns the audio work buffers and lives until deep sleep.
+    // Keep it out of the small ESP-IDF main-task stack.
+    static doorbell::DoorbellController controller;
     controller.run();
 #elif SMART_DOORBELL_MIC_BRINGUP
     run_mic_bringup();
@@ -105,7 +107,8 @@ extern "C" void app_main(void)
 #elif SMART_DOORBELL_PIR_BRINGUP
     run_pir_bringup();
 #else
-    doorbell::DoorbellController controller;
+    // Keep the production fallback consistent with the configured path above.
+    static doorbell::DoorbellController controller;
     controller.run();
 #endif
 }

@@ -16,7 +16,6 @@ constexpr std::uint32_t kSampleRateHz = 16000;
 constexpr std::uint16_t kChannels = 1;
 constexpr std::uint16_t kBitsPerSample = 16;
 constexpr std::size_t kWavHeaderSize = 44;
-constexpr std::size_t kReadFrames = 256;
 
 void put_u16(std::uint8_t *dst, std::uint16_t value)
 {
@@ -151,14 +150,13 @@ esp_err_t AudioService::record_greeting(RecordedAudio &audio,
         return err;
     }
 
-    std::int32_t slots[kReadFrames * 2];
     auto *pcm = reinterpret_cast<std::int16_t *>(wav + kWavHeaderSize);
     std::size_t samples_written = 0;
 
     while (samples_written < target_samples) {
         std::size_t bytes_read = 0;
-        err = i2s_channel_read(rx_channel_, slots, sizeof(slots), &bytes_read,
-                               pdMS_TO_TICKS(250));
+        err = i2s_channel_read(rx_channel_, sample_slots_, sizeof(sample_slots_),
+                               &bytes_read, pdMS_TO_TICKS(250));
         if (err != ESP_OK) {
             ESP_LOGE(kTag, "Microphone read failed: %s", esp_err_to_name(err));
             break;
@@ -167,7 +165,8 @@ esp_err_t AudioService::record_greeting(RecordedAudio &audio,
         const std::size_t copy_frames =
             std::min(frames, target_samples - samples_written);
         for (std::size_t frame = 0; frame < copy_frames; ++frame) {
-            pcm[samples_written++] = mic_sample_to_pcm16(slots[frame * 2]);
+            pcm[samples_written++] =
+                mic_sample_to_pcm16(sample_slots_[frame * 2]);
         }
     }
 

@@ -288,16 +288,15 @@ esp_err_t IntercomService::play_wav(const IntercomCommand &command,
     vTaskDelay(pdMS_TO_TICKS(20));
     ESP_LOGI(kTag, "Playing homeowner reply message=%s", command.message_id);
     {
-        std::uint8_t mono_bytes[1024];
-        std::int16_t stereo[1024];
         std::uint8_t carry = 0;
         bool have_carry = false;
         std::uint32_t bytes_remaining = data_length;
         while (bytes_remaining > 0) {
             const std::size_t requested = (std::min)(
-                sizeof(mono_bytes), static_cast<std::size_t>(bytes_remaining));
+                sizeof(playback_mono_),
+                static_cast<std::size_t>(bytes_remaining));
             int read = esp_http_client_read(client,
-                                            reinterpret_cast<char *>(mono_bytes),
+                                            reinterpret_cast<char *>(playback_mono_),
                                             requested);
             if (read < 0) goto cleanup;
             if (read == 0) goto cleanup;
@@ -306,37 +305,43 @@ esp_err_t IntercomService::play_wav(const IntercomCommand &command,
             std::size_t frames = 0;
             if (have_carry) {
                 const std::int16_t sample = static_cast<std::int16_t>(
-                    carry | (static_cast<std::uint16_t>(mono_bytes[0]) << 8));
-                stereo[0] = sample;
-                stereo[1] = sample;
+                    carry |
+                    (static_cast<std::uint16_t>(playback_mono_[0]) << 8));
+                playback_stereo_[0] = sample;
+                playback_stereo_[1] = sample;
                 frames = 1;
                 byte_offset = 1;
                 have_carry = false;
             }
             while (byte_offset + 1 < static_cast<std::size_t>(read)) {
                 const std::int16_t sample = static_cast<std::int16_t>(
-                    mono_bytes[byte_offset] |
-                    (static_cast<std::uint16_t>(mono_bytes[byte_offset + 1]) << 8));
-                stereo[frames * 2] = sample;
-                stereo[frames * 2 + 1] = sample;
+                    playback_mono_[byte_offset] |
+                    (static_cast<std::uint16_t>(
+                         playback_mono_[byte_offset + 1])
+                     << 8));
+                playback_stereo_[frames * 2] = sample;
+                playback_stereo_[frames * 2 + 1] = sample;
                 ++frames;
                 byte_offset += 2;
             }
             if (byte_offset < static_cast<std::size_t>(read)) {
-                carry = mono_bytes[byte_offset];
+                carry = playback_mono_[byte_offset];
                 have_carry = true;
             }
             std::size_t bytes_written = 0;
             if (frames > 0 &&
-                i2s_channel_write(tx_channel, stereo,
+                i2s_channel_write(tx_channel, playback_stereo_,
                                   frames * 2 * sizeof(std::int16_t),
                                   &bytes_written, pdMS_TO_TICKS(500)) != ESP_OK) {
                 goto cleanup;
             }
         }
-        std::int16_t silence[256 * 2]{};
+        constexpr std::size_t kSilenceSamples = 256 * 2;
+        std::memset(playback_stereo_, 0,
+                    kSilenceSamples * sizeof(playback_stereo_[0]));
         std::size_t silence_written = 0;
-        (void)i2s_channel_write(tx_channel, silence, sizeof(silence),
+        (void)i2s_channel_write(tx_channel, playback_stereo_,
+                                kSilenceSamples * sizeof(playback_stereo_[0]),
                                 &silence_written, pdMS_TO_TICKS(100));
         vTaskDelay(pdMS_TO_TICKS(20));
     }
