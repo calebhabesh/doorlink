@@ -95,6 +95,7 @@ struct GreetingCaptureTaskContext {
     std::uint32_t duration_ms;
     std::int64_t session_start_us;
     std::int64_t microphone_target_us;
+    std::atomic_bool *capture_window_active;
     esp_err_t result{ESP_FAIL};
 };
 
@@ -108,9 +109,10 @@ void record_greeting_task(void *arg)
            esp_timer_get_time() < context->microphone_target_us) {
         vTaskDelay(pdMS_TO_TICKS(20));
     }
-    if (chime_player_is_playing()) {
-        chime_player_request_stop();
-    }
+    // From this point until the WAV is complete, button presses must not start
+    // or queue speaker playback. This prevents delayed chimes and keeps the
+    // visitor recording free of intentional local speaker audio.
+    chime_player_set_suppressed(true);
 
     ESP_LOGI(kTag,
              "[MONOTONIC_TIMING] t=%.1f ms | STAGE_START: Visitor microphone recording",
@@ -118,6 +120,8 @@ void record_greeting_task(void *arg)
                  1000.0);
     context->result = context->audio_service->record_greeting(
         *context->greeting, context->duration_ms);
+    chime_player_set_suppressed(false);
+    context->capture_window_active->store(false);
     xSemaphoreGive(context->completion);
     vTaskDelete(nullptr);
 }
@@ -379,12 +383,22 @@ void DoorbellController::start_button_monitor()
                     button_released = false;
                     ESP_LOGI(kTag, "⚡ Button repress detected by ButtonMonitor!");
 
-                    // 1. Immediate local chime audio & ring LED feedback
-                    (void)chime_player_play_async();
+                    // Always provide immediate visual feedback. During visitor
+                    // capture, do not play audio or queue another remote cycle.
+                    (void)ring_animation_start(150, 1000, 300);
+                    if (self->visitor_capture_window_active_.load()) {
+                        ESP_LOGI(kTag,
+                                 "Button repress local=led_only remote=ignored reason=visitor_capture");
+                    } else {
+                        (void)chime_player_play_async();
 
-                    // 2. Post SystemEvent to dedicated length-1 button mailbox (xQueueOverwrite)
-                    SystemEvent ev{EventType::ButtonPress, static_cast<uint32_t>(now_us / 1000LL)};
-                    self->post_button_event(ev);
+                        // Post to the length-1 button mailbox only when a new
+                        // visitor capture is allowed.
+                        SystemEvent ev{
+                            EventType::ButtonPress,
+                            static_cast<uint32_t>(now_us / 1000LL)};
+                        self->post_button_event(ev);
+                    }
                 }
             }
 
@@ -433,7 +447,12 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
              static_cast<double>(remaining_ms) / 1000.0);
 
     RecordedAudio greeting;
-    const bool doorbell_event = std::strncmp(event_type, "DOORBELL_", 9) == 0;
+    // Capture one visitor greeting per session. Repress cycles retain their
+    // local chime and remote image/notification behavior without reopening a
+    // speaker-suppression window.
+    const bool record_visitor_greeting =
+        session_.alert_cycle_count == 1 &&
+        std::strcmp(event_type, "DOORBELL_PRESS") == 0;
     const int greeting_budget_ms = static_cast<int>((std::min)(
         static_cast<int64_t>(kVisitorGreetingMs),
         (std::max)(0LL, session_.remaining_us(esp_timer_get_time()) / 1000LL -
@@ -443,7 +462,8 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
     SemaphoreHandle_t greeting_completion = nullptr;
     GreetingCaptureTaskContext greeting_context{};
     bool greeting_task_started = false;
-    if (doorbell_event && greeting_budget_ms >= 500) {
+    if (record_visitor_greeting && greeting_budget_ms >= 500) {
+        visitor_capture_window_active_.store(true);
         greeting_completion =
             xSemaphoreCreateBinaryStatic(&greeting_completion_storage);
         greeting_context = {
@@ -456,6 +476,7 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
                 (session_.alert_cycle_count == 1 ? session_.session_start_us
                                                  : now_start_us) +
                 static_cast<std::int64_t>(kVisitorMicStartTargetMs) * 1000LL,
+            .capture_window_active = &visitor_capture_window_active_,
             .result = ESP_FAIL,
         };
         greeting_task_started =
@@ -497,6 +518,7 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
         ESP_LOGW(kTag, "session=%s cycle=%" PRIu32 " ALERT_ABORTED stage=early_notify reason=session_deadline_reached",
                  session_.session_id, session_.alert_cycle_count);
         finish_greeting_task();
+        visitor_capture_window_active_.store(false);
         session_.last_remote_alert_end_us = esp_timer_get_time();
         alert_cycle_in_progress_ = false;
         alert_cycles_finished_++;
@@ -509,6 +531,7 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
         ESP_LOGE(kTag, "session=%s cycle=%" PRIu32 " ALERT_FAILED reason=rf_quiesce_failed",
                  session_.session_id, session_.alert_cycle_count);
         finish_greeting_task();
+        visitor_capture_window_active_.store(false);
         session_.last_remote_alert_end_us = esp_timer_get_time();
         alert_cycle_in_progress_ = false;
         alert_cycles_finished_++;
@@ -528,6 +551,7 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
                  session_.session_id, session_.alert_cycle_count);
         image.reset();
         greeting.reset();
+        visitor_capture_window_active_.store(false);
         session_.last_remote_alert_end_us = esp_timer_get_time();
         alert_cycle_in_progress_ = false;
         alert_cycles_finished_++;
@@ -536,10 +560,14 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
     ESP_LOGI(kTag, "[MONOTONIC_TIMING] t=%.1f ms | STAGE_COMPLETE: Camera Photo Captured & Copied to PSRAM (SHUTTER CLOSE)",
              static_cast<double>(esp_timer_get_time() - session_.session_start_us) / 1000.0);
 
-    if (!greeting_task_started && doorbell_event && greeting_budget_ms >= 500) {
+    if (!greeting_task_started && record_visitor_greeting &&
+        greeting_budget_ms >= 500) {
         set_state(DeviceState::RecordingGreeting);
+        chime_player_set_suppressed(true);
         const esp_err_t audio_err = audio_.record_greeting(
             greeting, static_cast<std::uint32_t>(greeting_budget_ms));
+        chime_player_set_suppressed(false);
+        visitor_capture_window_active_.store(false);
         if (audio_err != ESP_OK) {
             ESP_LOGW(kTag, "Visitor greeting unavailable; continuing image-only: %s",
                      esp_err_to_name(audio_err));
@@ -560,9 +588,13 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
     }
 
     // 4. Wi-Fi Reconnect & Multipart Upload (bounded by remaining_ms)
+    ESP_LOGI(kTag, "Controller stack headroom before upload: %u bytes",
+             static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
     const esp_err_t upload_err = handle_upload(
         image, greeting.valid() ? &greeting : nullptr, cycle_event_id,
         event_type, firmware_version, remaining_ms);
+    ESP_LOGI(kTag, "Controller stack headroom after upload: %u bytes",
+             static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
     image.reset();
     greeting.reset();
     ESP_LOGI(kTag, "[MONOTONIC_TIMING] t=%.1f ms | STAGE_COMPLETE: Full QXGA Image Uploaded to Gateway",
@@ -725,6 +757,7 @@ void DoorbellController::handle_ptt_session()
 {
     set_state(DeviceState::PreparingSleep);
     session_.followup_pending = false;
+    visitor_capture_window_active_.store(false);
     stop_button_monitor();
     audio_.stop();
     intercom_.stop();

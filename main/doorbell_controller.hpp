@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <cstdint>
 
 #include "esp_err.h"
@@ -80,6 +81,7 @@ private:
     QueueHandle_t button_mailbox_{nullptr};
     TaskHandle_t button_monitor_task_{nullptr};
     volatile bool button_monitor_running_{false};
+    std::atomic_bool visitor_capture_window_active_{false};
     bool alert_cycle_in_progress_{false};
     std::uint32_t alert_cycles_started_{0};
     std::uint32_t alert_cycles_finished_{0};

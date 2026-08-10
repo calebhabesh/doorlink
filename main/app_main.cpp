@@ -11,6 +11,12 @@
 #include "wake_sleep_bringup.h"
 #include "wifi_bringup.h"
 
+#include <cstdlib>
+
+#include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
 #ifndef SMART_DOORBELL_PRODUCTION_APP
 #ifdef CONFIG_SMART_DOORBELL_PRODUCTION_APP
 #define SMART_DOORBELL_PRODUCTION_APP CONFIG_SMART_DOORBELL_PRODUCTION_APP
@@ -77,15 +83,40 @@
 #define SMART_DOORBELL_PIR_BRINGUP 0
 #endif
 
+namespace {
+constexpr const char *kTag = "app_main";
+constexpr uint32_t kProductionControllerStackBytes = 16 * 1024;
+constexpr UBaseType_t kProductionControllerPriority = 5;
+
+void production_controller_task(void *arg)
+{
+    auto *controller = static_cast<doorbell::DoorbellController *>(arg);
+    controller->run();
+}
+
+void start_production_controller()
+{
+    // The controller and its member work buffers use static storage. Its call
+    // chain includes camera, HTTP multipart upload, MQTT, and session handling,
+    // so do not run it on ESP-IDF's small CONFIG_ESP_MAIN_TASK_STACK_SIZE stack.
+    static doorbell::DoorbellController controller;
+    const BaseType_t result = xTaskCreate(
+        production_controller_task, "doorbell_ctrl",
+        kProductionControllerStackBytes, &controller,
+        kProductionControllerPriority, nullptr);
+    if (result != pdPASS) {
+        ESP_LOGE(kTag, "Failed to create production controller task");
+        std::abort();
+    }
+}
+}  // namespace
+
 extern "C" void app_main(void)
 {
 #if SMART_DOORBELL_WAKE_SLEEP_DIAGNOSTIC
     run_wake_sleep_bringup();
 #elif SMART_DOORBELL_PRODUCTION_APP
-    // The controller owns the audio work buffers and lives until deep sleep.
-    // Keep it out of the small ESP-IDF main-task stack.
-    static doorbell::DoorbellController controller;
-    controller.run();
+    start_production_controller();
 #elif SMART_DOORBELL_MIC_BRINGUP
     run_mic_bringup();
 #elif SMART_DOORBELL_CORE_BRINGUP
@@ -108,7 +139,6 @@ extern "C" void app_main(void)
     run_pir_bringup();
 #else
     // Keep the production fallback consistent with the configured path above.
-    static doorbell::DoorbellController controller;
-    controller.run();
+    start_production_controller();
 #endif
 }

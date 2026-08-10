@@ -30,6 +30,7 @@ sequenceDiagram
         ESP32->>ESP32: RF off; capture single JPEG frame
     and Immediate visitor greeting path
         Note over ESP32: Short acknowledgement chime (~400 ms)<br/>then release shared I2S
+        Note over ESP32: Suppress local speaker for entire capture window
         ESP32->>ESP32: Record 5s WAV (Mic)
     end
     Note over ESP32: Reconnect Wi-Fi for media upload
@@ -90,7 +91,13 @@ Upon receiving this payload, the ESP32-S3 pulls the WAV audio data via standard 
 1. **Trigger**: The doorbell button goes LOW, triggering an `EXT0` wakeup on `DOORBELL_IN` (GPIO2).
 2. **Capture**: The ESP32-S3 wakes up and immediately captures:
    - A single JPEG frame from the **OV5640** camera.
-   - A short (5 to 10 seconds) visitor audio clip via the **ICS-43434** digital I2S microphone.
+   - A five-second visitor audio clip via the **ICS-43434** digital I2S microphone.
+   - While the visitor clip is active, repeated presses receive LED feedback
+     only. Local chimes and follow-up capture events are both dropped, so no
+     delayed speaker playback or surprise second recording is queued.
+   - Only the first doorbell event in a visitor session records a greeting.
+     Accepted repress cycles keep normal local chime behavior and may re-alert
+     with a new image, but they do not start another microphone window.
 3. **Transmission**: The device connects to Wi-Fi and sends a multipart HTTP POST request to `/api/events` with the image and audio payloads. It then starts a 60-second timer.
 4. **Reply Window**: The device subscribes to `doorbell/commands/audio` and waits until the 60-second idle or 90-second absolute session deadline.
 

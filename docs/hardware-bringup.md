@@ -1121,6 +1121,26 @@ records while early notification and camera work proceed. This second latency
 change passes the ESP-IDF 6.0.1 production build and still requires a
 flashed-board measurement.
 
+The first immediate-greeting board run also exposed two follow-up issues.
+Repeated button presses could claim the shared audio bus and defer chimes until
+microphone capture ended, making local feedback feel unresponsive and risking
+speaker noise around visitor audio. Chime playback is now explicitly suppressed
+for the complete visitor-capture window: an active chime is stopped, and new or
+retriggered button-chime requests are dropped rather than queued. Debounced
+represses still restart the GPIO48 ring animation for immediate silent feedback.
+Those presses are also excluded from the button mailbox, preventing a press
+made during the silent window from starting a delayed follow-up recording.
+Only the initial `DOORBELL_PRESS` cycle records a visitor greeting; later
+`DOORBELL_REPRESS` cycles preserve local chime/retrigger behavior and cannot
+open another speaker-suppression window.
+The same run reported a FreeRTOS stack overflow in task `main` at the start of multipart
+upload. The production controller was still using the configured 3,584-byte
+ESP-IDF main-task stack. It now runs in a dedicated 16 KiB `doorbell_ctrl` task,
+with the controller object and large audio buffers retained in static storage;
+stack high-water telemetry is logged immediately before and after upload. Both
+follow-up changes pass the ESP-IDF 6.0.1 production build and require a flashed
+board retest.
+
 1. With no battery, camera, or U1 installed, inspect the population and perform
    resistance/continuity checks. Prove all 24 camera paths against the table in
    `docs/hardware/camera/README.md`.
