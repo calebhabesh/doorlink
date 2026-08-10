@@ -234,11 +234,11 @@ export default function CalendarView() {
                     className="w-full text-left bg-zinc-900/50 border border-zinc-800 p-4 rounded-xl hover:border-emerald-500/50 transition-colors group flex flex-col"
                   >
                     <div className="flex justify-between items-start mb-2 w-full">
-                      <span className="text-emerald-500 text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded">
-                        {session.pressCount} {session.pressCount === 1 ? 'PRESS' : 'PRESSES'}
+                      <span className="text-emerald-500 text-[10px] font-black tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded">
+                        {session.pressCount} {session.pressCount === 1 ? 'Press' : 'Presses'}
                       </span>
                       <div className="flex items-center gap-2">
-                         {session.recordingCount > 0 && <span className="bg-zinc-800 px-1.5 py-0.5 rounded text-[9px] text-zinc-300 font-mono uppercase tracking-widest">{session.recordingCount} Audio</span>}
+                         {session.recordingCount > 0 && <span className="bg-zinc-800 px-1.5 py-0.5 rounded text-[9px] text-zinc-300 font-mono tracking-widest">{session.recordingCount} {session.recordingCount === 1 ? 'Message' : 'Messages'}</span>}
                          <span className="text-zinc-500 font-mono text-[10px]">
                            {new Date(session.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }).toUpperCase()}
                          </span>

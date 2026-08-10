@@ -50,7 +50,7 @@ that every accessory or connector is present.
 | Battery | 1S `103450`, nominal `3.7 V`, `50 x 34 x 10 mm`, JST-PH 2.0, advertised `2000 mAh` | Recorded existing; the record does not establish pack protection, so verify protection and polarity |
 | Camera | Fixed-focus `DCXYX-LZTKQJ-5M-357-V1` OV5640, 24-pin 0.5 mm FPC | Recorded selected; leave disconnected in this guide |
 | Button | 22 mm white-LED metal momentary button | Recorded existing; reserve its approximately `31 mm` internal depth during dry fit |
-| Speaker | `8 ohm`, `1 W`, approximately `24 x 15 mm` oval speaker | Recorded existing; leave disconnected in this guide |
+| Speaker | Original tested unit: `8 ohm`, `1 W`, approximately `24 x 15 mm`; current enclosure target: one seller-described `4 ohm`, `3 W`, `2.0`-terminal speaker from a five-piece pack | New speaker and metal cover recorded 2026-08-10; dimensions, connector fit, loudness, temperature, and finished-enclosure response remain unvalidated |
 | Mic duct | Silicone tube, `2 mm ID x 4 mm OD`, 1 m | Recorded existing; use only for a non-destructive clearance check |
 | Light-pipe stock | `LPA3.5-21.1 mm` sample, ten `3 x 100 mm` clear acrylic rods, ten black 3 mm clip bezels | Recorded purchased; do not cut until the measured lid spacing is known |
 | Optional PIR | AM312, approximately 13 mm dome and 25 mm overall depth | Recorded existing; leave disconnected in this guide |

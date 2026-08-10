@@ -94,7 +94,7 @@ session with all presses, visitor messages, and homeowner replies. See
 | ESP32-S3-WROOM-1-N16R8          | Main MCU (Octal SPI)* |
 | OV5640 (24-pin FPC)             | Camera                |
 | ICS-43434                       | Visitor microphone*   |
-| MAX98357A + Speaker             | Homeowner reply audio |
+| MAX98357A + 4Ω, 3W-rated speaker | Homeowner reply audio |
 | MCP73871                        | LiPo charger and power-path manager |
 | TPS63802                        | 3.3 V buck-boost regulator |
 | TPS22919                        | Firmware-controlled camera power switch |
@@ -102,7 +102,7 @@ session with all presses, visitor messages, and homeowner replies. See
 | SRV05-4                         | ESD Protection        |
 | 22mm Momentary Button           | Doorbell trigger      |
 | Raspberry Pi 4 (4GB)            | Local gateway server  |
-| 80×130×70mm Black ABS Enclosure (planned Rev B) | Housing |
+| 80×130×70mm black ABS enclosure | Housing construction target |
 
 *\* Note: The ESP32-S3 and ICS-43434 are hand-soldered onto the board to maintain economy-level PCBA constraints with JLCPCB.*
 
@@ -133,7 +133,9 @@ Normal workflow:
 5. Run `./scripts/build-pi-production.sh` if gateway or dashboard code changed.
 6. Restart only the affected systemd service.
 
-See `docs/pi-deployment.md` for the current Pi topology and `docs/hardware-bringup.md` for the board bring-up checklist.
+See `docs/pi-deployment.md` for the current Pi topology,
+`docs/hardware-bringup.md` for the board bring-up record, and
+`docs/enclosure-construction-guide.md` for the measured-fit enclosure workflow.
 
 ## Getting Started For Development
 

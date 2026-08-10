@@ -335,23 +335,51 @@ Avoid:
 
 ## Speaker
 
-Existing speaker:
+Previously tested speaker:
 
 - 8 ohm, 1 W, small oval speaker.
 - Size: `24 x 15 mm`.
-- Wired/movable, so it can be placed independently of the PCB.
+- This unit passed the original conservative J6 electrical bring-up but was
+  judged too small, quiet, and tinny for the enclosure target.
+
+Current construction target, recorded 2026-08-10:
+
+- One speaker from a five-piece pack described by the seller as `4 ohm`,
+  `3 W`, with a `2.0` terminal.
+- Outdoor metal speaker cover mounted inside the enclosure between the speaker
+  and the cutout in the ABS panel.
+- Verify the received speaker dimensions, terminal housing/latch, pin order,
+  polarity, and cover geometry before machining. The seller photo is not a
+  dimensional drawing, and `2.0` does not by itself prove JST-PH compatibility.
+- The 3 W marking is speaker power handling, not guaranteed board output. U4
+  is powered from `/SYS`; the MAX98357A's advertised 3.2 W into 4 ohms is a
+  5 V condition, while this design does not provide U4 a dedicated fixed 5 V
+  speaker rail.
 
 Recommended placement:
 
-- Mount to bottom or side grille.
+- Prefer a bottom- or side-facing grille for water shedding. A forward-facing
+  installation is acceptable only with full cover overlap, a perimeter gasket,
+  and suitable water protection.
 - Keep away from mic grille/tube.
-- Use foam/EVA gasket or adhesive speaker gasket to couple speaker to holes.
-- Drill a grille pattern using small bits.
+- Use a foam/EVA perimeter gasket to couple the speaker to the metal cover and
+  prevent front-to-rear acoustic leakage.
+- Cut one controlled opening behind the metal cover rather than improvising a
+  visible hole pattern. Size it from the measured diaphragm, cover open area,
+  and bonding flange.
+- A metal cover is not a water barrier. Add a hydrophobic acoustic membrane if
+  outdoor exposure requires one.
 
 Electrical caution:
 
 - Speaker connector `J6` is driven by the MAX98357A bridged output.
 - Do not connect either speaker lead to ground.
+- Do not connect multiple speakers to J6.
+- Retain the populated R32 6 dB gain strap and determine maximum usable output
+  through digital level, clipping, current, and temperature testing.
+
+See the [enclosure construction guide](enclosure-construction-guide.md) for
+the speaker stack, tools, cutout method, assembly order, and acceptance tests.
 
 ## Light Pipe And LEDs
 
@@ -438,8 +466,14 @@ Use:
 - Step bit for button and larger clean ABS openings.
 - Small bits for speaker grille, mic hole, charging/status LED hole, and pilot
   holes.
+- A Dremel 4000 is useful for non-round speaker and USB-C openings when paired
+  with a 561/561HP plastic-cutting bit and 565 depth guide. Cut inside the line
+  and hand-file to final size; do not freehand the visible finish edge.
 - Sandpaper/deburring after drilling.
 - Heat shrink on soldered button terminals.
+
+The construction workflow and per-opening methods are maintained in the
+[enclosure construction guide](enclosure-construction-guide.md).
 
 ## Hardware Shopping List
 

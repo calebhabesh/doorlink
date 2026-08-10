@@ -119,7 +119,7 @@ export default function EventLog() {
               <div className="space-y-4 p-4 lg:hidden">
                 {filteredSessions.map((session) => (
                   <button key={session.sessionId} onClick={() => setSelectedSession(session)} className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 p-5 text-left">
-                    <div className="flex items-start justify-between gap-3"><span className="font-bold text-zinc-200">{session.pressCount} presses</span><span className="text-xs text-emerald-400">{session.recordingCount} messages</span></div>
+                    <div className="flex items-start justify-between gap-3"><span className="font-bold text-zinc-200">{session.pressCount} {session.pressCount === 1 ? 'Press' : 'Presses'}</span><span className="text-xs text-emerald-400">{session.recordingCount} {session.recordingCount === 1 ? 'Message' : 'Messages'}</span></div>
                     <p className="mt-3 font-mono text-xs text-zinc-500">{new Date(session.startedAt).toLocaleString()}</p>
                   </button>
                 ))}

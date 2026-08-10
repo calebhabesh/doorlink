@@ -1,14 +1,15 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { Camera, Clock3, MessageSquareText, Radio, Volume2 } from 'lucide-react';
+import { Camera, Clock3, ImageIcon, MessageSquareText, Mic2, Radio } from 'lucide-react';
 import MainLayout, { ConnectionStatus } from '../components/MainLayout';
 import PttButton from '../components/PttButton';
 import ClockGlobeCard from '../components/ClockGlobeCard';
 import ShipmentsCard from '../components/ShipmentsCard';
 import QuickResponsesCard from '../components/QuickResponsesCard';
-import { upsertSession, VisitorSession } from '../lib/visitorSessions';
+import SessionTimeline from '../components/SessionTimeline';
+import { getSessionCoverImageKey, getSessionImages, upsertSession, VisitorSession } from '../lib/visitorSessions';
 
 const API_BASE_URL = '/api/events';
 const MEDIA_BASE_URL = `${API_BASE_URL}/media`;
@@ -32,13 +33,14 @@ export default function Home() {
 
   const activeSession = sessions.find((session) => session.sessionId === activeSessionId)
     ?? sessions[0] ?? null;
+  const activeCoverImageKey = activeSession ? getSessionCoverImageKey(activeSession) : null;
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, []);
 
-  useEffect(() => setIsImageLoaded(false), [activeSession?.latestImageKey]);
+  useEffect(() => setIsImageLoaded(false), [activeCoverImageKey]);
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/sessions?size=100`)
@@ -70,14 +72,6 @@ export default function Home() {
     return () => eventSource.close();
   }, []);
 
-  const timeline = useMemo(() => {
-    if (!activeSession) return [];
-    return [
-      ...activeSession.presses.map((press) => ({ kind: 'press' as const, at: press.pressedAt, press })),
-      ...activeSession.replies.map((reply) => ({ kind: 'reply' as const, at: reply.createdAt, reply })),
-    ].sort((left, right) => Date.parse(left.at) - Date.parse(right.at));
-  }, [activeSession]);
-
   const isMostRecent = activeSession?.sessionId === sessions[0]?.sessionId;
   const canReply = Boolean(activeSession && isMostRecent && sessionIsActive(activeSession, now));
   const latestPressId = activeSession?.presses.at(-1)?.id ?? null;
@@ -95,12 +89,12 @@ export default function Home() {
           <section className="flex min-w-0 flex-col gap-6 lg:col-span-8">
             <article className="overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 shadow-2xl">
               <div className="relative aspect-[4/3] w-full overflow-hidden border-b border-zinc-800 bg-zinc-900">
-                {activeSession.latestImageKey ? (
+                {activeCoverImageKey ? (
                   <>
                     {!isImageLoaded && <div className="absolute inset-0 grid place-items-center text-zinc-600"><Camera className="h-9 w-9 animate-pulse" /></div>}
                     <Image
-                      src={`${MEDIA_BASE_URL}/${activeSession.latestImageKey}`}
-                      alt="Latest snapshot from this visitor session"
+                      src={`${MEDIA_BASE_URL}/${activeCoverImageKey}`}
+                      alt="First snapshot from this visitor session"
                       fill
                       unoptimized
                       onLoad={() => setIsImageLoaded(true)}
@@ -121,9 +115,9 @@ export default function Home() {
               <div className="flex flex-col gap-5 bg-zinc-900/40 p-5 sm:p-8">
                 <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                   <div>
-                    <p className="mb-2 text-[10px] font-black uppercase tracking-[0.22em] text-emerald-400">Visitor session</p>
+                    <p className="mb-2 text-[10px] font-black tracking-[0.22em] text-emerald-400">Visitor Session</p>
                     <h1 className="text-2xl font-black tracking-tight text-zinc-100 sm:text-3xl">
-                      {activeSession.pressCount} {activeSession.pressCount === 1 ? 'press' : 'presses'} · {activeSession.recordingCount} {activeSession.recordingCount === 1 ? 'message' : 'messages'}
+                      {activeSession.pressCount} {activeSession.pressCount === 1 ? 'Press' : 'Presses'} · {activeSession.recordingCount} {activeSession.recordingCount === 1 ? 'Message' : 'Messages'}
                     </h1>
                     <p className="mt-2 font-mono text-xs uppercase tracking-wider text-zinc-500">
                       {new Date(activeSession.startedAt).toLocaleString()}
@@ -134,40 +128,9 @@ export default function Home() {
 
                 <div className="border-t border-zinc-800 pt-5">
                   <div className="mb-4 flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-zinc-400">
-                    <MessageSquareText className="h-4 w-4 text-emerald-400" /> Conversation timeline
+                    <MessageSquareText className="h-4 w-4 text-emerald-400" /> Conversation Timeline
                   </div>
-                  <div className="space-y-3">
-                    {timeline.map((item) => item.kind === 'press' ? (
-                      <div key={`press-${item.press.id}`} className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex items-center gap-3">
-                            <span className="grid h-8 w-8 place-items-center rounded-full bg-emerald-500/10 text-xs font-black text-emerald-400">{item.press.pressNumber}</span>
-                            <div>
-                              <p className="text-sm font-bold text-zinc-200">Doorbell press</p>
-                              <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">{new Date(item.press.pressedAt).toLocaleTimeString()}</p>
-                            </div>
-                          </div>
-                          <span className="rounded-full bg-zinc-800 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-                            {item.press.recordings.length ? `Held ${(item.press.durationMs! / 1000).toFixed(1)}s` : item.press.state === 'PHOTO_PENDING' ? 'Media pending' : 'Short press'}
-                          </span>
-                        </div>
-                        {item.press.recordings.map((recording) => (
-                          <div key={recording.recordingId} className="mt-4 flex items-center gap-3 border-t border-zinc-800 pt-4">
-                            <Volume2 className="h-4 w-4 shrink-0 text-emerald-400" />
-                            <audio controls preload="none" src={`${MEDIA_BASE_URL}/${recording.audioKey}`} className="h-9 w-full" />
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div key={`reply-${item.reply.messageId}`} className="ml-6 rounded-2xl border border-sky-500/20 bg-sky-500/[0.06] p-4">
-                        <div className="mb-3 flex items-center justify-between gap-2">
-                          <span className="flex items-center gap-2 text-sm font-bold text-sky-300"><Radio className="h-4 w-4" /> Homeowner reply</span>
-                          <span className="text-[10px] uppercase tracking-wider text-zinc-500">{item.reply.deliveredAt ? 'Played at door' : 'Playback queued'}</span>
-                        </div>
-                        <audio controls preload="none" src={`${MEDIA_BASE_URL}/${item.reply.audioKey}`} className="h-9 w-full" />
-                      </div>
-                    ))}
-                  </div>
+                  <SessionTimeline session={activeSession} />
                 </div>
               </div>
             </article>
@@ -177,17 +140,39 @@ export default function Home() {
           <aside className="flex min-w-0 flex-col gap-6 lg:col-span-4">
             <div className="hidden lg:block"><ClockGlobeCard /></div>
             <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-6 shadow-lg">
-              <div className="mb-4 flex items-center gap-3 border-b border-zinc-800 pb-4 text-xs font-black uppercase tracking-[0.2em] text-zinc-500"><Clock3 className="h-4 w-4 text-emerald-400" /> Recent sessions</div>
+              <div className="mb-4 flex items-center gap-3 border-b border-zinc-800 pb-4 text-xs font-black tracking-[0.2em] text-zinc-500"><Clock3 className="h-4 w-4 text-emerald-400" /> Recent Sessions</div>
               <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
-                {sessions.map((session) => (
-                  <button key={session.sessionId} onClick={() => setActiveSessionId(session.sessionId)} className={`w-full rounded-2xl border p-4 text-left transition ${activeSession.sessionId === session.sessionId ? 'border-emerald-500/50 bg-emerald-500/[0.05]' : 'border-zinc-800 bg-zinc-950 hover:border-zinc-700'} ${latestLiveSessionId === session.sessionId ? 'animate-slide-in' : ''}`}>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="font-bold text-zinc-200">{session.pressCount} {session.pressCount === 1 ? 'press' : 'presses'}</span>
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">{session.recordingCount} audio</span>
+                {sessions.map((session) => {
+                  const coverImageKey = getSessionCoverImageKey(session);
+                  const imageCount = getSessionImages(session).length;
+                  const isSelected = activeSession.sessionId === session.sessionId;
+                  return (
+                  <button key={session.sessionId} onClick={() => setActiveSessionId(session.sessionId)} className={`group relative w-full overflow-hidden rounded-2xl border p-3 text-left transition ${isSelected ? 'border-emerald-500/50 bg-gradient-to-r from-emerald-500/[0.09] to-zinc-950 shadow-[0_0_24px_rgba(16,185,129,0.07)]' : 'border-zinc-800 bg-zinc-950 hover:border-zinc-700 hover:bg-zinc-900/70'} ${latestLiveSessionId === session.sessionId ? 'animate-slide-in' : ''}`}>
+                    {isSelected && <span className="absolute inset-y-3 left-0 w-0.5 rounded-full bg-emerald-400" />}
+                    <div className="flex items-center gap-3">
+                      <div className="relative h-14 w-16 shrink-0 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
+                        {coverImageKey ? (
+                          <Image src={`${MEDIA_BASE_URL}/${coverImageKey}`} alt="Visitor session cover" fill unoptimized className="object-cover transition duration-300 group-hover:scale-105" />
+                        ) : (
+                          <div className="grid h-full place-items-center"><Camera className="h-5 w-5 text-zinc-600" /></div>
+                        )}
+                        {session.status === 'ACTIVE' && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_0_3px_rgba(16,185,129,0.2)]" />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate font-bold text-zinc-100">{session.pressCount} {session.pressCount === 1 ? 'Press' : 'Presses'}</span>
+                          <span className="shrink-0 font-mono text-[9px] text-zinc-500">{new Date(session.startedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
+                        </div>
+                        <p className="mt-1 truncate font-mono text-[9px] text-zinc-600">{new Date(session.startedAt).toLocaleDateString()}</p>
+                        <div className="mt-2 flex items-center gap-3 text-[10px] font-semibold text-zinc-400">
+                          <span className="flex items-center gap-1"><Mic2 className="h-3 w-3 text-emerald-400" /> {session.recordingCount} {session.recordingCount === 1 ? 'Message' : 'Messages'}</span>
+                          <span className="flex items-center gap-1"><Radio className="h-3 w-3 text-sky-400" /> {session.replies.length} {session.replies.length === 1 ? 'Reply' : 'Replies'}</span>
+                          {imageCount > 1 && <span className="flex items-center gap-1"><ImageIcon className="h-3 w-3" /> {imageCount}</span>}
+                        </div>
+                      </div>
                     </div>
-                    <p className="mt-2 font-mono text-[10px] uppercase tracking-wider text-zinc-500">{new Date(session.startedAt).toLocaleString()}</p>
                   </button>
-                ))}
+                );})}
               </div>
             </div>
             <div className="hidden md:block"><ShipmentsCard /></div>

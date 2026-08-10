@@ -20,6 +20,47 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+.audio-player-range {
+  --audio-progress: 0%;
+  appearance: none;
+  height: 4px;
+  border-radius: 9999px;
+  background: linear-gradient(to right, #34d399 var(--audio-progress), #3f3f46 var(--audio-progress));
+  cursor: pointer;
+}
+
+.audio-player-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #18181b;
+  border-radius: 9999px;
+  background: #6ee7b7;
+  box-shadow: 0 0 0 2px rgb(52 211 153 / 20%);
+}
+
+.audio-player-range::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border: 2px solid #18181b;
+  border-radius: 9999px;
+  background: #6ee7b7;
+}
+
+.audio-player-range-sky {
+  background: linear-gradient(to right, #38bdf8 var(--audio-progress), #3f3f46 var(--audio-progress));
+}
+
+.audio-player-range-sky::-webkit-slider-thumb {
+  background: #7dd3fc;
+  box-shadow: 0 0 0 2px rgb(56 189 248 / 20%);
+}
+
+.audio-player-range-sky::-moz-range-thumb {
+  background: #7dd3fc;
+  box-shadow: 0 0 0 2px rgb(56 189 248 / 20%);
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
