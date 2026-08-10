@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "board_pins.h"
+#include "audio_bus.h"
 #include "doorbell_chime_pcm.h"
 #include "ring_fade.h"
 #include "driver/gpio.h"
@@ -85,6 +86,11 @@ esp_err_t chime_player_play_sync(void)
     atomic_store(&s_is_playing, true);
     atomic_store(&s_retrigger_requested, false);
 
+    if (!audio_bus_acquire(portMAX_DELAY)) {
+        atomic_store(&s_is_playing, false);
+        return ESP_ERR_TIMEOUT;
+    }
+
     // Configure AMP_EN_PIN as output and enable MAX98357A amp
     gpio_reset_pin(AMP_EN_PIN);
     gpio_set_direction(AMP_EN_PIN, GPIO_MODE_OUTPUT);
@@ -96,6 +102,7 @@ esp_err_t chime_player_play_sync(void)
     if (err != ESP_OK) {
         gpio_set_level(AMP_EN_PIN, 0);
         atomic_store(&s_is_playing, false);
+        audio_bus_release();
         return err;
     }
 
@@ -141,6 +148,7 @@ esp_err_t chime_player_play_sync(void)
     ESP_LOGI(TAG, "Local doorbell chime playback completed cleanly");
     atomic_store(&s_is_playing, false);
     atomic_store(&s_retrigger_requested, false);
+    audio_bus_release();
     return ESP_OK;
 }
 

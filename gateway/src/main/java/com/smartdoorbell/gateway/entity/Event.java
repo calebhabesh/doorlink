@@ -1,7 +1,10 @@
 package com.smartdoorbell.gateway.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "events")
@@ -24,6 +27,10 @@ public class Event {
 
     @Column(nullable = true)
     private String audioKey;
+
+    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<IntercomMessage> intercomMessages = new ArrayList<>();
 
     public Event() {}
 
@@ -54,4 +61,5 @@ public class Event {
     public String getEventType() { return eventType; }
     public String getImageKey() { return imageKey; }
     public String getAudioKey() { return audioKey; }
+    public List<IntercomMessage> getIntercomMessages() { return intercomMessages; }
 }

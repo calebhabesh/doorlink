@@ -6,7 +6,9 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "services/camera_service.hpp"
+#include "services/audio_service.hpp"
 #include "services/connectivity_manager.hpp"
+#include "services/intercom_service.hpp"
 #include "services/power_manager.hpp"
 #include "system_events.hpp"
 
@@ -19,9 +21,12 @@ enum class DeviceState : std::uint8_t {
     CameraPowerUp,
     Capturing,
     CameraPowerDown,
+    RecordingGreeting,
     WifiReconnect,
     Uploading,
-    PttSession,
+    ListeningForReply,
+    ReplyArmed,
+    PlayingReply,
     PreparingSleep,
     WaitingForRelease
 };
@@ -41,6 +46,7 @@ private:
     esp_err_t handle_rf_quiesce();
     esp_err_t handle_camera_capture(CapturedImage &image, int remaining_ms = 4000);
     esp_err_t handle_upload(const CapturedImage &image,
+                             const RecordedAudio *audio,
                              const char *event_id,
                              const char *event_type,
                              const char *firmware_version,
@@ -59,6 +65,7 @@ private:
                                  const char *firmware_version,
                                  int timeout_ms = 5000);
     esp_err_t upload_with_retry(const CapturedImage &image,
+                                const RecordedAudio *audio,
                                 const char *event_type,
                                 const char *event_id,
                                 const char *device_id,
@@ -81,9 +88,10 @@ private:
     bool cam_pwr_active_{false};
 
     CameraService camera_;
+    AudioService audio_;
     ConnectivityManager connectivity_;
+    IntercomService intercom_;
     PowerManager power_;
 };
 
 }  // namespace doorbell
-

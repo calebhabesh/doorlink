@@ -41,6 +41,7 @@ esp_err_t ConnectivityManager::trigger(const char *event_id,
 }
 
 esp_err_t ConnectivityManager::upload(const CapturedImage &image,
+                                      const RecordedAudio *audio,
                                       const char *event_type,
                                       const char *event_id,
                                       const char *device_id,
@@ -50,8 +51,10 @@ esp_err_t ConnectivityManager::upload(const CapturedImage &image,
     if (!connected_ || !image.valid() || !event_type) {
         return ESP_ERR_INVALID_STATE;
     }
-    return wifi_bringup_upload_jpeg_timeout(image.data(), image.size(), event_type,
-                                    event_id, device_id, firmware_version, timeout_ms);
+    return wifi_bringup_upload_event_timeout(
+        image.data(), image.size(), audio && audio->valid() ? audio->data() : nullptr,
+        audio && audio->valid() ? audio->size() : 0, event_type, event_id,
+        device_id, firmware_version, timeout_ms);
 }
 
 esp_err_t ConnectivityManager::shutdown()

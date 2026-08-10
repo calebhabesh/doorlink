@@ -388,6 +388,21 @@ esp_err_t wifi_bringup_upload_jpeg_timeout(const uint8_t *jpeg,
                                            const char *firmware_version,
                                            int timeout_ms)
 {
+    return wifi_bringup_upload_event_timeout(
+        jpeg, jpeg_len, NULL, 0, event_type, event_id, device_id,
+        firmware_version, timeout_ms);
+}
+
+esp_err_t wifi_bringup_upload_event_timeout(const uint8_t *jpeg,
+                                            size_t jpeg_len,
+                                            const uint8_t *audio,
+                                            size_t audio_len,
+                                            const char *event_type,
+                                            const char *event_id,
+                                            const char *device_id,
+                                            const char *firmware_version,
+                                            int timeout_ms)
+{
     if (!jpeg || jpeg_len < 4 || !event_type || event_type[0] == '\0') {
         return ESP_ERR_INVALID_ARG;
     }
@@ -395,6 +410,7 @@ esp_err_t wifi_bringup_upload_jpeg_timeout(const uint8_t *jpeg,
     const char *boundary = "SmartDoorbellCaptureBoundary";
     char event_head[768];
     char image_head[192];
+    char audio_head[192];
     const char *terminator = "\r\n--SmartDoorbellCaptureBoundary--\r\n";
 
     int rssi_dbm = 0;
@@ -431,21 +447,32 @@ esp_err_t wifi_bringup_upload_jpeg_timeout(const uint8_t *jpeg,
         "Content-Disposition: form-data; name=\"image\"; filename=\"doorbell-qxga.jpg\"\r\n"
         "Content-Type: image/jpeg\r\n\r\n",
         boundary);
+    int audio_head_len = snprintf(
+        audio_head, sizeof(audio_head),
+        "\r\n--%s\r\n"
+        "Content-Disposition: form-data; name=\"audio\"; filename=\"visitor-greeting.wav\"\r\n"
+        "Content-Type: audio/wav\r\n\r\n",
+        boundary);
     if (event_head_len < 0 || (size_t)event_head_len >= sizeof(event_head) ||
-        image_head_len < 0 || (size_t)image_head_len >= sizeof(image_head)) {
+        image_head_len < 0 || (size_t)image_head_len >= sizeof(image_head) ||
+        audio_head_len < 0 || (size_t)audio_head_len >= sizeof(audio_head)) {
         return ESP_ERR_INVALID_SIZE;
     }
 
     size_t total_len = (size_t)event_head_len + (size_t)image_head_len +
                        jpeg_len + strlen(terminator);
+    if (audio && audio_len > 0) {
+        total_len += (size_t)audio_head_len + audio_len;
+    }
     esp_http_client_config_t config = {
         .url = GATEWAY_API_URL,
         .method = HTTP_METHOD_POST,
         .timeout_ms = timeout_ms > 0 ? timeout_ms : 30000,
     };
 
-    ESP_LOGI(TAG, "Uploading QXGA event (%u-byte JPEG, %u-byte body, timeout=%d ms)",
-             (unsigned)jpeg_len, (unsigned)total_len, config.timeout_ms);
+    ESP_LOGI(TAG, "Uploading event (%u-byte JPEG, %u-byte WAV, %u-byte body, timeout=%d ms)",
+             (unsigned)jpeg_len, (unsigned)audio_len, (unsigned)total_len,
+             config.timeout_ms);
 
     esp_http_client_handle_t client = esp_http_client_init(&config);
     if (!client) {
@@ -471,6 +498,14 @@ esp_err_t wifi_bringup_upload_jpeg_timeout(const uint8_t *jpeg,
     }
     if (err == ESP_OK) {
         err = write_http_part(client, "JPEG", (const char *)jpeg, jpeg_len);
+    }
+    if (err == ESP_OK && audio && audio_len > 0) {
+        err = write_http_part(client, "audio head", audio_head,
+                              (size_t)audio_head_len);
+    }
+    if (err == ESP_OK && audio && audio_len > 0) {
+        err = write_http_part(client, "visitor WAV", (const char *)audio,
+                              audio_len);
     }
     if (err == ESP_OK) {
         err = write_http_part(client, "terminator", terminator,

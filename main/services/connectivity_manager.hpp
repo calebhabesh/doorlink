@@ -2,6 +2,7 @@
 
 #include "esp_err.h"
 #include "services/camera_service.hpp"
+#include "services/audio_service.hpp"
 
 namespace doorbell {
 
@@ -18,7 +19,8 @@ public:
                       const char *device_id,
                       const char *firmware_version,
                       int timeout_ms = 0) const;
-    esp_err_t upload(const CapturedImage &image, const char *event_type,
+    esp_err_t upload(const CapturedImage &image, const RecordedAudio *audio,
+                     const char *event_type,
                      const char *event_id, const char *device_id,
                      const char *firmware_version,
                      int timeout_ms = 0) const;

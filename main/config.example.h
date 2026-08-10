@@ -19,6 +19,7 @@
 // ==========================================
 // Replace with the IP address of your Raspberry Pi 4 running the Mosquitto broker
 #define MQTT_BROKER_URI "mqtt://192.168.1.10:1883"
+#define MQTT_PTT_TOPIC  "doorbell/commands/audio"
 
 // ==========================================
 // Gateway Configuration

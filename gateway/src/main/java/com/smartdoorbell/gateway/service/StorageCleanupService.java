@@ -46,6 +46,8 @@ public class StorageCleanupService {
             if (event.getAudioKey() != null) {
                 minioService.deleteFile(event.getAudioKey());
             }
+            event.getIntercomMessages().forEach(message ->
+                    minioService.deleteFile(message.getAudioKey()));
         }
 
         // Delete records from database

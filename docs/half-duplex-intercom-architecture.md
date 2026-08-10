@@ -1,9 +1,9 @@
 # Doorlink: Half-Duplex Intercom Architecture
 
-> **Design proposal, not current functionality.** The production firmware path
-> currently uploads a still image and returns to deep sleep. Visitor recording,
-> the 60-second MQTT window, reply download, and speaker playback described
-> below have not been integrated or validated end to end.
+> **Implemented in software; hardware validation pending.** The production
+> firmware, gateway, and dashboard now implement this flow and their builds and
+> automated tests pass. The combined microphone/upload/PTT/download/speaker
+> sequence has not yet been validated end to end on the assembled Rev C board.
 
 Because the ESP32-S3 is battery-powered, it spends most of its life in **Deep Sleep**. When a visitor presses the button, the board wakes up, captures a snapshot and records a brief visitor greeting, uploads them, and then enters a temporary **60-second turn-based intercom session** where it can play incoming voice turns before returning to sleep. 
 
@@ -24,16 +24,16 @@ sequenceDiagram
     actor Homeowner
 
     Visitor->>ESP32: Press Doorbell Button
-    Note over ESP32: Wake from Deep Sleep (EXT0)<br/>Init Camera & Mic
+    Note over ESP32: Wake from Deep Sleep (EXT0)<br/>Send early authenticated alert
     ESP32->>ESP32: Capture Single JPEG Frame
-    ESP32->>ESP32: Record 5-10s Greeting (Mic)
+    ESP32->>ESP32: Camera off; record 5s WAV (Mic)
     Note over ESP32: Turn on Wi-Fi
     ESP32->>GW: HTTP POST /api/events (JPEG + WAV)
     GW->>DB: Store Media in MinIO & Event in Postgres
     GW-->>DBard: Broadcast event via SSE (Stream)
     GW-->>ESP32: 201 Created (Success)
     
-    Note over ESP32: Enter 60s Listen Mode<br/>Subscribe to MQTT topic:<br/>device/doorlink/audio/play
+    Note over ESP32: Enter bounded reply window<br/>Subscribe to MQTT topic:<br/>doorbell/commands/audio
 
     DBard->>Homeowner: Ring Chime & Render Image
     Homeowner->>DBard: Click "Play Audio"
@@ -42,11 +42,13 @@ sequenceDiagram
     Note over Homeowner: Push to Talk (PTT)
     Homeowner->>DBard: Press & Hold PTT
     Note over DBard: Record Speaker Mic (Browser)
+    DBard->>GW: POST /api/system/ptt/start
+    GW->>ESP32: MQTT PTT_START (arm/mute)
     Homeowner->>DBard: Release PTT
-    DBard->>GW: HTTP POST /api/events/{id}/reply (Homeowner WAV)
+    DBard->>GW: POST /api/system/ptt (16kHz mono WAV)
     GW->>DB: Save Homeowner WAV in MinIO
     Note over GW: Control Plane Dispatch
-    GW->>ESP32: Publish MQTT device/doorlink/audio/play (JSON Command Payload)
+    GW->>ESP32: MQTT PLAY_AUDIO (JSON URL command)
     
     Note over ESP32: Receive MQTT message<br/>Turn on Amp (AMP_EN -> HIGH)<br/>Disable Mic Recording
     ESP32->>Visitor: Play Homeowner's voice over I2S Speaker
@@ -61,13 +63,14 @@ Instead of streaming binary audio blobs over MQTT (which would bloat the broker 
 
 When the homeowner uploads a voice reply, the gateway saves the WAV file in MinIO and sends a lightweight JSON command message to the ESP32-S3 over Mosquitto MQTT:
 
-### MQTT JSON Payload Schema (`device/doorlink/audio/play`)
+### MQTT JSON Payload Schema (`doorbell/commands/audio`)
 ```json
 {
   "type": "PLAY_AUDIO",
-  "eventId": 123,
-  "messageId": 456,
-  "audioUrl": "http://192.168.1.10:9000/doorbell-images/intercom/456.wav",
+  "eventId": "0123456789abcdef0123456789abcdef-1",
+  "messageId": "6db2995e-4c0e-4717-9b95-8c0330031eb2",
+  "audioUrl": "http://192.168.1.10:8080/api/events/media/event-reply.wav",
+  "ackUrl": "http://192.168.1.10:8080/api/system/ptt/messages/6db2995e-4c0e-4717-9b95-8c0330031eb2/delivered",
   "durationMs": 3200
 }
 ```
@@ -84,7 +87,7 @@ Upon receiving this payload, the ESP32-S3 pulls the WAV audio data via standard 
    - A single JPEG frame from the **OV5640** camera.
    - A short (5 to 10 seconds) visitor audio clip via the **ICS-43434** digital I2S microphone.
 3. **Transmission**: The device connects to Wi-Fi and sends a multipart HTTP POST request to `/api/events` with the image and audio payloads. It then starts a 60-second timer.
-4. **Listen Window**: The device subscribes to the MQTT topic `device/doorlink/audio/play` and waits.
+4. **Reply Window**: The device subscribes to `doorbell/commands/audio` and waits until the 60-second idle or 90-second absolute session deadline.
 
 ### Phase B: Homeowner Notification & Playback
 1. **Notification**: The dashboard receives the live event via Server-Sent Events (SSE). The homeowner sees the visitor snapshot.
@@ -92,7 +95,7 @@ Upon receiving this payload, the ESP32-S3 pulls the WAV audio data via standard 
 
 ### Phase C: Homeowner Reply (The Turn-Based Intercom Loop)
 1. **Record**: The homeowner holds down the **PTT** button on the dashboard. The browser records the homeowner's microphone audio via the HTML5 Web Audio API.
-2. **Send**: Releasing the button stops recording and HTTP POSTs the recorded audio to the gateway.
+2. **Arm and Send**: Press sends `PTT_START`; release encodes/resamples a canonical 16 kHz mono 16-bit WAV and posts it to `/api/system/ptt`.
 3. **Relay**: The gateway saves this audio clip and broadcasts the command payload to the ESP32-S3 via MQTT.
 4. **Speak**: The ESP32-S3 receives the MQTT payload:
    - It pulls **AMP_EN** (GPIO44) HIGH to enable the **MAX98357A** amplifier.
@@ -121,12 +124,15 @@ Rather than storing a single audio file per event, Doorlink models the interacti
 | :--- | :--- | :--- |
 | `id` | SERIAL PRIMARY KEY | Unique message ID |
 | `event_id` | INT REFERENCES events(id) | Associated doorbell press event |
-| `sequence_number` | INT | Turn sequence number (1, 2, 3, etc.) |
 | `sender` | VARCHAR | `'VISITOR'` or `'HOMEOWNER'` |
 | `audio_key` | VARCHAR | MinIO file key for the `.wav` audio clip |
 | `duration_ms` | INT | Duration of the audio clip in milliseconds |
 | `created_at` | TIMESTAMP | Message creation time |
 | `delivered_at` | TIMESTAMP (NULLable) | Time message was delivered to the ESP32-S3 |
+
+The initial visitor greeting remains the event's `audio_key`; stored homeowner
+turns are rows in `intercom_messages`. Firmware acknowledges successful
+playback so `delivered_at` distinguishes queued from delivered replies.
 
 ---
 

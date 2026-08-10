@@ -61,6 +61,8 @@ public class RetentionService {
                 if (event.getAudioKey() != null) {
                     minioService.deleteFile(event.getAudioKey());
                 }
+                event.getIntercomMessages().forEach(message ->
+                        minioService.deleteFile(message.getAudioKey()));
                 
                 // Delete from Database
                 eventRepository.delete(event);
