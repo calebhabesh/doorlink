@@ -4,7 +4,7 @@
 
 - Living in an apartment without a concierge, you're often left guessing who's at the door, and asking questions like "did my package arrive?". Providing an interface for visitors to communicate in real-time to notify me of package deliveries and general presence would be really convenient.
 
-- Doorlink is a self-hosted IoT smart doorbell built around a custom ESP32-S3-WROOM-1-N16R8 PCB, a Raspberry Pi gateway, local media storage, and real-time mobile notifications. The validated hardware path captures and uploads doorbell still images without a proprietary subscription cloud. Visitor greeting recording and half-duplex reply audio are integrated in software and await end-to-end hardware validation.
+- Doorlink is a self-hosted IoT smart doorbell built around a custom ESP32-S3-WROOM-1-N16R8 PCB, a Raspberry Pi gateway, local media storage, and real-time mobile notifications. The validated hardware path captures and uploads doorbell still images and visitor audio without a proprietary subscription cloud. Stored half-duplex replies have also passed an end-to-end dashboard-to-doorbell speaker test.
 
 ## Demo
 
@@ -29,11 +29,12 @@ arms only the GPIO2 button by default; PIR remains available behind an explicit
 build option and in its isolated diagnostic, but cannot generate normal
 doorbell events accidentally. GPIO48 fades in, holds, and fades out after a
 button press while D3 provides immediate wake acknowledgement.
-The production path now records a five-second visitor WAV, uploads it with the
+The production path records a five-second visitor WAV, uploads it with the
 event, accepts browser PTT replies, and downloads/plays stored replies during a
-bounded MQTT-controlled window. This integrated path builds but has not yet
-been exercised end to end on the assembled board; only the microphone and
-speaker paths have passed independently. Battery life has not been measured.
+bounded MQTT-controlled window. Visitor playback and dashboard PTT reply
+playback have been exercised end to end on the assembled board. The recorded
+speech quality was subjectively good; microphone start latency is being reduced
+and still needs an instrumented board retest. Battery life has not been measured.
 The earlier MK1 heating fault was resolved by reworking its ungrounded center
 pad; see `docs/hardware-bringup.md` for the measured bring-up record.
 
@@ -52,13 +53,13 @@ pad; see `docs/hardware-bringup.md` for the measured bring-up record.
 - Battery-only capture, Wi-Fi upload, gateway persistence, dashboard display, and notifications
 - Individually validated ICS-43434 microphone and MAX98357A speaker paths
 - C++ wake/capture/upload/sleep controller with C hardware drivers
-- Compiler-verified visitor WAV capture and stored half-duplex PTT reply path
+- Hardware-validated visitor WAV capture and stored half-duplex PTT reply path
 
 **Still Pending Hardware Validation:**
 
 - Active, idle, and deep-sleep current
 - Corridor-lighting exposure and moving-person blur
-- End-to-end visitor recording and half-duplex reply playback on assembled hardware
+- Instrumented microphone-start and reply-latency measurements
 
 ## System Architecture
 
@@ -72,11 +73,10 @@ excluded; MQTT carries control messages while HTTP carries WAV media.
 
 1. **Trigger:** GPIO2 wakes on an active-low button press through EXT0. GPIO3 PIR wake is disabled in the normal production build and is opt-in for future motion events.
 2. **Fast alert:** Firmware connects Wi-Fi immediately and sends an authenticated, idempotent event ID to `/api/events/trigger`, then fully releases Wi-Fi.
-3. **Capture:** With RF off, firmware enables U9, captures one QXGA JPEG, copies it into owned PSRAM, returns the camera frame, deinitializes the driver, and disables U9.
-4. **Greeting:** With RF and camera power off, firmware records five seconds from the ICS-43434 into a 16 kHz mono PCM WAV in PSRAM.
-5. **Upload:** Firmware reconnects and uploads the JPEG, WAV, and the same event ID to `/api/events`. The gateway avoids duplicate chime/ntfy delivery and falls back to notifying during upload if no early-trigger receipt exists.
-6. **Reply window:** Firmware subscribes to `doorbell/commands/audio`. Dashboard PTT press/cancel commands arm the half-duplex state, while released replies are stored in MinIO and downloaded by the ESP32 over HTTP for I2S playback.
-7. **Shutdown:** At the 60-second idle or 90-second absolute deadline, Wi-Fi and its network resources are released, media buffers are freed, camera/audio controls are held safe, and the ESP32 enters deep sleep.
+3. **Capture and greeting:** With RF off, firmware enables U9 and captures one QXGA JPEG. In parallel, the greeting task waits for the local chime to release the shared I2S clocks, then records five seconds from the ICS-43434 into a 16 kHz mono PCM WAV. Camera power is disabled as soon as capture finishes.
+4. **Upload:** Firmware reconnects and uploads the JPEG, WAV, and the same event ID to `/api/events`. The gateway avoids duplicate chime/ntfy delivery and falls back to notifying during upload if no early-trigger receipt exists.
+5. **Reply window:** Firmware subscribes to `doorbell/commands/audio`. Dashboard PTT press/cancel commands arm the half-duplex state, while released replies are stored in MinIO and downloaded by the ESP32 over HTTP for I2S playback.
+6. **Shutdown:** At the 60-second idle or 90-second absolute deadline, Wi-Fi and its network resources are released, media buffers are freed, camera/audio controls are held safe, and the ESP32 enters deep sleep.
 
 The controller processes one bounded event at a time. Additional button edges
 during the roughly 20-second capture/upload cycle are intentionally coalesced;
@@ -209,7 +209,7 @@ flash it as a substitute for the remaining wake/deep-sleep hardware test.
 
 - Measure active and deep-sleep current after the battery-path fault is resolved
 - Corridor-lighting and moving-subject camera validation
-- Validate integrated visitor capture and PTT reply playback on assembled hardware
+- Retest the overlapped camera/greeting schedule and measure button-to-microphone latency
 - Measure reply latency, recorded speech level, and active-session current
 - Backend media proxy or presigned URLs for MinIO objects
 - Motion detection as secondary wakeup trigger

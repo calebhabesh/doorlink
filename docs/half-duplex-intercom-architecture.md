@@ -1,9 +1,9 @@
 # Doorlink: Half-Duplex Intercom Architecture
 
-> **Implemented in software; hardware validation pending.** The production
-> firmware, gateway, and dashboard now implement this flow and their builds and
-> automated tests pass. The combined microphone/upload/PTT/download/speaker
-> sequence has not yet been validated end to end on the assembled Rev C board.
+> **Implemented and exercised on hardware.** Visitor WAV upload/playback and a
+> dashboard PTT reply through the doorbell speaker have passed on the assembled
+> Rev C board. The faster, overlapped microphone/camera schedule builds and
+> still requires a flashed-board latency retest.
 
 Because the ESP32-S3 is battery-powered, it spends most of its life in **Deep Sleep**. When a visitor presses the button, the board wakes up, captures a snapshot and records a brief visitor greeting, uploads them, and then enters a temporary **60-second turn-based intercom session** where it can play incoming voice turns before returning to sleep. 
 
@@ -25,8 +25,12 @@ sequenceDiagram
 
     Visitor->>ESP32: Press Doorbell Button
     Note over ESP32: Wake from Deep Sleep (EXT0)<br/>Send early authenticated alert
-    ESP32->>ESP32: Capture Single JPEG Frame
-    ESP32->>ESP32: Camera off; record 5s WAV (Mic)
+    par RF-off camera path
+        ESP32->>ESP32: Capture Single JPEG Frame
+    and Visitor greeting path
+        Note over ESP32: Wait for local chime to release shared I2S
+        ESP32->>ESP32: Record 5s WAV (Mic)
+    end
     Note over ESP32: Turn on Wi-Fi
     ESP32->>GW: HTTP POST /api/events (JPEG + WAV)
     GW->>DB: Store Media in MinIO & Event in Postgres

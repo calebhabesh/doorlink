@@ -12,6 +12,7 @@
 #include "esp_system.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "freertos/task.h"
 #include "chime_player.h"
 #include "ring_fade.h"
@@ -27,6 +28,7 @@ constexpr std::uint32_t kRingFadeInMs = 1800;
 constexpr std::uint32_t kRingHoldMs = 2500;
 constexpr std::uint32_t kRingFadeOutMs = 1800;
 constexpr std::uint32_t kVisitorGreetingMs = 5000;
+constexpr std::uint32_t kChimeReleaseWaitMs = 3500;
 
 #ifdef CONFIG_SMART_DOORBELL_ENABLE_PIR_EVENTS
 constexpr bool kPirEventsEnabled = true;
@@ -84,6 +86,37 @@ void log_elapsed(const char *stage, std::int64_t started_us)
 {
     ESP_LOGI(kTag, "Latency %s: %.1f ms since controller start", stage,
              static_cast<double>(esp_timer_get_time() - started_us) / 1000.0);
+}
+
+struct GreetingCaptureTaskContext {
+    AudioService *audio_service;
+    RecordedAudio *greeting;
+    SemaphoreHandle_t completion;
+    std::uint32_t duration_ms;
+    std::int64_t session_start_us;
+    esp_err_t result{ESP_FAIL};
+};
+
+void record_greeting_task(void *arg)
+{
+    auto *context = static_cast<GreetingCaptureTaskContext *>(arg);
+
+    // The local chime and microphone share the I2S clocks. Camera capture does
+    // not, so wait here while the controller starts the camera in parallel.
+    for (std::uint32_t wait_ms = 0;
+         chime_player_is_playing() && wait_ms < kChimeReleaseWaitMs;
+         wait_ms += 20) {
+        vTaskDelay(pdMS_TO_TICKS(20));
+    }
+
+    ESP_LOGI(kTag,
+             "[MONOTONIC_TIMING] t=%.1f ms | STAGE_START: Visitor microphone recording",
+             static_cast<double>(esp_timer_get_time() - context->session_start_us) /
+                 1000.0);
+    context->result = context->audio_service->record_greeting(
+        *context->greeting, context->duration_ms);
+    xSemaphoreGive(context->completion);
+    vTaskDelete(nullptr);
 }
 
 const char *wake_name(WakeReason reason)
@@ -425,14 +458,63 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
     ESP_LOGI(kTag, "[MONOTONIC_TIMING] t=%.1f ms | STAGE_COMPLETE: RF Quiesced (Wi-Fi disabled for camera capture)",
              static_cast<double>(esp_timer_get_time() - session_.session_start_us) / 1000.0);
 
-    // 3. Fast Camera Power Up & QXGA Capture into PSRAM (bounded by remaining_ms)
+    RecordedAudio greeting;
+    const bool doorbell_event = std::strncmp(event_type, "DOORBELL_", 9) == 0;
+    const int greeting_budget_ms = static_cast<int>((std::min)(
+        static_cast<int64_t>(kVisitorGreetingMs),
+        (std::max)(0LL, session_.remaining_us(esp_timer_get_time()) / 1000LL -
+                            10000LL)));
+
+    StaticSemaphore_t greeting_completion_storage{};
+    SemaphoreHandle_t greeting_completion = nullptr;
+    GreetingCaptureTaskContext greeting_context{};
+    bool greeting_task_started = false;
+    if (doorbell_event && greeting_budget_ms >= 500) {
+        greeting_completion =
+            xSemaphoreCreateBinaryStatic(&greeting_completion_storage);
+        greeting_context = {
+            .audio_service = &audio_,
+            .greeting = &greeting,
+            .completion = greeting_completion,
+            .duration_ms = static_cast<std::uint32_t>(greeting_budget_ms),
+            .session_start_us = session_.session_start_us,
+            .result = ESP_FAIL,
+        };
+        greeting_task_started =
+            xTaskCreate(record_greeting_task, "visitor_audio", 4096,
+                        &greeting_context, configMAX_PRIORITIES - 4,
+                        nullptr) == pdPASS;
+        if (!greeting_task_started) {
+            ESP_LOGW(kTag,
+                     "Could not start parallel visitor recording; using sequential fallback");
+        }
+    }
+
+    // 3. Capture the photo while the visitor greeting starts as soon as the
+    // local chime releases the shared I2S bus.
     CapturedImage image;
     const esp_err_t capture_err = handle_camera_capture(image, remaining_ms);
+
+    if (greeting_task_started) {
+        // record_greeting() is bounded by its duration and I2S read timeouts.
+        // Joining also keeps the stack-owned context alive until the task exits.
+        xSemaphoreTake(greeting_completion, portMAX_DELAY);
+        ESP_LOGI(kTag,
+                 "[MONOTONIC_TIMING] t=%.1f ms | STAGE_COMPLETE: Visitor microphone recording",
+                 static_cast<double>(esp_timer_get_time() -
+                                     session_.session_start_us) /
+                     1000.0);
+        if (greeting_context.result != ESP_OK) {
+            ESP_LOGW(kTag, "Visitor greeting unavailable; continuing image-only: %s",
+                     esp_err_to_name(greeting_context.result));
+        }
+    }
 
     if (capture_err != ESP_OK || !image.valid()) {
         ESP_LOGE(kTag, "session=%s cycle=%" PRIu32 " ALERT_FAILED reason=camera_capture_failed",
                  session_.session_id, session_.alert_cycle_count);
         image.reset();
+        greeting.reset();
         session_.last_remote_alert_end_us = esp_timer_get_time();
         alert_cycle_in_progress_ = false;
         alert_cycles_finished_++;
@@ -441,20 +523,7 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
     ESP_LOGI(kTag, "[MONOTONIC_TIMING] t=%.1f ms | STAGE_COMPLETE: Camera Photo Captured & Copied to PSRAM (SHUTTER CLOSE)",
              static_cast<double>(esp_timer_get_time() - session_.session_start_us) / 1000.0);
 
-    // The local chime owns the shared I2S clocks while it is playing. Camera
-    // capture normally outlasts it, but keep this explicit before starting RX.
-    for (int wait_ms = 0; chime_player_is_playing() && wait_ms < 3000;
-         wait_ms += 20) {
-        vTaskDelay(pdMS_TO_TICKS(20));
-    }
-
-    RecordedAudio greeting;
-    const bool doorbell_event = std::strncmp(event_type, "DOORBELL_", 9) == 0;
-    const int greeting_budget_ms = static_cast<int>((std::min)(
-        static_cast<int64_t>(kVisitorGreetingMs),
-        (std::max)(0LL, session_.remaining_us(esp_timer_get_time()) / 1000LL -
-                            10000LL)));
-    if (doorbell_event && greeting_budget_ms >= 500) {
+    if (!greeting_task_started && doorbell_event && greeting_budget_ms >= 500) {
         set_state(DeviceState::RecordingGreeting);
         const esp_err_t audio_err = audio_.record_greeting(
             greeting, static_cast<std::uint32_t>(greeting_budget_ms));

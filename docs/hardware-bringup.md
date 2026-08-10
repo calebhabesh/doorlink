@@ -1107,6 +1107,16 @@ Subsequent testing confirmed complete resolution:
 2. **USB Production Event Test**: Single button press on GPIO2 triggered non-blocking LED ring fade (GPIO48), early Wi-Fi chime notification in ~1.4 s (HTTP 200), QXGA 2048x1536 OV5640 JPEG capture/upload, and clean return to deep sleep.
 3. **Battery Power Test**: Connecting LiPo battery J1 directly produced zero heating across MK1 and U8/L1 (100% room temperature), zero high-frequency whine, and normal battery operation. The high-frequency switching whine occurred concurrently with MK1 heating during ungrounded latch-up; grounding Pin 3 resolved both symptoms in initial testing. The link between ungrounded MK1 latch-up current draw and U8/L1 switching noise is recorded as the primary suspected mechanism, subject to long-term monitoring across extended battery operational cycles. MK1 battery testing is cleared.
 
+On 2026-08-10, the integrated production audio path was exercised end to end.
+The uploaded visitor greeting played from the dashboard's **Play Audio** control
+with subjectively good microphone quality, and a dashboard **Push to Talk**
+reply played successfully through the doorbell speaker. The test also exposed
+a noticeable delay between the button press and the start of visitor speech
+capture. Firmware was changed to start the greeting task as soon as the local
+chime releases the shared I2S bus while camera initialization/capture proceeds
+in parallel. That scheduling change passes the ESP-IDF 6.0.1 production build
+but has not yet been flashed or latency-measured on the board.
+
 1. With no battery, camera, or U1 installed, inspect the population and perform
    resistance/continuity checks. Prove all 24 camera paths against the table in
    `docs/hardware/camera/README.md`.
