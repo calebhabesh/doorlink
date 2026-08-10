@@ -3,163 +3,69 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { X } from 'lucide-react';
-
-interface DoorbellEvent {
-  id: number;
-  timestamp: string;
-  eventType: string;
-  imageKey: string;
-  audioKey?: string | null;
-}
+import { VisitorSession } from '../lib/visitorSessions';
 
 interface EventPreviewDrawerProps {
-  event: DoorbellEvent | null;
+  session: VisitorSession | null;
   onClose: () => void;
 }
 
-const MINIO_BASE_URL = `/api/events/media`;
+const MEDIA_BASE_URL = '/api/events/media';
 
-export default function EventPreviewDrawer({ event, onClose }: EventPreviewDrawerProps) {
+export default function EventPreviewDrawer({ session, onClose }: EventPreviewDrawerProps) {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
 
+  useEffect(() => setIsImageLoaded(false), [session?.latestImageKey]);
   useEffect(() => {
-    setIsImageLoaded(false);
-  }, [event?.id]);
-
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    if (event) {
-      document.body.style.overflow = 'hidden';
-      window.addEventListener('keydown', handleEscape);
-    } else {
-      document.body.style.overflow = '';
-    }
+    if (!session) return;
+    const handleEscape = (event: KeyboardEvent) => event.key === 'Escape' && onClose();
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleEscape);
     return () => {
       document.body.style.overflow = '';
       window.removeEventListener('keydown', handleEscape);
     };
-  }, [event, onClose]);
+  }, [session, onClose]);
 
-  if (!event) return null;
-
-  const formatTitleCase = (str: string) => {
-    return str.toLowerCase().split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-  };
+  if (!session) return null;
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex justify-end" 
-      role="dialog" 
-      aria-modal="true"
-    >
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
-        onClick={onClose}
-      />
-
-      {/* Drawer */}
-      <div className="relative w-full max-w-xl h-full bg-zinc-950 border-l border-zinc-800 shadow-2xl flex flex-col overflow-y-auto transform transition-transform">
-        
-        {/* Header */}
-        <div className="p-4 sm:p-6 flex items-center justify-between border-b border-zinc-800 bg-zinc-900/50 sticky top-0 z-10 backdrop-blur-md">
-          <h2 className="text-xl font-black text-zinc-100 tracking-tight">Event Preview</h2>
-          <button 
-            onClick={onClose}
-            className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-full text-zinc-400 hover:text-white transition-colors"
-            aria-label="Close preview"
-          >
-            <X className="w-5 h-5" />
-          </button>
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/70 backdrop-blur-sm" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <aside className="h-full w-full max-w-xl overflow-y-auto border-l border-zinc-800 bg-zinc-950 p-6 shadow-2xl sm:p-8">
+        <div className="mb-7 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-emerald-400">Visitor session</p>
+            <h2 className="mt-2 text-2xl font-black text-zinc-100">{session.pressCount} presses · {session.recordingCount} messages</h2>
+            <p className="mt-2 font-mono text-xs uppercase text-zinc-500">{new Date(session.startedAt).toLocaleString()}</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close preview" className="rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-zinc-400 hover:text-white"><X className="h-5 w-5" /></button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 flex flex-col p-4 sm:p-6 gap-6">
-          
-          {/* Image */}
-          <div className="w-full aspect-[4/3] bg-zinc-900 rounded-2xl border border-zinc-800 relative overflow-hidden flex items-center justify-center">
-            {!isImageLoaded && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <svg className="animate-spin h-8 w-8 text-zinc-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
+        {session.latestImageKey && (
+          <div className="relative mb-6 aspect-[4/3] overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900">
+            <Image src={`${MEDIA_BASE_URL}/${session.latestImageKey}`} alt="Visitor session snapshot" fill unoptimized onLoad={() => setIsImageLoaded(true)} className={`object-cover transition ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`} />
+          </div>
+        )}
+
+        <div className="space-y-3">
+          {session.presses.map((press) => (
+            <div key={press.id} className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-bold text-zinc-200">Press {press.pressNumber}</span>
+                <span className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">{new Date(press.pressedAt).toLocaleTimeString()}</span>
               </div>
-            )}
-            <Image 
-              src={`${MINIO_BASE_URL}/${event.imageKey}`} 
-              alt="Doorbell snapshot" 
-              fill 
-              className={`object-cover w-full transition-all duration-700 ease-out ${isImageLoaded ? 'opacity-100 blur-0' : 'opacity-0 blur-sm scale-105'}`} 
-              onLoad={() => setIsImageLoaded(true)}
-              unoptimized 
-            />
-          </div>
-
-          {/* Metadata */}
-          <div className="bg-zinc-900/50 rounded-2xl border border-zinc-800 p-5 space-y-4">
-            <div>
-              <p className="text-xs text-zinc-500 font-mono uppercase tracking-widest mb-1">Event Type</p>
-              <p className="text-lg font-bold text-emerald-400">{formatTitleCase(event.eventType)}</p>
+              <p className="mt-2 text-xs text-zinc-500">{press.recordings.length ? `Held ${(press.durationMs! / 1000).toFixed(1)} seconds` : press.state === 'PHOTO_PENDING' ? 'Media upload pending' : 'Short press — no message'}</p>
+              {press.recordings.map((recording) => <audio key={recording.recordingId} controls preload="none" src={`${MEDIA_BASE_URL}/${recording.audioKey}`} className="mt-4 h-9 w-full" />)}
             </div>
-            <div>
-              <p className="text-xs text-zinc-500 font-mono uppercase tracking-widest mb-1">Timestamp</p>
-              <p className="text-base text-zinc-300">
-                {new Date(event.timestamp).toLocaleString(undefined, {
-                  weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
-                  hour: 'numeric', minute: '2-digit', second: '2-digit',
-                  hour12: true
-                }).toUpperCase()}
-              </p>
+          ))}
+          {session.replies.map((reply) => (
+            <div key={reply.messageId} className="ml-6 rounded-2xl border border-sky-500/20 bg-sky-500/[0.06] p-5">
+              <div className="flex items-center justify-between gap-3"><span className="font-bold text-sky-300">Homeowner reply</span><span className="text-[10px] uppercase text-zinc-500">{reply.deliveredAt ? 'Delivered' : 'Queued'}</span></div>
+              <audio controls preload="none" src={`${MEDIA_BASE_URL}/${reply.audioKey}`} className="mt-4 h-9 w-full" />
             </div>
-            <div>
-              <p className="text-xs text-zinc-500 font-mono uppercase tracking-widest mb-1">Event ID</p>
-              <p className="text-sm font-mono text-zinc-400">{event.id}</p>
-            </div>
-            <div>
-              <p className="text-xs text-zinc-500 font-mono uppercase tracking-widest mb-1">Image Key</p>
-              <p className="text-sm font-mono text-zinc-400 truncate" title={event.imageKey}>{event.imageKey}</p>
-            </div>
-            {event.audioKey && (
-              <div>
-                <p className="text-xs text-zinc-500 font-mono uppercase tracking-widest mb-1">Audio Key</p>
-                <p className="text-sm font-mono text-zinc-400 truncate" title={event.audioKey}>{event.audioKey}</p>
-              </div>
-            )}
-          </div>
-
-          {/* Audio Playback */}
-          {event.audioKey ? (
-            <div className="bg-zinc-900/50 rounded-2xl border border-zinc-800 p-5">
-              <p className="text-xs text-zinc-500 font-mono uppercase tracking-widest mb-3">Recorded Audio</p>
-              <audio 
-                controls 
-                src={`${MINIO_BASE_URL}/${event.audioKey}`} 
-                className="w-full h-10 rounded-lg outline-none" 
-              />
-            </div>
-          ) : (
-            <div className="bg-zinc-900/30 rounded-2xl border border-zinc-800/50 p-5 flex items-center justify-center">
-              <p className="text-sm text-zinc-500 font-medium">No audio recorded for this event</p>
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="pt-4 flex gap-3 pb-8">
-            <a 
-              href={`${MINIO_BASE_URL}/${event.imageKey}`} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="flex-1 text-center bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-4 py-3 rounded-xl text-sm font-bold uppercase tracking-widest transition-colors border border-zinc-700"
-            >
-              Open Image Raw
-            </a>
-          </div>
-
+          ))}
         </div>
-      </div>
+      </aside>
     </div>
   );
 }

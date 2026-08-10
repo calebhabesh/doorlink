@@ -32,14 +32,6 @@ bool chime_player_is_playing(void);
  */
 void chime_player_request_stop(void);
 
-/**
- * @brief Suppress local speaker chimes while visitor microphone capture owns audio.
- *
- * Enabling suppression stops any active chime and drops new/retrigger requests
- * instead of queueing them for delayed playback.
- */
-void chime_player_set_suppressed(bool suppressed);
-
 #ifdef __cplusplus
 }
 #endif

@@ -380,6 +380,73 @@ esp_err_t wifi_bringup_trigger_event(const char *event_id,
                                                firmware_version, 5000);
 }
 
+esp_err_t wifi_bringup_close_session(const char *session_id, int timeout_ms)
+{
+    if (!session_id || strlen(session_id) < 8) return ESP_ERR_INVALID_ARG;
+    char url[320];
+    int length = snprintf(url, sizeof(url), "%s/sessions/%s/close",
+                          GATEWAY_API_URL, session_id);
+    if (length < 0 || (size_t)length >= sizeof(url)) return ESP_ERR_INVALID_SIZE;
+
+    esp_http_client_config_t config = {
+        .url = url,
+        .method = HTTP_METHOD_POST,
+        .timeout_ms = timeout_ms > 0 ? timeout_ms : 5000,
+    };
+    esp_http_client_handle_t client = esp_http_client_init(&config);
+    if (!client) return ESP_ERR_NO_MEM;
+#ifdef GATEWAY_API_KEY
+    esp_http_client_set_header(client, "X-API-Key", GATEWAY_API_KEY);
+#endif
+    esp_err_t err = esp_http_client_perform(client);
+    if (err == ESP_OK) {
+        const int status = esp_http_client_get_status_code(client);
+        if (status < 200 || status >= 300) err = ESP_FAIL;
+    }
+    esp_http_client_cleanup(client);
+    return err;
+}
+
+esp_err_t wifi_bringup_complete_press(const char *press_id,
+                                      uint32_t duration_ms,
+                                      int timeout_ms)
+{
+    if (!press_id || strlen(press_id) < 8 || duration_ms > 15000) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    char url[320];
+    int length = snprintf(url, sizeof(url), "%s/presses/%s/complete",
+                          GATEWAY_API_URL, press_id);
+    if (length < 0 || (size_t)length >= sizeof(url)) return ESP_ERR_INVALID_SIZE;
+    char body[48];
+    int body_length = snprintf(body, sizeof(body),
+                               "{\"durationMs\":%u}",
+                               (unsigned)duration_ms);
+    if (body_length < 0 || (size_t)body_length >= sizeof(body)) {
+        return ESP_ERR_INVALID_SIZE;
+    }
+
+    esp_http_client_config_t config = {
+        .url = url,
+        .method = HTTP_METHOD_POST,
+        .timeout_ms = timeout_ms > 0 ? timeout_ms : 5000,
+    };
+    esp_http_client_handle_t client = esp_http_client_init(&config);
+    if (!client) return ESP_ERR_NO_MEM;
+    esp_http_client_set_header(client, "Content-Type", "application/json");
+#ifdef GATEWAY_API_KEY
+    esp_http_client_set_header(client, "X-API-Key", GATEWAY_API_KEY);
+#endif
+    esp_http_client_set_post_field(client, body, body_length);
+    esp_err_t err = esp_http_client_perform(client);
+    if (err == ESP_OK) {
+        const int status = esp_http_client_get_status_code(client);
+        if (status < 200 || status >= 300) err = ESP_FAIL;
+    }
+    esp_http_client_cleanup(client);
+    return err;
+}
+
 esp_err_t wifi_bringup_upload_jpeg_timeout(const uint8_t *jpeg,
                                            size_t jpeg_len,
                                            const char *event_type,
@@ -403,7 +470,9 @@ esp_err_t wifi_bringup_upload_event_timeout(const uint8_t *jpeg,
                                             const char *firmware_version,
                                             int timeout_ms)
 {
-    if (!jpeg || jpeg_len < 4 || !event_type || event_type[0] == '\0') {
+    const bool has_image = jpeg && jpeg_len >= 4;
+    const bool has_audio = audio && audio_len > 44;
+    if ((!has_image && !has_audio) || !event_type || event_type[0] == '\0') {
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -449,7 +518,7 @@ esp_err_t wifi_bringup_upload_event_timeout(const uint8_t *jpeg,
         boundary);
     int audio_head_len = snprintf(
         audio_head, sizeof(audio_head),
-        "\r\n--%s\r\n"
+        "--%s\r\n"
         "Content-Disposition: form-data; name=\"audio\"; filename=\"visitor-greeting.wav\"\r\n"
         "Content-Type: audio/wav\r\n\r\n",
         boundary);
@@ -459,10 +528,13 @@ esp_err_t wifi_bringup_upload_event_timeout(const uint8_t *jpeg,
         return ESP_ERR_INVALID_SIZE;
     }
 
-    size_t total_len = (size_t)event_head_len + (size_t)image_head_len +
-                       jpeg_len + strlen(terminator);
-    if (audio && audio_len > 0) {
+    size_t total_len = (size_t)event_head_len + strlen(terminator);
+    if (has_image) {
+        total_len += (size_t)image_head_len + jpeg_len;
+    }
+    if (has_audio) {
         total_len += (size_t)audio_head_len + audio_len;
+        if (has_image) total_len += 2;
     }
     esp_http_client_config_t config = {
         .url = GATEWAY_API_URL,
@@ -492,18 +564,21 @@ esp_err_t wifi_bringup_upload_event_timeout(const uint8_t *jpeg,
         err = write_http_part(client, "event head", event_head,
                               (size_t)event_head_len);
     }
-    if (err == ESP_OK) {
+    if (err == ESP_OK && has_image) {
         err = write_http_part(client, "image head", image_head,
                               (size_t)image_head_len);
     }
-    if (err == ESP_OK) {
+    if (err == ESP_OK && has_image) {
         err = write_http_part(client, "JPEG", (const char *)jpeg, jpeg_len);
     }
-    if (err == ESP_OK && audio && audio_len > 0) {
+    if (err == ESP_OK && has_image && has_audio) {
+        err = write_http_part(client, "media separator", "\r\n", 2);
+    }
+    if (err == ESP_OK && has_audio) {
         err = write_http_part(client, "audio head", audio_head,
                               (size_t)audio_head_len);
     }
-    if (err == ESP_OK && audio && audio_len > 0) {
+    if (err == ESP_OK && has_audio) {
         err = write_http_part(client, "visitor WAV", (const char *)audio,
                               audio_len);
     }

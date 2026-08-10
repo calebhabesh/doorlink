@@ -85,5 +85,6 @@ class EventAlertServiceTest {
         assertTrue(service.completeUpload(eventId, "DOORBELL_PRESS"));
         verify(chimeService).ring("DOORBELL_PRESS");
         verify(ntfyService).sendNotification("DOORBELL_PRESS");
+        verify(receiptRepository).save(any(EventTriggerReceipt.class));
     }
 }

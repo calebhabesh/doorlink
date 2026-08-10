@@ -6,6 +6,7 @@ import com.smartdoorbell.gateway.entity.Event;
 import com.smartdoorbell.gateway.repository.EventRepository;
 import com.smartdoorbell.gateway.repository.IntercomMessageRepository;
 import com.smartdoorbell.gateway.repository.SystemSettingsRepository;
+import com.smartdoorbell.gateway.repository.VisitorSessionRepository;
 import com.smartdoorbell.gateway.service.MinioService;
 import com.smartdoorbell.gateway.service.SystemHealthService;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,8 +48,10 @@ class SystemControllerTest {
     @MockBean private MqttConfig mqttConfig;
     @MockBean private SystemHealthService systemHealthService;
     @MockBean private EventRepository eventRepository;
+    @MockBean private VisitorSessionRepository visitorSessionRepository;
     @MockBean private IntercomMessageRepository intercomMessageRepository;
     @MockBean private MinioService minioService;
+    @MockBean private EventController eventController;
 
     @BeforeEach
     void configureActiveEvent() {
@@ -66,7 +69,7 @@ class SystemControllerTest {
                         .content("{\"eventId\":42}")
                         .header("X-API-Key", "test-api-key"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.state").value("RECORDING"));
+                .andExpect(jsonPath("$.state").value("ARMING"));
 
         ArgumentCaptor<String> payload = ArgumentCaptor.forClass(String.class);
         verify(mqttGateway).sendToMqtt(payload.capture(), eq("doorbell/commands/audio"));

@@ -29,12 +29,12 @@ arms only the GPIO2 button by default; PIR remains available behind an explicit
 build option and in its isolated diagnostic, but cannot generate normal
 doorbell events accidentally. GPIO48 fades in, holds, and fades out after a
 button press while D3 provides immediate wake acknowledgement.
-The production path records a five-second visitor WAV, uploads it with the
-event, accepts browser PTT replies, and downloads/plays stored replies during a
-bounded MQTT-controlled window. Visitor playback and dashboard PTT reply
-playback have been exercised end to end on the assembled board. The recorded
-speech quality was subjectively good; microphone start latency is being reduced
-and still needs an instrumented board retest. Battery life has not been measured.
+The production controller now implements release-driven hold-to-message capture,
+session-grouped presses, a complete first local chime, and stored browser PTT
+replies in a bounded MQTT-controlled window. The earlier fixed five-second WAV
+and stored reply path were exercised end to end on the assembled board; the new
+hold thresholds, full-chime handoff, multi-press behavior, and latency still need
+an instrumented hardware retest. Battery life has not been measured.
 The earlier MK1 heating fault was resolved by reworking its ungrounded center
 pad; see `docs/hardware-bringup.md` for the measured bring-up record.
 
@@ -67,21 +67,21 @@ pad; see `docs/hardware-bringup.md` for the measured bring-up record.
 
 ## Interaction Model (Audio & Wakeup)
 
-The firmware model is a bounded image-and-greeting event followed by a short,
-turn-based reply window. Full-duplex phone-call behavior is intentionally
-excluded; MQTT carries control messages while HTTP carries WAV media.
+The firmware model is a bounded visitor session followed by a short, turn-based
+reply window. Full-duplex phone-call behavior is intentionally excluded; MQTT
+carries control messages while HTTP carries WAV media.
 
 1. **Trigger:** GPIO2 wakes on an active-low button press through EXT0. GPIO3 PIR wake is disabled in the normal production build and is opt-in for future motion events.
-2. **Fast alert and immediate greeting:** Firmware launches the authenticated `/api/events/trigger` request and visitor-audio path together. The local acknowledgement chime is shortened after roughly 400 ms so the shared half-duplex I2S bus can switch to the ICS-43434; one five-second visitor WAV is recorded per visitor session while the early Wi-Fi alert proceeds. Repeated presses throughout this initial capture window receive LED feedback only: local chimes are not played and follow-up capture events are not queued. Once it closes, represses retain normal local chime behavior and do not open another microphone-suppression window.
-3. **Capture:** After the early alert and RF shutdown, firmware enables U9 and captures one QXGA JPEG while visitor recording continues. Camera power is disabled as soon as capture finishes.
-4. **Upload:** Firmware reconnects and uploads the JPEG, WAV, and the same event ID to `/api/events`. The gateway avoids duplicate chime/ntfy delivery and falls back to notifying during upload if no early-trigger receipt exists.
-5. **Reply window:** Firmware subscribes to `doorbell/commands/audio`. Dashboard PTT press/cancel commands arm the half-duplex state, while released replies are stored in MinIO and downloaded by the ESP32 over HTTP for I2S playback.
-6. **Shutdown:** At the 60-second idle or 90-second absolute deadline, Wi-Fi and its network resources are released, media buffers are freed, camera/audio controls are held safe, and the ESP32 enters deep sleep.
+2. **First chime and hold:** The first local chime plays once to completion while the authenticated early trigger proceeds. A visitor still holding after the chime gets microphone capture until release or 15 seconds; clips shorter than one second of microphone audio are discarded.
+3. **Capture:** After the early alert and RF shutdown, firmware enables U9 and captures the initial QXGA JPEG. Later presses refresh it only after it is 15 seconds old.
+4. **Later presses:** Every valid down-edge becomes another ordered press in the same session, starts hold capture immediately, and restarts LED feedback. The local chime is not replayed.
+5. **Upload:** Image and visitor recordings have stable per-press identifiers. The gateway groups them into one session, deduplicates notification delivery at session scope, and publishes lifecycle updates over SSE.
+6. **Reply window:** Dashboard PTT replies are stored WAV turns. A reply that arrives during visitor capture waits until the visitor releases; the microphone stays off during speaker playback.
+7. **Shutdown:** At the 60-second idle or 90-second absolute deadline, firmware closes the gateway session, releases network/media resources, holds camera/audio controls safe, and enters deep sleep.
 
-The controller processes one bounded event at a time. Additional button edges
-during the roughly 20-second capture/upload cycle are intentionally coalesced;
-they do not create extra chimes or queued snapshots. After the controller has
-returned to deep sleep, the next button press starts a new event normally.
+The dashboard Active Event, Event Log, and Calendar show one expandable visitor
+session with all presses, visitor messages, and homeowner replies. See
+`docs/behavioral_spec.md` for the locked interaction contract.
 
 ## Hardware
 

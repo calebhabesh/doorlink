@@ -8,6 +8,7 @@
 #include "driver/gpio.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 
 namespace doorbell {
 namespace {
@@ -83,8 +84,16 @@ esp_err_t AudioService::start_microphone()
         return ESP_OK;
     }
 
-    if (!audio_bus_acquire(pdMS_TO_TICKS(3000))) {
-        return ESP_ERR_TIMEOUT;
+    // An already-playing homeowner turn is allowed to finish. A visitor who
+    // keeps holding receives the bus immediately afterward. Polling keeps the
+    // hard session shutdown able to cancel this wait.
+    const TickType_t acquire_deadline =
+        xTaskGetTickCount() + pdMS_TO_TICKS(20000);
+    while (!audio_bus_acquire(pdMS_TO_TICKS(100))) {
+        if (stop_requested_.load()) return ESP_ERR_INVALID_STATE;
+        if (static_cast<std::int32_t>(acquire_deadline - xTaskGetTickCount()) <= 0) {
+            return ESP_ERR_TIMEOUT;
+        }
     }
     owns_audio_bus_ = true;
     gpio_set_level(AMP_EN_PIN, 0);
@@ -183,6 +192,103 @@ esp_err_t AudioService::record_greeting(RecordedAudio &audio,
     audio.size_ = kWavHeaderSize + recorded_pcm_bytes;
     ESP_LOGI(kTag, "Visitor greeting recorded: %u ms, %u-byte WAV",
              static_cast<unsigned>((samples_written * 1000) / kSampleRateHz),
+             static_cast<unsigned>(audio.size_));
+    return ESP_OK;
+}
+
+esp_err_t AudioService::record_button_hold(RecordedAudio &audio,
+                                           std::uint32_t max_duration_ms,
+                                           std::uint32_t minimum_duration_ms,
+                                           std::uint32_t &recorded_duration_ms)
+{
+    audio.reset();
+    recorded_duration_ms = 0;
+    if (max_duration_ms == 0 || max_duration_ms > 15000 ||
+        minimum_duration_ms == 0 || minimum_duration_ms > max_duration_ms) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (capture_active_.exchange(true)) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    stop_requested_.store(false);
+    struct CaptureGuard {
+        std::atomic_bool &active;
+        ~CaptureGuard() { active.store(false); }
+    } guard{capture_active_};
+
+    // A release that happened while the initial chime owned I2S is a normal
+    // short press, not a zero-length voice message.
+    if (gpio_get_level(DOORBELL_BUTTON_PIN) != 0) {
+        return ESP_OK;
+    }
+
+    const std::size_t target_samples =
+        (static_cast<std::size_t>(kSampleRateHz) * max_duration_ms) / 1000;
+    const std::size_t pcm_bytes = target_samples * sizeof(std::int16_t);
+    auto *wav = static_cast<std::uint8_t *>(heap_caps_malloc(
+        kWavHeaderSize + pcm_bytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT));
+    if (!wav) {
+        wav = static_cast<std::uint8_t *>(malloc(kWavHeaderSize + pcm_bytes));
+    }
+    if (!wav) return ESP_ERR_NO_MEM;
+
+    esp_err_t err = start_microphone();
+    if (err != ESP_OK) {
+        heap_caps_free(wav);
+        return err;
+    }
+
+    auto *pcm = reinterpret_cast<std::int16_t *>(wav + kWavHeaderSize);
+    std::size_t samples_written = 0;
+    std::int64_t release_candidate_us = 0;
+    while (samples_written < target_samples && !stop_requested_.load()) {
+        std::size_t bytes_read = 0;
+        err = i2s_channel_read(rx_channel_, sample_slots_, sizeof(sample_slots_),
+                               &bytes_read, pdMS_TO_TICKS(100));
+        if (err != ESP_OK) {
+            ESP_LOGE(kTag, "Visitor microphone read failed: %s",
+                     esp_err_to_name(err));
+            break;
+        }
+        const std::size_t frames = bytes_read / (sizeof(std::int32_t) * 2);
+        const std::size_t copy_frames =
+            std::min(frames, target_samples - samples_written);
+        for (std::size_t frame = 0; frame < copy_frames; ++frame) {
+            pcm[samples_written++] = mic_sample_to_pcm16(sample_slots_[frame * 2]);
+        }
+
+        const std::int64_t now_us = esp_timer_get_time();
+        if (gpio_get_level(DOORBELL_BUTTON_PIN) == 0) {
+            release_candidate_us = 0;
+        } else if (release_candidate_us == 0) {
+            release_candidate_us = now_us;
+        } else if (now_us - release_candidate_us >= 20000LL) {
+            break;
+        }
+    }
+
+    stop();
+    stop_requested_.store(false);
+    recorded_duration_ms = static_cast<std::uint32_t>(
+        (samples_written * 1000U) / kSampleRateHz);
+    if (err != ESP_OK) {
+        heap_caps_free(wav);
+        return err;
+    }
+    if (recorded_duration_ms < minimum_duration_ms) {
+        heap_caps_free(wav);
+        ESP_LOGI(kTag, "Discarded short hold: %u ms of microphone audio",
+                 static_cast<unsigned>(recorded_duration_ms));
+        return ESP_OK;
+    }
+
+    const std::uint32_t recorded_pcm_bytes =
+        static_cast<std::uint32_t>(samples_written * sizeof(std::int16_t));
+    write_wav_header(wav, recorded_pcm_bytes);
+    audio.data_ = wav;
+    audio.size_ = kWavHeaderSize + recorded_pcm_bytes;
+    ESP_LOGI(kTag, "Visitor hold recorded: %u ms, %u-byte WAV",
+             static_cast<unsigned>(recorded_duration_ms),
              static_cast<unsigned>(audio.size_));
     return ESP_OK;
 }

@@ -5,9 +5,11 @@ import com.smartdoorbell.gateway.config.MqttGateway;
 import com.smartdoorbell.gateway.entity.Event;
 import com.smartdoorbell.gateway.entity.IntercomMessage;
 import com.smartdoorbell.gateway.entity.SystemSettings;
+import com.smartdoorbell.gateway.entity.VisitorSession;
 import com.smartdoorbell.gateway.repository.EventRepository;
 import com.smartdoorbell.gateway.repository.IntercomMessageRepository;
 import com.smartdoorbell.gateway.repository.SystemSettingsRepository;
+import com.smartdoorbell.gateway.repository.VisitorSessionRepository;
 import com.smartdoorbell.gateway.service.MinioService;
 import com.smartdoorbell.gateway.service.SystemHealthService;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,9 +32,11 @@ public class SystemController {
     private final com.smartdoorbell.gateway.config.MqttConfig mqttConfig;
     private final SystemHealthService systemHealthService;
     private final EventRepository eventRepository;
+    private final VisitorSessionRepository visitorSessionRepository;
     private final IntercomMessageRepository intercomMessageRepository;
     private final MinioService minioService;
     private final ObjectMapper objectMapper;
+    private final EventController eventController;
 
     @Value("${intercom.device-base-url:http://192.168.1.10:8080}")
     private String deviceBaseUrl;
@@ -40,52 +44,61 @@ public class SystemController {
     @Value("${intercom.session.max-age-seconds:90}")
     private long sessionMaxAgeSeconds;
 
+    @Value("${intercom.session.idle-timeout-seconds:60}")
+    private long sessionIdleTimeoutSeconds;
+
     public SystemController(SystemSettingsRepository settingsRepository,
                             MqttGateway mqttGateway,
                             com.smartdoorbell.gateway.config.MqttConfig mqttConfig,
                             SystemHealthService systemHealthService,
                             EventRepository eventRepository,
+                            VisitorSessionRepository visitorSessionRepository,
                             IntercomMessageRepository intercomMessageRepository,
                             MinioService minioService,
-                            ObjectMapper objectMapper) {
+                            ObjectMapper objectMapper,
+                            EventController eventController) {
         this.settingsRepository = settingsRepository;
         this.mqttGateway = mqttGateway;
         this.mqttConfig = mqttConfig;
         this.systemHealthService = systemHealthService;
         this.eventRepository = eventRepository;
+        this.visitorSessionRepository = visitorSessionRepository;
         this.intercomMessageRepository = intercomMessageRepository;
         this.minioService = minioService;
         this.objectMapper = objectMapper;
+        this.eventController = eventController;
     }
 
     @PostMapping(path = "/ptt/start", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> startPtt(@RequestBody PttControlRequest request) {
-        Event event = activeEvent(request.eventId());
-        if (event == null) {
+        ActiveTarget target = activeTarget(request);
+        if (target == null) {
             return ResponseEntity.status(409).body("The visitor session is no longer active");
         }
-        publishCommand(Map.of("type", "PTT_START", "eventId", event.getEventId()));
-        return ResponseEntity.ok(new PttStateResponse("RECORDING", null));
+        publishCommand(Map.of("type", "PTT_START", "eventId", target.sessionId()));
+        return ResponseEntity.ok(new PttStateResponse("ARMING", null));
     }
 
     @PostMapping(path = "/ptt/cancel", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> cancelPtt(@RequestBody PttControlRequest request) {
-        Event event = activeEvent(request.eventId());
-        if (event == null) {
+        ActiveTarget target = activeTarget(request);
+        if (target == null) {
             return ResponseEntity.status(409).body("The visitor session is no longer active");
         }
-        publishCommand(Map.of("type", "PTT_CANCEL", "eventId", event.getEventId()));
+        publishCommand(Map.of("type", "PTT_CANCEL", "eventId", target.sessionId()));
         return ResponseEntity.ok(new PttStateResponse("LISTENING", null));
     }
 
     @PostMapping(path = "/ptt", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<?> handlePttAudio(@RequestParam("eventId") Long eventId,
+    public ResponseEntity<?> handlePttAudio(@RequestParam(value = "eventId", required = false) Long eventId,
+                                            @RequestParam(value = "sessionId", required = false) String sessionId,
                                             @RequestParam("durationMs") Integer durationMs,
                                             @RequestParam("audio") MultipartFile audio) {
-        Event event = activeEvent(eventId);
-        if (event == null) {
+        ActiveTarget target = activeTarget(new PttControlRequest(eventId, sessionId));
+        if (target == null) {
             return ResponseEntity.status(409).body("The visitor session is no longer active");
         }
+        Event event = target.event();
         if (audio.isEmpty() || audio.getSize() < 44 || audio.getSize() > 640044 ||
                 durationMs == null ||
                 !"audio/wav".equalsIgnoreCase(audio.getContentType())) {
@@ -93,6 +106,7 @@ public class SystemController {
         }
 
         String audioKey = null;
+        IntercomMessage message = null;
         try {
             Integer wavDurationMs = inspectPcmWav(audio.getBytes());
             if (wavDurationMs == null || wavDurationMs < 100 || wavDurationMs > 20000 ||
@@ -103,20 +117,24 @@ public class SystemController {
             String messageId = UUID.randomUUID().toString();
             audioKey = minioService.uploadFile(
                     audio, event.getEventId() + "-reply-" + messageId);
-            IntercomMessage message = intercomMessageRepository.save(
+            message = intercomMessageRepository.save(
                     new IntercomMessage(messageId, event, "HOMEOWNER", audioKey,
                             wavDurationMs, LocalDateTime.now()));
             String baseUrl = deviceBaseUrl.replaceAll("/+$", "");
             publishCommand(Map.of(
                     "type", "PLAY_AUDIO",
-                    "eventId", event.getEventId(),
+                    "eventId", target.sessionId(),
                     "messageId", messageId,
                     "audioUrl", baseUrl + "/api/events/media/" + audioKey,
                     "ackUrl", baseUrl + "/api/system/ptt/messages/" + messageId + "/delivered",
                     "durationMs", wavDurationMs));
+            eventController.publishSessionUpdate(target.session());
             return ResponseEntity.ok(new PttReplyResponse(
                     "PLAYBACK_QUEUED", message.getMessageId(), audioKey, wavDurationMs));
         } catch (Exception e) {
+            if (message != null) {
+                intercomMessageRepository.delete(message);
+            }
             if (audioKey != null) {
                 minioService.deleteFile(audioKey);
             }
@@ -130,18 +148,37 @@ public class SystemController {
                 .map(message -> {
                     message.markDelivered(LocalDateTime.now());
                     intercomMessageRepository.save(message);
+                    eventController.publishSessionUpdate(message.getEvent().getSession());
                     return ResponseEntity.ok().build();
                 })
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    private Event activeEvent(Long id) {
-        if (id == null) return null;
-        return eventRepository.findById(id)
+    private ActiveTarget activeTarget(PttControlRequest request) {
+        LocalDateTime now = LocalDateTime.now();
+        if (request.sessionId() != null && !request.sessionId().isBlank()) {
+            return visitorSessionRepository.findBySessionId(request.sessionId().trim())
+                    .filter(session -> session.getClosedAt() == null)
+                    .filter(session -> !session.getStartedAt().isAfter(now))
+                    .filter(session -> Duration.between(session.getStartedAt(), now).getSeconds()
+                            <= sessionMaxAgeSeconds)
+                    .filter(session -> Duration.between(session.getLastActivityAt(), now).getSeconds()
+                            <= sessionIdleTimeoutSeconds)
+                    .flatMap(session -> eventRepository
+                            .findFirstBySessionOrderByPressNumberDesc(session)
+                            .map(event -> new ActiveTarget(session.getSessionId(), event, session)))
+                    .orElse(null);
+        }
+        if (request.eventId() == null) return null;
+        return eventRepository.findById(request.eventId())
                 .filter(event -> event.getEventId() != null)
-                .filter(event -> !event.getTimestamp().isAfter(LocalDateTime.now()))
-                .filter(event -> Duration.between(event.getTimestamp(), LocalDateTime.now()).getSeconds()
+                .filter(event -> !event.getTimestamp().isAfter(now))
+                .filter(event -> Duration.between(event.getTimestamp(), now).getSeconds()
                         <= sessionMaxAgeSeconds)
+                .map(event -> new ActiveTarget(
+                        event.getSession() == null ? event.getEventId()
+                                : event.getSession().getSessionId(), event,
+                        event.getSession()))
                 .orElse(null);
     }
 
@@ -188,7 +225,9 @@ public class SystemController {
                 ((bytes[offset + 3] & 0xffL) << 24);
     }
 
-    public record PttControlRequest(Long eventId) {}
+    private record ActiveTarget(String sessionId, Event event,
+                                VisitorSession session) {}
+    public record PttControlRequest(Long eventId, String sessionId) {}
     public record PttStateResponse(String state, String messageId) {}
     public record PttReplyResponse(String state, String messageId, String audioKey,
                                    Integer durationMs) {}

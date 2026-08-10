@@ -4,6 +4,7 @@ import com.smartdoorbell.gateway.entity.Event;
 import com.smartdoorbell.gateway.entity.SystemSettings;
 import com.smartdoorbell.gateway.repository.EventRepository;
 import com.smartdoorbell.gateway.repository.SystemSettingsRepository;
+import com.smartdoorbell.gateway.repository.VisitorSessionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -21,11 +22,15 @@ public class RetentionService {
     private final EventRepository eventRepository;
     private final MinioService minioService;
     private final SystemSettingsRepository settingsRepository;
+    private final VisitorSessionRepository sessionRepository;
 
-    public RetentionService(EventRepository eventRepository, MinioService minioService, SystemSettingsRepository settingsRepository) {
+    public RetentionService(EventRepository eventRepository, MinioService minioService,
+                            SystemSettingsRepository settingsRepository,
+                            VisitorSessionRepository sessionRepository) {
         this.eventRepository = eventRepository;
         this.minioService = minioService;
         this.settingsRepository = settingsRepository;
+        this.sessionRepository = sessionRepository;
     }
 
     /**
@@ -46,6 +51,7 @@ public class RetentionService {
         List<Event> oldEvents = eventRepository.findByTimestampBefore(cutoff);
 
         if (oldEvents.isEmpty()) {
+            sessionRepository.deleteEmptySessionsStartedBefore(cutoff);
             logger.info("No events found to clean up (retention: {} days).", retentionDays);
             return;
         }
@@ -55,12 +61,16 @@ public class RetentionService {
         for (Event event : oldEvents) {
             try {
                 // Delete from MinIO
-                if (event.getImageKey() != null) {
+                if (event.getImageKey() != null &&
+                        !Event.PENDING_IMAGE_KEY.equals(event.getImageKey())) {
                     minioService.deleteFile(event.getImageKey());
                 }
                 if (event.getAudioKey() != null) {
                     minioService.deleteFile(event.getAudioKey());
                 }
+                event.getVisitorRecordings().stream()
+                        .filter(recording -> !recording.getAudioKey().equals(event.getAudioKey()))
+                        .forEach(recording -> minioService.deleteFile(recording.getAudioKey()));
                 event.getIntercomMessages().forEach(message ->
                         minioService.deleteFile(message.getAudioKey()));
                 
@@ -70,6 +80,8 @@ public class RetentionService {
                 logger.error("Failed to clean up event {}: {}", event.getId(), e.getMessage());
             }
         }
+
+        sessionRepository.deleteEmptySessionsStartedBefore(cutoff);
 
         logger.info("Retention cleanup completed.");
     }

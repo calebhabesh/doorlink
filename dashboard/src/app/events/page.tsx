@@ -1,292 +1,135 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { CalendarDays, ChevronDown, Download, Eye, Search, X } from 'lucide-react';
 import MainLayout, { ConnectionStatus } from '../../components/MainLayout';
-import { Search, Download, ChevronLeft, ChevronRight, Eye, CalendarDays, X, ChevronDown } from 'lucide-react';
 import EventPreviewDrawer from '../../components/EventPreviewDrawer';
+import { upsertSession, VisitorSession } from '../../lib/visitorSessions';
 
-interface DoorbellEvent {
-  id: number;
-  timestamp: string;
-  eventType: string;
-  imageKey: string;
-  audioKey?: string | null;
+const API_BASE_URL = '/api/events';
+
+function csvCell(value: string | number) {
+  const text = String(value);
+  return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 
-const API_BASE_URL = `/api/events`;
-
 export default function EventLog() {
-  const [events, setEvents] = useState<DoorbellEvent[]>([]);
+  const [sessions, setSessions] = useState<VisitorSession[]>([]);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
-  const [latestLiveEventId, setLatestLiveEventId] = useState<number | null>(null);
+  const [latestLiveSessionId, setLatestLiveSessionId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterDate, setFilterDate] = useState<string>('');
-  const [selectedEvent, setSelectedEvent] = useState<DoorbellEvent | null>(null);
+  const [filterDate, setFilterDate] = useState('');
+  const [selectedSession, setSelectedSession] = useState<VisitorSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}?size=1000`)
-      .then((res) => res.json())
-      .then((data) => {
-        setEvents(data);
-        setIsLoading(false);
+    fetch(`${API_BASE_URL}/sessions?size=1000`)
+      .then((response) => {
+        if (!response.ok) throw new Error(`Session history returned ${response.status}`);
+        return response.json();
       })
-      .catch((err) => {
-        console.error("Failed to fetch logs", err);
-        setIsLoading(false);
-      });
+      .then((data: VisitorSession[]) => setSessions(data))
+      .catch((error) => console.error('Failed to fetch session log', error))
+      .finally(() => setIsLoading(false));
 
-    const eventSource = new EventSource(`/stream`);
-    
-    eventSource.onopen = () => {
-      setConnectionStatus('connected');
-    };
-
-    eventSource.onerror = () => {
-      setConnectionStatus('connecting');
-    };
-
-    // Fallback: if we receive the init event, we are definitely connected
-    eventSource.addEventListener('init', () => {
-      setConnectionStatus('connected');
-    });
-
-    eventSource.addEventListener('doorbell-event', (e) => {
+    const eventSource = new EventSource('/stream');
+    eventSource.onopen = () => setConnectionStatus('connected');
+    eventSource.onerror = () => setConnectionStatus('connecting');
+    eventSource.addEventListener('init', () => setConnectionStatus('connected'));
+    eventSource.addEventListener('session-update', (event) => {
       setConnectionStatus('connected');
       try {
-        const newEvent: DoorbellEvent = JSON.parse(e.data);
-        setEvents((prev) => {
-          if (prev.some((event) => event.id === newEvent.id)) {
-            return prev;
-          }
-          return [newEvent, ...prev];
-        });
-        setLatestLiveEventId(newEvent.id);
-      } catch (err) {
-        console.error("Failed to parse event", err);
+        const session: VisitorSession = JSON.parse(event.data);
+        setSessions((current) => upsertSession(current, session));
+        setLatestLiveSessionId(session.sessionId);
+        setSelectedSession((current) => current?.sessionId === session.sessionId ? session : current);
+      } catch (error) {
+        console.error('Failed to parse session update', error);
       }
     });
-
     return () => eventSource.close();
   }, []);
 
-  const formatTitleCase = (str: string) => {
-    return str.toLowerCase().split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-  };
-
-  const filteredEvents = useMemo(() => {
-    return events.filter(e => {
-      const matchesSearch = e.eventType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            e.imageKey.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      if (!filterDate) return matchesSearch;
-      
-      const eventDate = new Date(e.timestamp);
-      // 'en-CA' locale format is YYYY-MM-DD, matching the date input value exactly
-      const eventDateStr = eventDate.toLocaleDateString('en-CA');
-      
-      return matchesSearch && eventDateStr === filterDate;
-    });
-  }, [events, searchQuery, filterDate]);
+  const filteredSessions = useMemo(() => sessions.filter((session) => {
+    const query = searchQuery.trim().toLowerCase();
+    const matchesSearch = !query || session.sessionId.toLowerCase().includes(query)
+      || session.presses.some((press) => press.eventType.toLowerCase().includes(query));
+    if (!filterDate) return matchesSearch;
+    return matchesSearch && new Date(session.startedAt).toLocaleDateString('en-CA') === filterDate;
+  }), [sessions, searchQuery, filterDate]);
 
   const exportToCsv = () => {
-    const headers = ["ID", "Timestamp", "Event Type", "Image Key", "Audio Key"];
-    const rows = filteredEvents.map(e => [
-      e.id,
-      e.timestamp,
-      e.eventType,
-      e.imageKey,
-      e.audioKey || ""
+    const rows = filteredSessions.map((session) => [
+      session.sessionId, session.startedAt, session.status, session.pressCount,
+      session.recordingCount, session.replies.length, session.latestImageKey ?? '',
     ]);
-
-    const csvContent = [
-      headers.join(","),
-      ...rows.map(row => row.join(","))
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `doorbell_events_${filterDate || 'all'}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
+    const csv = [
+      ['Session ID', 'Started At', 'Status', 'Presses', 'Visitor Recordings', 'Homeowner Replies', 'Latest Image'],
+      ...rows,
+    ].map((row) => row.map(csvCell).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `doorbell_sessions_${filterDate || 'all'}.csv`;
     link.click();
-    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (
-    <MainLayout status={connectionStatus} breadcrumbs={[{ label: 'Dashboard' }, { label: 'Event Log', active: true }]}>
-      <div className="w-full max-w-[1800px] mx-auto flex flex-col h-full overflow-hidden">
-        
-        {/* Action Toolbar */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6 lg:mb-10 shrink-0 relative z-10 w-full">
+    <MainLayout status={connectionStatus} breadcrumbs={[{ label: 'Dashboard' }, { label: 'Session Log', active: true }]}>
+      <div className="mx-auto flex h-full w-full max-w-[1800px] flex-col overflow-hidden">
+        <div className="mb-6 flex shrink-0 flex-col items-start justify-between gap-4 lg:mb-10 lg:flex-row lg:items-center">
           <div className="relative w-full lg:w-96">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-4 text-zinc-500" />
-            <input 
-              type="text" 
-              placeholder="Search events..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 pl-12 pr-6 text-base text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-inner"
-            />
+            <Search className="absolute left-4 top-1/2 h-4 w-5 -translate-y-1/2 text-zinc-500" />
+            <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search sessions…" className="w-full rounded-xl border border-zinc-800 bg-zinc-950 py-3 pl-12 pr-6 text-zinc-200 outline-none focus:border-emerald-500" />
           </div>
-          <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
-            <div className="relative w-full sm:w-auto">
-              <input 
-                type="date"
-                value={filterDate}
-                onChange={(e) => setFilterDate(e.target.value)}
-                className="w-full min-w-[200px] sm:min-w-[240px] bg-zinc-950 border border-zinc-800 text-zinc-200 pl-12 pr-12 py-3.5 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors shadow-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 [color-scheme:dark] appearance-none"
-              />
-              <CalendarDays className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500 pointer-events-none" />
-              {!filterDate && <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-4 text-zinc-500 pointer-events-none" />}
-              {filterDate && (
-                <button 
-                  onClick={(e) => { e.preventDefault(); setFilterDate(''); }} 
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-200 p-1.5 bg-zinc-950 rounded-full z-10"
-                  title="Clear filter"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
+          <div className="flex w-full flex-col gap-4 sm:flex-row lg:w-auto">
+            <div className="relative">
+              <CalendarDays className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-emerald-500" />
+              <input type="date" value={filterDate} onChange={(event) => setFilterDate(event.target.value)} className="w-full min-w-[230px] appearance-none rounded-xl border border-zinc-800 bg-zinc-950 py-3.5 pl-12 pr-12 text-sm font-bold text-zinc-200 [color-scheme:dark]" />
+              {!filterDate && <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-5 -translate-y-1/2 text-zinc-500" />}
+              {filterDate && <button onClick={() => setFilterDate('')} aria-label="Clear date filter" className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-zinc-900 p-1.5 text-zinc-500"><X className="h-4 w-4" /></button>}
             </div>
-            <button 
-              onClick={exportToCsv}
-              className="w-full sm:w-auto flex justify-center items-center gap-3 bg-zinc-950 border border-zinc-800 text-zinc-200 px-6 py-3 rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors shadow-lg group"
-            >
-              <Download className="w-5 h-5 text-zinc-400 group-hover:text-emerald-400 transition-colors" />
-              Export CSV
-            </button>
+            <button onClick={exportToCsv} className="flex items-center justify-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950 px-6 py-3 text-sm font-bold uppercase tracking-widest text-zinc-200 hover:bg-zinc-900"><Download className="h-5 w-5 text-emerald-400" /> Export CSV</button>
           </div>
         </div>
 
-        {/* Data Table Container */}
-        <div className={`w-full overflow-hidden rounded-3xl lg:border border-zinc-800 lg:bg-zinc-950/50 flex flex-col min-h-0 lg:shadow-2xl relative z-10 ${!isLoading ? 'animate-flash-event' : ''}`}>
-          
+        <div className="min-h-0 flex-1 overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950/50 shadow-2xl">
           {isLoading ? (
-            <div className="flex-1 flex items-center justify-center min-h-[400px]">
-              <div className="flex flex-col items-center gap-4">
-                <svg className="animate-spin h-8 w-8 text-emerald-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <p className="text-sm text-zinc-400 font-mono uppercase tracking-widest">Loading Event Log...</p>
-              </div>
-            </div>
+            <div className="grid h-full min-h-[400px] place-items-center font-mono text-sm uppercase tracking-widest text-zinc-500">Loading session log…</div>
           ) : (
-            <>
-          {/* Desktop Table */}
-          <div className="hidden lg:block overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
-            <table className="w-full border-collapse text-left">
-              <thead className="bg-zinc-900/80 sticky top-0 z-20 backdrop-blur-md">
-                <tr className="border-b border-zinc-800">
-                  <th className="px-8 py-6 text-sm uppercase tracking-[0.2em] text-zinc-400 font-black">Timestamp</th>
-                  <th className="px-8 py-6 text-sm uppercase tracking-[0.2em] text-zinc-400 font-black">Event Type</th>
-                  <th className="px-8 py-6 text-sm uppercase tracking-[0.2em] text-zinc-400 font-black">Media Reference</th>
-                  <th className="px-8 py-6 text-sm uppercase tracking-[0.2em] text-zinc-400 font-black">System Status</th>
-                  <th className="px-8 py-6 text-sm uppercase tracking-[0.2em] text-zinc-400 font-black text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-800/50">
-                {filteredEvents.map((evt) => (
-                  <tr key={evt.id} className={`transition-all cursor-pointer group ${latestLiveEventId === evt.id ? 'animate-slide-in bg-emerald-500/[0.06] shadow-[inset_3px_0_0_rgba(16,185,129,0.9)]' : 'hover:bg-zinc-800/30'}`}>
-                    <td className="px-8 py-6 font-mono text-zinc-300 text-base whitespace-nowrap">
-                      {new Date(evt.timestamp).toLocaleString(undefined, {
-                        year: 'numeric', month: 'short', day: 'numeric',
-                        hour: 'numeric', minute: '2-digit', second: '2-digit',
-                        hour12: true
-                      }).toUpperCase()}
-                    </td>
-                    <td className="px-8 py-6">
-                      <span className="bg-emerald-500/10 text-emerald-500 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]">
-                        {formatTitleCase(evt.eventType)}
-                      </span>
-                    </td>
-                    <td className="px-8 py-6 text-zinc-400 text-base font-mono max-w-md truncate">
-                      {evt.imageKey}
-                    </td>
-                    <td className="px-8 py-6">
-                      <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse"></div>
-                        <span className="text-zinc-200 text-sm font-bold uppercase tracking-widest">Verified</span>
-                      </div>
-                    </td>
-                    <td className="px-8 py-6 text-right">
-                       <button 
-                         type="button"
-                         onClick={() => setSelectedEvent(evt)}
-                         aria-label={`Preview ${formatTitleCase(evt.eventType)} from ${new Date(evt.timestamp).toLocaleString()}`}
-                         className="opacity-100 lg:opacity-0 group-hover:opacity-100 transition-all p-3 hover:bg-zinc-700 bg-zinc-800/50 rounded-xl border border-zinc-700 shadow-lg"
-                       >
-                          <Eye className="w-5 h-5 text-emerald-500" />
-                       </button>
-                    </td>
-                  </tr>
+            <div className="h-full overflow-y-auto">
+              <table className="hidden w-full border-collapse text-left lg:table">
+                <thead className="sticky top-0 z-10 border-b border-zinc-800 bg-zinc-900/95">
+                  <tr>{['Started', 'Session', 'Presses', 'Conversation', 'Status', ''].map((heading) => <th key={heading} className="px-8 py-5 text-xs font-black uppercase tracking-[0.2em] text-zinc-400">{heading}</th>)}</tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-800/60">
+                  {filteredSessions.map((session) => (
+                    <tr key={session.sessionId} className={latestLiveSessionId === session.sessionId ? 'bg-emerald-500/[0.05]' : 'hover:bg-zinc-900/60'}>
+                      <td className="whitespace-nowrap px-8 py-6 font-mono text-sm text-zinc-300">{new Date(session.startedAt).toLocaleString()}</td>
+                      <td className="max-w-52 truncate px-8 py-6 font-mono text-xs text-zinc-500" title={session.sessionId}>{session.sessionId}</td>
+                      <td className="px-8 py-6 font-bold text-zinc-200">{session.pressCount}</td>
+                      <td className="px-8 py-6 text-sm text-zinc-400">{session.recordingCount} visitor · {session.replies.length} homeowner</td>
+                      <td className="px-8 py-6"><span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-wider ${session.status === 'ACTIVE' ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' : 'border-zinc-700 bg-zinc-800 text-zinc-400'}`}>{session.status}</span></td>
+                      <td className="px-8 py-6 text-right"><button onClick={() => setSelectedSession(session)} aria-label="Preview visitor session" className="rounded-xl border border-zinc-700 bg-zinc-800 p-3 text-emerald-400"><Eye className="h-5 w-5" /></button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="space-y-4 p-4 lg:hidden">
+                {filteredSessions.map((session) => (
+                  <button key={session.sessionId} onClick={() => setSelectedSession(session)} className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 p-5 text-left">
+                    <div className="flex items-start justify-between gap-3"><span className="font-bold text-zinc-200">{session.pressCount} presses</span><span className="text-xs text-emerald-400">{session.recordingCount} messages</span></div>
+                    <p className="mt-3 font-mono text-xs text-zinc-500">{new Date(session.startedAt).toLocaleString()}</p>
+                  </button>
                 ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Mobile Cards */}
-          <div className="lg:hidden flex flex-col gap-4 overflow-y-auto pb-4">
-            {filteredEvents.map((evt) => (
-              <div 
-                key={evt.id} 
-                className={`bg-zinc-950 border border-zinc-800 rounded-2xl p-5 flex flex-col gap-4 ${latestLiveEventId === evt.id ? 'border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : ''}`}
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-500/20 mb-2 inline-block">
-                      {formatTitleCase(evt.eventType)}
-                    </span>
-                    <div className="font-mono text-zinc-300 text-sm">
-                      {new Date(evt.timestamp).toLocaleString(undefined, {
-                        month: 'short', day: 'numeric',
-                        hour: 'numeric', minute: '2-digit',
-                        hour12: true
-                      }).toUpperCase()}
-                    </div>
-                  </div>
-                  <button 
-                     type="button"
-                     onClick={() => setSelectedEvent(evt)}
-                     aria-label={`Preview event`}
-                     className="p-3 bg-zinc-800/80 rounded-xl border border-zinc-700 active:scale-95 transition-transform"
-                   >
-                      <Eye className="w-5 h-5 text-emerald-500" />
-                   </button>
-                </div>
-                <div className="flex justify-between items-center text-xs font-mono text-zinc-500">
-                  <span className="truncate max-w-[150px]">{evt.imageKey}</span>
-                  {evt.audioKey && <span className="bg-zinc-800 px-2 py-0.5 rounded text-zinc-300">Audio</span>}
-                </div>
               </div>
-            ))}
-          </div>
-
-          {/* Pagination Footer */}
-          <div className="px-6 py-4 lg:border-t border-zinc-800 lg:bg-zinc-900 bg-transparent flex justify-between items-center shrink-0">
-            <p className="text-xs font-mono text-zinc-500 uppercase tracking-widest">
-              Showing <span className="text-zinc-300">1</span> to <span className="text-zinc-300">{filteredEvents.length}</span> of <span className="text-zinc-300">{filteredEvents.length}</span> events
-            </p>
-            <div className="flex gap-2">
-              <button className="p-2 border border-zinc-800 rounded hover:bg-zinc-800 text-zinc-400 disabled:opacity-30" disabled>
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button className="p-2 border border-zinc-800 rounded hover:bg-zinc-800 text-zinc-400 disabled:opacity-30" disabled>
-                <ChevronRight className="w-4 h-4" />
-              </button>
             </div>
-          </div>
-            </>
           )}
         </div>
+        <p className="mt-3 shrink-0 font-mono text-[10px] uppercase tracking-widest text-zinc-600">Showing {filteredSessions.length} grouped visitor sessions</p>
       </div>
-      <EventPreviewDrawer 
-        event={selectedEvent} 
-        onClose={() => setSelectedEvent(null)} 
-      />
+      <EventPreviewDrawer session={selectedSession} onClose={() => setSelectedSession(null)} />
     </MainLayout>
   );
 }

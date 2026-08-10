@@ -40,7 +40,7 @@ public class EventAlertService {
     }
 
     @Transactional
-    public boolean completeUpload(String eventId, String eventType) {
+    public synchronized boolean completeUpload(String eventId, String eventType) {
         if (eventId != null) {
             Optional<EventTriggerReceipt> receipt = receiptRepository.findById(eventId);
             if (receipt.isPresent()) {
@@ -48,6 +48,13 @@ public class EventAlertService {
                 receiptRepository.save(receipt.get());
                 return false;
             }
+            LocalDateTime now = LocalDateTime.now();
+            dispatch(eventType);
+            EventTriggerReceipt fallbackReceipt =
+                    new EventTriggerReceipt(eventId, eventType, now);
+            fallbackReceipt.markUploaded(now);
+            receiptRepository.save(fallbackReceipt);
+            return true;
         }
 
         dispatch(eventType);

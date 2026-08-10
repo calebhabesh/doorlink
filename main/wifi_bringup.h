@@ -42,6 +42,10 @@ esp_err_t wifi_bringup_upload_event_timeout(const uint8_t *jpeg,
                                             const char *device_id,
                                             const char *firmware_version,
                                             int timeout_ms);
+esp_err_t wifi_bringup_close_session(const char *session_id, int timeout_ms);
+esp_err_t wifi_bringup_complete_press(const char *press_id,
+                                      uint32_t duration_ms,
+                                      int timeout_ms);
 esp_err_t wifi_bringup_get_rssi(int *rssi_dbm);
 esp_err_t wifi_bringup_stop_bounded(void);
 void run_wifi_bringup(void);

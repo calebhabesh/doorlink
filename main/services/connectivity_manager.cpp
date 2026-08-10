@@ -40,7 +40,7 @@ esp_err_t ConnectivityManager::trigger(const char *event_id,
                                       firmware_version, timeout_ms);
 }
 
-esp_err_t ConnectivityManager::upload(const CapturedImage &image,
+esp_err_t ConnectivityManager::upload(const CapturedImage *image,
                                       const RecordedAudio *audio,
                                       const char *event_type,
                                       const char *event_id,
@@ -48,11 +48,14 @@ esp_err_t ConnectivityManager::upload(const CapturedImage &image,
                                       const char *firmware_version,
                                       int timeout_ms) const
 {
-    if (!connected_ || !image.valid() || !event_type) {
+    if (!connected_ || !event_type ||
+        ((!image || !image->valid()) && (!audio || !audio->valid()))) {
         return ESP_ERR_INVALID_STATE;
     }
     return wifi_bringup_upload_event_timeout(
-        image.data(), image.size(), audio && audio->valid() ? audio->data() : nullptr,
+        image && image->valid() ? image->data() : nullptr,
+        image && image->valid() ? image->size() : 0,
+        audio && audio->valid() ? audio->data() : nullptr,
         audio && audio->valid() ? audio->size() : 0, event_type, event_id,
         device_id, firmware_version, timeout_ms);
 }
@@ -65,6 +68,21 @@ esp_err_t ConnectivityManager::shutdown()
     const esp_err_t err = wifi_bringup_stop_bounded();
     connected_ = false;
     return err;
+}
+
+esp_err_t ConnectivityManager::close_session(const char *session_id,
+                                              int timeout_ms) const
+{
+    if (!connected_) return ESP_ERR_INVALID_STATE;
+    return wifi_bringup_close_session(session_id, timeout_ms);
+}
+
+esp_err_t ConnectivityManager::complete_press(const char *press_id,
+                                               std::uint32_t duration_ms,
+                                               int timeout_ms) const
+{
+    if (!connected_) return ESP_ERR_INVALID_STATE;
+    return wifi_bringup_complete_press(press_id, duration_ms, timeout_ms);
 }
 
 }  // namespace doorbell

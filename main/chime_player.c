@@ -24,7 +24,6 @@ static const char *TAG = "chime_player";
 static atomic_bool s_is_playing = false;
 static atomic_bool s_retrigger_requested = false;
 static atomic_bool s_stop_requested = false;
-static atomic_bool s_suppressed = false;
 
 static esp_err_t init_speaker_i2s(i2s_chan_handle_t *tx_chan)
 {
@@ -112,7 +111,7 @@ static esp_err_t play_claimed_chime(void)
 
     while (offset < g_doorbell_chime_pcm_len) {
         if (atomic_load(&s_stop_requested)) {
-            ESP_LOGI(TAG, "Local chime shortened to release I2S for visitor microphone");
+            ESP_LOGI(TAG, "Local chime stopped by shutdown/safety request");
             break;
         }
         if (atomic_exchange(&s_retrigger_requested, false)) {
@@ -156,11 +155,6 @@ static esp_err_t play_claimed_chime(void)
 
 static bool claim_chime_playback(void)
 {
-    if (atomic_load(&s_suppressed)) {
-        ESP_LOGI(TAG, "Local chime suppressed while visitor microphone is active");
-        return false;
-    }
-
     bool expected = false;
     if (!atomic_compare_exchange_strong(&s_is_playing, &expected, true)) {
         ESP_LOGI(TAG, "Chime already playing; retriggering from sample 0");
@@ -169,13 +163,6 @@ static bool claim_chime_playback(void)
     }
     atomic_store(&s_retrigger_requested, false);
     atomic_store(&s_stop_requested, false);
-    if (atomic_load(&s_suppressed)) {
-        // Suppression may have raced the initial check. Release the playback
-        // claim without starting a task or leaving a deferred chime behind.
-        atomic_store(&s_stop_requested, true);
-        atomic_store(&s_is_playing, false);
-        return false;
-    }
     return true;
 }
 
@@ -220,12 +207,4 @@ void chime_player_request_stop(void)
 {
     atomic_store(&s_retrigger_requested, false);
     atomic_store(&s_stop_requested, true);
-}
-
-void chime_player_set_suppressed(bool suppressed)
-{
-    atomic_store(&s_suppressed, suppressed);
-    if (suppressed) {
-        chime_player_request_stop();
-    }
 }

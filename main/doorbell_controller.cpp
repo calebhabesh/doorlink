@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <cstring>
 #include <inttypes.h>
+#include <new>
 
 #include "board_pins.h"
 #include "driver/gpio.h"
@@ -27,8 +28,10 @@ constexpr unsigned kUploadAttempts = 2;
 constexpr std::uint32_t kRingFadeInMs = 1800;
 constexpr std::uint32_t kRingHoldMs = 2500;
 constexpr std::uint32_t kRingFadeOutMs = 1800;
-constexpr std::uint32_t kVisitorGreetingMs = 5000;
-constexpr std::uint32_t kVisitorMicStartTargetMs = 400;
+constexpr std::uint32_t kVisitorRecordingMaxMs =
+    DoorbellPolicy::kVisitorRecordingMaxMs;
+constexpr std::uint32_t kVisitorHoldMinimumMs =
+    DoorbellPolicy::kVisitorHoldMinimumMs;
 
 #ifdef CONFIG_SMART_DOORBELL_ENABLE_PIR_EVENTS
 constexpr bool kPirEventsEnabled = true;
@@ -55,8 +58,8 @@ const char *state_name(DeviceState state)
         return "CAPTURING";
     case DeviceState::CameraPowerDown:
         return "CAMERA_POWER_DOWN";
-    case DeviceState::RecordingGreeting:
-        return "RECORDING_GREETING";
+    case DeviceState::RecordingVisitor:
+        return "RECORDING_VISITOR";
     case DeviceState::WifiReconnect:
         return "WIFI_RECONNECT";
     case DeviceState::Uploading:
@@ -93,8 +96,8 @@ struct GreetingCaptureTaskContext {
     RecordedAudio *greeting;
     SemaphoreHandle_t completion;
     std::uint32_t duration_ms;
+    std::uint32_t recorded_duration_ms;
     std::int64_t session_start_us;
-    std::int64_t microphone_target_us;
     std::atomic_bool *capture_window_active;
     esp_err_t result{ESP_FAIL};
 };
@@ -103,26 +106,77 @@ void record_greeting_task(void *arg)
 {
     auto *context = static_cast<GreetingCaptureTaskContext *>(arg);
 
-    // Give the visitor a short local acknowledgement, then let microphone
-    // capture take priority on the shared half-duplex I2S bus.
-    while (chime_player_is_playing() &&
-           esp_timer_get_time() < context->microphone_target_us) {
+    // The first chime owns I2S until its final sample. A visitor who wants to
+    // leave a message keeps holding; the microphone starts immediately after.
+    while (chime_player_is_playing()) {
         vTaskDelay(pdMS_TO_TICKS(20));
     }
-    // From this point until the WAV is complete, button presses must not start
-    // or queue speaker playback. This prevents delayed chimes and keeps the
-    // visitor recording free of intentional local speaker audio.
-    chime_player_set_suppressed(true);
 
     ESP_LOGI(kTag,
              "[MONOTONIC_TIMING] t=%.1f ms | STAGE_START: Visitor microphone recording",
              static_cast<double>(esp_timer_get_time() - context->session_start_us) /
                  1000.0);
-    context->result = context->audio_service->record_greeting(
-        *context->greeting, context->duration_ms);
-    chime_player_set_suppressed(false);
+    (void)ring_animation_start(100, context->duration_ms, 150);
+    context->result = context->audio_service->record_button_hold(
+        *context->greeting, context->duration_ms, kVisitorHoldMinimumMs,
+        context->recorded_duration_ms);
+    ring_fade_stop();
     context->capture_window_active->store(false);
     xSemaphoreGive(context->completion);
+    vTaskDelete(nullptr);
+}
+
+struct FollowupTurn {
+    AudioService *audio_service;
+    DoorbellController *controller;
+    std::atomic_bool *capture_window_active;
+    std::atomic_bool *shutting_down;
+    std::uint32_t press_number;
+    std::int64_t press_started_us;
+    std::uint32_t recorded_duration_ms{0};
+    std::uint32_t max_duration_ms{0};
+    RecordedAudio recording;
+    esp_err_t result{ESP_FAIL};
+};
+
+void record_followup_turn_task(void *arg)
+{
+    auto *turn = static_cast<FollowupTurn *>(arg);
+    const std::int64_t wait_deadline_us = esp_timer_get_time() + 500000LL;
+    if (turn->shutting_down->load()) {
+        turn->result = ESP_ERR_INVALID_STATE;
+        SystemEvent ready{EventType::VisitorRecordingReady,
+                          static_cast<std::uint32_t>(esp_timer_get_time() / 1000LL),
+                          turn->result, turn};
+        (void)turn->controller->post_event(ready);
+        vTaskDelete(nullptr);
+        return;
+    }
+    bool expected = false;
+    bool acquired = turn->capture_window_active->compare_exchange_strong(expected, true);
+    while (!acquired && esp_timer_get_time() < wait_deadline_us) {
+        expected = false;
+        vTaskDelay(pdMS_TO_TICKS(10));
+        acquired = turn->capture_window_active->compare_exchange_strong(expected, true);
+    }
+    if (!acquired) {
+        turn->result = ESP_ERR_TIMEOUT;
+    } else if (turn->shutting_down->load() ||
+               turn->max_duration_ms < kVisitorHoldMinimumMs) {
+        turn->result = ESP_OK;
+        turn->capture_window_active->store(false);
+    } else {
+        (void)ring_animation_start(100, turn->max_duration_ms, 150);
+        turn->result = turn->audio_service->record_button_hold(
+            turn->recording, turn->max_duration_ms, kVisitorHoldMinimumMs,
+            turn->recorded_duration_ms);
+        ring_fade_stop();
+        turn->capture_window_active->store(false);
+    }
+    SystemEvent ready{EventType::VisitorRecordingReady,
+                      static_cast<std::uint32_t>(esp_timer_get_time() / 1000LL),
+                      turn->result, turn};
+    (void)turn->controller->post_event(ready);
     vTaskDelete(nullptr);
 }
 
@@ -146,7 +200,7 @@ const char *wake_name(WakeReason reason)
 
 DoorbellController::DoorbellController()
 {
-    event_queue_ = xQueueCreate(10, sizeof(SystemEvent));
+    event_queue_ = xQueueCreate(24, sizeof(SystemEvent));
     button_mailbox_ = xQueueCreate(1, sizeof(SystemEvent));
     if (!event_queue_ || !button_mailbox_) {
         ESP_LOGE(kTag, "Failed to create system event queues");
@@ -223,7 +277,7 @@ esp_err_t DoorbellController::capture_with_retry(CapturedImage &image, int timeo
     return err;
 }
 
-esp_err_t DoorbellController::upload_with_retry(const CapturedImage &image,
+esp_err_t DoorbellController::upload_with_retry(const CapturedImage *image,
                                                 const RecordedAudio *audio,
                                                 const char *event_type,
                                                 const char *event_id,
@@ -315,7 +369,7 @@ esp_err_t DoorbellController::handle_camera_capture(CapturedImage &image, int re
     return err;
 }
 
-esp_err_t DoorbellController::handle_upload(const CapturedImage &image,
+esp_err_t DoorbellController::handle_upload(const CapturedImage *image,
                                              const RecordedAudio *audio,
                                              const char *event_id,
                                              const char *event_type,
@@ -335,17 +389,52 @@ esp_err_t DoorbellController::handle_upload(const CapturedImage &image,
     err = upload_with_retry(image, audio, event_type, event_id, DEVICE_ID,
                             firmware_version, upload_timeout);
     if (err == ESP_OK) {
-        session_.image_uploaded = true;
-        ESP_LOGI(kTag, "%s event completed (%ux%u, %u bytes, event_id=%s)",
+        if (image && image->valid()) session_.image_uploaded = true;
+        ESP_LOGI(kTag, "%s event completed (image=%u bytes, audio=%u bytes, event_id=%s)",
                  event_type,
-                 static_cast<unsigned>(image.width()),
-                 static_cast<unsigned>(image.height()),
-                 static_cast<unsigned>(image.size()),
+                 static_cast<unsigned>(image && image->valid() ? image->size() : 0),
+                 static_cast<unsigned>(audio && audio->valid() ? audio->size() : 0),
                  event_id);
     } else {
         ESP_LOGE(kTag, "%s event failed: %s", event_type, esp_err_to_name(err));
     }
     return err;
+}
+
+void DoorbellController::start_followup_capture(std::uint32_t press_number,
+                                                std::int64_t press_started_us)
+{
+    auto *turn = new (std::nothrow) FollowupTurn{
+        .audio_service = &audio_,
+        .controller = this,
+        .capture_window_active = &visitor_capture_window_active_,
+        .shutting_down = &shutting_down_,
+        .press_number = press_number,
+        .press_started_us = press_started_us,
+        .recorded_duration_ms = 0,
+        .max_duration_ms = static_cast<std::uint32_t>((std::min)(
+            static_cast<std::int64_t>(kVisitorRecordingMaxMs),
+            session_.remaining_us(press_started_us) / 1000LL)),
+        .recording = {},
+        .result = ESP_FAIL,
+    };
+    if (!turn) {
+        ESP_LOGE(kTag, "Could not allocate visitor turn metadata");
+        return;
+    }
+
+    SystemEvent started{EventType::ButtonPress,
+                        static_cast<std::uint32_t>(press_started_us / 1000LL),
+                        ESP_OK, turn};
+    (void)post_event(started);
+    if (xTaskCreate(record_followup_turn_task, "visitor_hold", 4096, turn,
+                    configMAX_PRIORITIES - 4, nullptr) != pdPASS) {
+        turn->result = ESP_ERR_NO_MEM;
+        SystemEvent ready{EventType::VisitorRecordingReady,
+                          static_cast<std::uint32_t>(esp_timer_get_time() / 1000LL),
+                          turn->result, turn};
+        (void)post_event(ready);
+    }
 }
 
 void DoorbellController::start_button_monitor()
@@ -374,7 +463,7 @@ void DoorbellController::start_button_monitor()
             if (current_raw != candidate_btn_level) {
                 candidate_btn_level = current_raw;
                 candidate_start_us = now_us;
-            } else if ((now_us - candidate_start_us) >= 10000LL &&
+            } else if ((now_us - candidate_start_us) >= 20000LL &&
                        candidate_btn_level != stable_btn_level) {
                 stable_btn_level = candidate_btn_level;
                 if (stable_btn_level == 1) {
@@ -383,22 +472,12 @@ void DoorbellController::start_button_monitor()
                     button_released = false;
                     ESP_LOGI(kTag, "⚡ Button repress detected by ButtonMonitor!");
 
-                    // Always provide immediate visual feedback. During visitor
-                    // capture, do not play audio or queue another remote cycle.
+                    // Every new down-edge is one press/possible visitor turn.
+                    // Only the first press of a session plays the local chime.
                     (void)ring_animation_start(150, 1000, 300);
-                    if (self->visitor_capture_window_active_.load()) {
-                        ESP_LOGI(kTag,
-                                 "Button repress local=led_only remote=ignored reason=visitor_capture");
-                    } else {
-                        (void)chime_player_play_async();
-
-                        // Post to the length-1 button mailbox only when a new
-                        // visitor capture is allowed.
-                        SystemEvent ev{
-                            EventType::ButtonPress,
-                            static_cast<uint32_t>(now_us / 1000LL)};
-                        self->post_button_event(ev);
-                    }
+                    const std::uint32_t press_number =
+                        self->next_press_number_.fetch_add(1) + 1;
+                    self->start_followup_capture(press_number, now_us);
                 }
             }
 
@@ -420,41 +499,38 @@ void DoorbellController::stop_button_monitor()
     }
 }
 
-void DoorbellController::execute_alert_cycle(const char *event_type, const char *firmware_version)
+void DoorbellController::execute_alert_cycle(const char *event_type,
+                                             const char *firmware_version,
+                                             std::uint32_t press_number)
 {
     const int64_t now_start_us = esp_timer_get_time();
     int remaining_ms = static_cast<int>(session_.remaining_us(now_start_us) / 1000LL);
     if (session_.is_expired(now_start_us) || remaining_ms <= 0) {
         ESP_LOGW(kTag, "session=%s cycle=%" PRIu32 " ALERT_SKIPPED reason=session_deadline_reached",
                  session_.session_id, session_.alert_cycle_count + 1);
-        session_.followup_pending = false;
         return;
     }
 
     session_.alert_cycle_count++;
-    session_.last_remote_alert_start_us = now_start_us;
-    session_.followup_pending = false;
-    alert_cycle_in_progress_ = true;
     alert_cycles_started_++;
 
     char cycle_event_id[40];
     std::snprintf(cycle_event_id, sizeof(cycle_event_id), "%s-%" PRIu32,
-                  session_.session_id, session_.alert_cycle_count);
+                  session_.session_id, press_number);
 
     ESP_LOGI(kTag, "[MONOTONIC_TIMING] t=%.1f ms | ALERT_START session=%s event_id=%s cycle=%" PRIu32 " type=%s remaining_time=%.1fs",
              static_cast<double>(now_start_us - session_.session_start_us) / 1000.0,
-             session_.session_id, cycle_event_id, session_.alert_cycle_count, event_type,
+             session_.session_id, cycle_event_id, press_number, event_type,
              static_cast<double>(remaining_ms) / 1000.0);
 
     RecordedAudio greeting;
-    // Capture one visitor greeting per session. Repress cycles retain their
-    // local chime and remote image/notification behavior without reopening a
-    // speaker-suppression window.
+    // The initial turn shares this cycle's media upload. Follow-up turns are
+    // captured from their own down-edges and uploaded independently.
     const bool record_visitor_greeting =
         session_.alert_cycle_count == 1 &&
         std::strcmp(event_type, "DOORBELL_PRESS") == 0;
     const int greeting_budget_ms = static_cast<int>((std::min)(
-        static_cast<int64_t>(kVisitorGreetingMs),
+        static_cast<int64_t>(kVisitorRecordingMaxMs),
         (std::max)(0LL, session_.remaining_us(esp_timer_get_time()) / 1000LL -
                             10000LL)));
 
@@ -462,7 +538,8 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
     SemaphoreHandle_t greeting_completion = nullptr;
     GreetingCaptureTaskContext greeting_context{};
     bool greeting_task_started = false;
-    if (record_visitor_greeting && greeting_budget_ms >= 500) {
+    if (record_visitor_greeting &&
+        greeting_budget_ms >= static_cast<int>(kVisitorHoldMinimumMs)) {
         visitor_capture_window_active_.store(true);
         greeting_completion =
             xSemaphoreCreateBinaryStatic(&greeting_completion_storage);
@@ -471,11 +548,8 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
             .greeting = &greeting,
             .completion = greeting_completion,
             .duration_ms = static_cast<std::uint32_t>(greeting_budget_ms),
+            .recorded_duration_ms = 0,
             .session_start_us = session_.session_start_us,
-            .microphone_target_us =
-                (session_.alert_cycle_count == 1 ? session_.session_start_us
-                                                 : now_start_us) +
-                static_cast<std::int64_t>(kVisitorMicStartTargetMs) * 1000LL,
             .capture_window_active = &visitor_capture_window_active_,
             .result = ESP_FAIL,
         };
@@ -519,8 +593,6 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
                  session_.session_id, session_.alert_cycle_count);
         finish_greeting_task();
         visitor_capture_window_active_.store(false);
-        session_.last_remote_alert_end_us = esp_timer_get_time();
-        alert_cycle_in_progress_ = false;
         alert_cycles_finished_++;
         return;
     }
@@ -532,8 +604,6 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
                  session_.session_id, session_.alert_cycle_count);
         finish_greeting_task();
         visitor_capture_window_active_.store(false);
-        session_.last_remote_alert_end_us = esp_timer_get_time();
-        alert_cycle_in_progress_ = false;
         alert_cycles_finished_++;
         return;
     }
@@ -543,6 +613,7 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
     // 3. Capture the photo while the visitor greeting continues in parallel.
     CapturedImage image;
     const esp_err_t capture_err = handle_camera_capture(image, remaining_ms);
+    if (capture_err == ESP_OK) last_snapshot_capture_us_ = esp_timer_get_time();
 
     finish_greeting_task();
 
@@ -552,8 +623,6 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
         image.reset();
         greeting.reset();
         visitor_capture_window_active_.store(false);
-        session_.last_remote_alert_end_us = esp_timer_get_time();
-        alert_cycle_in_progress_ = false;
         alert_cycles_finished_++;
         return;
     }
@@ -561,12 +630,12 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
              static_cast<double>(esp_timer_get_time() - session_.session_start_us) / 1000.0);
 
     if (!greeting_task_started && record_visitor_greeting &&
-        greeting_budget_ms >= 500) {
-        set_state(DeviceState::RecordingGreeting);
-        chime_player_set_suppressed(true);
-        const esp_err_t audio_err = audio_.record_greeting(
-            greeting, static_cast<std::uint32_t>(greeting_budget_ms));
-        chime_player_set_suppressed(false);
+        greeting_budget_ms >= static_cast<int>(kVisitorHoldMinimumMs)) {
+        set_state(DeviceState::RecordingVisitor);
+        std::uint32_t recorded_duration_ms = 0;
+        const esp_err_t audio_err = audio_.record_button_hold(
+            greeting, static_cast<std::uint32_t>(greeting_budget_ms),
+            kVisitorHoldMinimumMs, recorded_duration_ms);
         visitor_capture_window_active_.store(false);
         if (audio_err != ESP_OK) {
             ESP_LOGW(kTag, "Visitor greeting unavailable; continuing image-only: %s",
@@ -581,8 +650,6 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
         ESP_LOGW(kTag, "session=%s cycle=%" PRIu32 " ALERT_ABORTED stage=camera_capture reason=session_deadline_reached",
                  session_.session_id, session_.alert_cycle_count);
         image.reset();
-        session_.last_remote_alert_end_us = esp_timer_get_time();
-        alert_cycle_in_progress_ = false;
         alert_cycles_finished_++;
         return;
     }
@@ -591,7 +658,7 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
     ESP_LOGI(kTag, "Controller stack headroom before upload: %u bytes",
              static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
     const esp_err_t upload_err = handle_upload(
-        image, greeting.valid() ? &greeting : nullptr, cycle_event_id,
+        &image, greeting.valid() ? &greeting : nullptr, cycle_event_id,
         event_type, firmware_version, remaining_ms);
     ESP_LOGI(kTag, "Controller stack headroom after upload: %u bytes",
              static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
@@ -600,8 +667,6 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
     ESP_LOGI(kTag, "[MONOTONIC_TIMING] t=%.1f ms | STAGE_COMPLETE: Full QXGA Image Uploaded to Gateway",
              static_cast<double>(esp_timer_get_time() - session_.session_start_us) / 1000.0);
 
-    session_.last_remote_alert_end_us = esp_timer_get_time();
-    alert_cycle_in_progress_ = false;
     alert_cycles_finished_++;
 
     if (upload_err == ESP_OK) {
@@ -614,43 +679,76 @@ void DoorbellController::execute_alert_cycle(const char *event_type, const char 
     }
 }
 
-void DoorbellController::process_button_press_event(int64_t event_time_us)
+void DoorbellController::process_button_press_event(int64_t event_time_us,
+                                                    void *turn_data)
 {
-    session_.press_count++;
+    auto *turn = static_cast<FollowupTurn *>(turn_data);
+    const std::uint32_t press_number = turn ? turn->press_number
+                                            : next_press_number_.fetch_add(1) + 1;
+    session_.press_count = (std::max)(session_.press_count, press_number);
     session_.last_button_press_us = event_time_us;
     session_.touch_activity(event_time_us);
 
-    const int64_t elapsed_since_last_alert_start_us = (session_.last_remote_alert_start_us > 0)
-                                                           ? (event_time_us - session_.last_remote_alert_start_us)
-                                                           : 0;
-    const double elapsed_sec = static_cast<double>(elapsed_since_last_alert_start_us) / 1000000.0;
-    const bool cooldown_expired = (session_.last_remote_alert_start_us > 0) &&
-                                  (elapsed_since_last_alert_start_us >= VisitorSession::kRealertCooldownUs);
-    const bool under_cycle_limit = (session_.alert_cycle_count < VisitorSession::kMaxAlertCyclesPerSession);
-
-    if (!under_cycle_limit) {
-        ESP_LOGI(kTag, "session=%s cycle=%" PRIu32 " BUTTON_PRESS local=retrigger remote=suppressed reason=max_cycles elapsed=%.1fs",
-                 session_.session_id, session_.alert_cycle_count, elapsed_sec);
-        return;
-    }
-
-    if (alert_cycle_in_progress_ || !cooldown_expired) {
-        session_.followup_pending = true;
-        ESP_LOGI(kTag, "session=%s cycle=%" PRIu32 " BUTTON_PRESS local=retrigger remote=pending reason=%s elapsed=%.1fs",
-                 session_.session_id, session_.alert_cycle_count,
-                 alert_cycle_in_progress_ ? "pipeline_busy" : "cooldown_active",
-                 elapsed_sec);
-    } else {
-        ESP_LOGI(kTag, "session=%s cycle=%" PRIu32 " BUTTON_PRESS local=retrigger remote=execute_now elapsed=%.1fs",
-                 session_.session_id, session_.alert_cycle_count, elapsed_sec);
-        const char *firmware_version = esp_app_get_description()->version;
+    const char *firmware_version = esp_app_get_description()->version;
+    const bool snapshot_stale = last_snapshot_capture_us_ == 0 ||
+        event_time_us - last_snapshot_capture_us_ >= DoorbellPolicy::kSnapshotRefreshUs;
+    if (snapshot_stale) {
+        ESP_LOGI(kTag,
+                 "session=%s press=%" PRIu32 " followup=snapshot_refresh chime=not_replayed",
+                 session_.session_id, press_number);
         intercom_.stop();
-        execute_alert_cycle("DOORBELL_REPRESS", firmware_version);
-        if (connectivity_.connected()) {
-            (void)intercom_.start(session_.session_id);
-        }
-        set_state(DeviceState::ListeningForReply);
+        execute_alert_cycle("DOORBELL_REPRESS", firmware_version, press_number);
+        if (connectivity_.connected()) (void)intercom_.start(session_.session_id);
+    } else {
+        char press_id[40];
+        std::snprintf(press_id, sizeof(press_id), "%s-%" PRIu32,
+                      session_.session_id, press_number);
+        const int remaining_ms = static_cast<int>(
+            session_.remaining_us(esp_timer_get_time()) / 1000LL);
+        ESP_LOGI(kTag,
+                 "session=%s press=%" PRIu32 " followup=register_only snapshot=fresh chime=not_replayed",
+                 session_.session_id, press_number);
+        (void)handle_early_notify(press_id, "DOORBELL_REPRESS",
+                                  firmware_version, remaining_ms);
     }
+    set_state(DeviceState::ListeningForReply);
+}
+
+void DoorbellController::process_visitor_recording(
+    void *turn_data, const char *firmware_version)
+{
+    auto *turn = static_cast<FollowupTurn *>(turn_data);
+    if (!turn) return;
+    session_.touch_activity(esp_timer_get_time());
+    char press_id[40];
+    std::snprintf(press_id, sizeof(press_id), "%s-%" PRIu32,
+                  session_.session_id, turn->press_number);
+    if (connectivity_.connected()) {
+        const esp_err_t complete_err = connectivity_.complete_press(
+            press_id, turn->recorded_duration_ms);
+        if (complete_err != ESP_OK) {
+            ESP_LOGW(kTag, "Press completion was not acknowledged: %s",
+                     esp_err_to_name(complete_err));
+        }
+    }
+    if (turn->result == ESP_OK && turn->recording.valid()) {
+        const int remaining_ms = static_cast<int>(
+            session_.remaining_us(esp_timer_get_time()) / 1000LL);
+        ESP_LOGI(kTag, "Uploading visitor recording for press=%" PRIu32
+                       " duration=%u ms",
+                 turn->press_number,
+                 static_cast<unsigned>(turn->recorded_duration_ms));
+        (void)handle_upload(nullptr, &turn->recording, press_id,
+                            "DOORBELL_REPRESS", firmware_version, remaining_ms);
+    } else if (turn->result != ESP_OK) {
+        ESP_LOGW(kTag, "Visitor recording failed for press=%" PRIu32 ": %s",
+                 turn->press_number, esp_err_to_name(turn->result));
+    } else {
+        ESP_LOGI(kTag, "Press=%" PRIu32 " was shorter than the voice threshold",
+                 turn->press_number);
+    }
+    delete turn;
+    set_state(DeviceState::ListeningForReply);
 }
 
 void DoorbellController::handle_ptt_session()
@@ -673,36 +771,59 @@ void DoorbellController::handle_ptt_session()
     session_.touch_activity(esp_timer_get_time());
     set_state(DeviceState::ListeningForReply);
     const char *firmware_version = esp_app_get_description()->version;
+    IntercomCommand deferred_reply{};
+    bool has_deferred_reply = false;
 
     while (!session_.is_expired(esp_timer_get_time())) {
         IntercomCommand command{};
-        if (intercom_.receive(command, 0)) {
+        bool has_command = false;
+        if (has_deferred_reply && !visitor_capture_window_active_.load()) {
+            command = deferred_reply;
+            has_deferred_reply = false;
+            has_command = true;
+        } else {
+            has_command = intercom_.receive(command, 0);
+        }
+        if (has_command) {
             const int64_t command_time_us = esp_timer_get_time();
             session_.touch_activity(command_time_us);
             if (command.type == IntercomCommandType::StartReply) {
-                audio_.stop();
                 session_.ptt_active = true;
-                set_state(DeviceState::ReplyArmed);
-                ESP_LOGI(kTag, "Homeowner PTT armed; visitor microphone muted");
+                if (visitor_capture_window_active_.load()) {
+                    ESP_LOGI(kTag,
+                             "Homeowner reply armed and queued behind visitor recording");
+                } else {
+                    audio_.stop();
+                    set_state(DeviceState::ReplyArmed);
+                    ESP_LOGI(kTag, "Homeowner PTT armed");
+                }
             } else if (command.type == IntercomCommandType::CancelReply) {
                 session_.ptt_active = false;
+                has_deferred_reply = false;
                 set_state(DeviceState::ListeningForReply);
                 ESP_LOGI(kTag, "Homeowner PTT cancelled");
             } else if (command.type == IntercomCommandType::PlayAudio) {
-                audio_.stop();
-                session_.ptt_active = true;
-                set_state(DeviceState::PlayingReply);
-                const std::uint32_t max_playback_ms = static_cast<std::uint32_t>(
-                    session_.remaining_us(esp_timer_get_time()) / 1000LL);
-                const esp_err_t play_err = intercom_.play_wav(
-                    command, max_playback_ms);
-                if (play_err != ESP_OK) {
-                    ESP_LOGE(kTag, "Homeowner reply playback failed: %s",
-                             esp_err_to_name(play_err));
+                if (visitor_capture_window_active_.load()) {
+                    deferred_reply = command;
+                    has_deferred_reply = true;
+                    ESP_LOGI(kTag,
+                             "Homeowner playback queued behind visitor recording");
+                } else {
+                    audio_.stop();
+                    session_.ptt_active = true;
+                    set_state(DeviceState::PlayingReply);
+                    const std::uint32_t max_playback_ms = static_cast<std::uint32_t>(
+                        session_.remaining_us(esp_timer_get_time()) / 1000LL);
+                    const esp_err_t play_err = intercom_.play_wav(
+                        command, max_playback_ms);
+                    if (play_err != ESP_OK) {
+                        ESP_LOGE(kTag, "Homeowner reply playback failed: %s",
+                                 esp_err_to_name(play_err));
+                    }
+                    session_.ptt_active = false;
+                    session_.touch_activity(esp_timer_get_time());
+                    set_state(DeviceState::ListeningForReply);
                 }
-                session_.ptt_active = false;
-                session_.touch_activity(esp_timer_get_time());
-                set_state(DeviceState::ListeningForReply);
             }
         }
 
@@ -710,7 +831,7 @@ void DoorbellController::handle_ptt_session()
         SystemEvent btn_ev;
         if (button_mailbox_ && xQueueReceive(button_mailbox_, &btn_ev, 0) == pdTRUE) {
             const int64_t now_us = esp_timer_get_time();
-            process_button_press_event(now_us);
+            process_button_press_event(now_us, btn_ev.extra_data);
         }
 
         // 2. Process non-coalescible lifecycle events from FIFO event_queue_
@@ -718,29 +839,9 @@ void DoorbellController::handle_ptt_session()
         if (xQueueReceive(event_queue_, &event, pdMS_TO_TICKS(50)) == pdTRUE) {
             const int64_t now_us = esp_timer_get_time();
             if (event.type == EventType::ButtonPress) {
-                process_button_press_event(now_us);
-            }
-        }
-
-        // 3. Check if a follow-up alert cycle is pending and eligible
-        const int64_t now_us = esp_timer_get_time();
-        if (session_.followup_pending && !alert_cycle_in_progress_) {
-            const int64_t cooldown_elapsed_us = (session_.last_remote_alert_start_us > 0)
-                                                     ? (now_us - session_.last_remote_alert_start_us)
-                                                     : 0;
-
-            if (session_.last_remote_alert_start_us > 0 &&
-                cooldown_elapsed_us >= VisitorSession::kRealertCooldownUs &&
-                session_.alert_cycle_count < VisitorSession::kMaxAlertCyclesPerSession) {
-                ESP_LOGI(kTag, "session=%s cycle=%" PRIu32 " ALERT_START_PENDING type=DOORBELL_REPRESS elapsed_from_first_press=%.1fs",
-                         session_.session_id, session_.alert_cycle_count + 1,
-                         static_cast<double>(cooldown_elapsed_us) / 1000000.0);
-                intercom_.stop();
-                execute_alert_cycle("DOORBELL_REPRESS", firmware_version);
-                if (connectivity_.connected()) {
-                    (void)intercom_.start(session_.session_id);
-                }
-                set_state(DeviceState::ListeningForReply);
+                process_button_press_event(now_us, event.extra_data);
+            } else if (event.type == EventType::VisitorRecordingReady) {
+                process_visitor_recording(event.extra_data, firmware_version);
             }
         }
     }
@@ -756,11 +857,24 @@ void DoorbellController::handle_ptt_session()
 [[noreturn]] void DoorbellController::sleep()
 {
     set_state(DeviceState::PreparingSleep);
-    session_.followup_pending = false;
-    visitor_capture_window_active_.store(false);
+    shutting_down_.store(true);
     stop_button_monitor();
+    audio_.request_capture_stop();
+    const std::int64_t capture_stop_deadline = esp_timer_get_time() + 500000LL;
+    while ((audio_.capture_active() || visitor_capture_window_active_.load()) &&
+           esp_timer_get_time() < capture_stop_deadline) {
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+    visitor_capture_window_active_.store(false);
     audio_.stop();
     intercom_.stop();
+    if (connectivity_.connected() && session_.session_id[0] != '\0') {
+        const esp_err_t close_err = connectivity_.close_session(session_.session_id);
+        if (close_err != ESP_OK) {
+            ESP_LOGW(kTag, "Session close was not acknowledged: %s",
+                     esp_err_to_name(close_err));
+        }
+    }
     (void)connectivity_.shutdown();
     ring_fade_stop();
     gpio_set_level(STATUS_LED_PIN, 0);
@@ -819,6 +933,7 @@ void DoorbellController::handle_ptt_session()
     session_.last_button_press_us = started_us;
     session_.touch_activity(started_us);
     session_.press_count = 1;
+    next_press_number_.store(1);
 
     const char *event_type = reason == WakeReason::Button
                                  ? "DOORBELL_PRESS"
@@ -831,7 +946,7 @@ void DoorbellController::handle_ptt_session()
     start_button_monitor();
 
     // Execute Alert Cycle #1
-    execute_alert_cycle(event_type, firmware_version);
+    execute_alert_cycle(event_type, firmware_version, 1);
     log_elapsed("initial alert cycle finished", started_us);
 
     // Enter PTT session / event loop

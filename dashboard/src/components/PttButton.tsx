@@ -6,7 +6,8 @@ import { Loader2, Mic, Radio, Square } from 'lucide-react';
 type PttState = 'idle' | 'arming' | 'recording' | 'sending' | 'queued' | 'error';
 
 interface PttButtonProps {
-  eventId: number;
+  sessionId: string;
+  eventId?: number | null;
 }
 
 const MAX_RECORDING_MS = 20_000;
@@ -50,7 +51,7 @@ function resamplePcm(samples: Int16Array, sourceRate: number, targetRate = 16000
   return output;
 }
 
-export default function PttButton({ eventId }: PttButtonProps) {
+export default function PttButton({ sessionId, eventId }: PttButtonProps) {
   const [state, setState] = useState<PttState>('idle');
   const [error, setError] = useState<string | null>(null);
   const heldRef = useRef(false);
@@ -85,7 +86,7 @@ export default function PttButton({ eventId }: PttButtonProps) {
       await fetch('/api/system/ptt/cancel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventId }),
+        body: JSON.stringify({ sessionId, eventId }),
       });
     } catch {
       // The device also leaves the armed state on its own session timeout.
@@ -119,7 +120,8 @@ export default function PttButton({ eventId }: PttButtonProps) {
 
     const doorbellSamples = resamplePcm(samples, sampleRate);
     const formData = new FormData();
-    formData.append('eventId', String(eventId));
+    formData.append('sessionId', sessionId);
+    if (eventId != null) formData.append('eventId', String(eventId));
     formData.append('durationMs', String(Math.round((doorbellSamples.length * 1000) / 16000)));
     formData.append('audio', makeWav(doorbellSamples, 16000), 'homeowner-reply.wav');
 
@@ -155,7 +157,7 @@ export default function PttButton({ eventId }: PttButtonProps) {
       const armResponse = await fetch('/api/system/ptt/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventId }),
+        body: JSON.stringify({ sessionId, eventId }),
       });
       if (!armResponse.ok) throw new Error(await armResponse.text());
       if (!heldRef.current) {
@@ -213,11 +215,11 @@ export default function PttButton({ eventId }: PttButtonProps) {
         void fetch('/api/system/ptt/cancel', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ eventId }),
+          body: JSON.stringify({ sessionId, eventId }),
         });
       }
     };
-  }, [eventId]);
+  }, [sessionId, eventId]);
 
   const busy = state === 'arming' || state === 'sending';
   const label = state === 'arming' ? 'Arming…'

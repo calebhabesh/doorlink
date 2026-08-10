@@ -1133,6 +1133,13 @@ made during the silent window from starting a delayed follow-up recording.
 Only the initial `DOORBELL_PRESS` cycle records a visitor greeting; later
 `DOORBELL_REPRESS` cycles preserve local chime/retrigger behavior and cannot
 open another speaker-suppression window.
+
+The two paragraphs above record the intermediate firmware tested on 2026-08-10.
+They were superseded later that day by the locked session behavior: the first
+chime plays completely, continuing to hold records after it, and every later
+hold can record immediately without replaying a chime. The new one-second
+minimum, 15-second cap, and multi-press arbitration build successfully but have
+not yet been validated on the assembled board.
 The same run reported a FreeRTOS stack overflow in task `main` at the start of multipart
 upload. The production controller was still using the configured 3,584-byte
 ESP-IDF main-task stack. It now runs in a dedicated 16 KiB `doorbell_ctrl` task,

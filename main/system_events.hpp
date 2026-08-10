@@ -17,6 +17,7 @@ namespace doorbell {
 enum class EventType : std::uint8_t {
     ButtonPress,
     ButtonRelease,
+    VisitorRecordingReady,
     PirMotion,
     EarlyNotifyAck,
     EarlyNotifyFailed,
@@ -58,8 +59,9 @@ enum class AlertCycleOutcome : std::uint8_t {
 namespace DoorbellPolicy {
     constexpr int64_t kPttIdleTimeoutUs = 60000000LL;       // 60 seconds idle PTT session timeout
     constexpr int64_t kSessionAbsoluteMaxUs = 90000000LL;   // 90 seconds absolute session hard cap
-    constexpr int64_t kRealertCooldownUs = 6000000LL;       // 6 seconds minimum spacing between remote alert cycles
-    constexpr std::uint32_t kMaxAlertCyclesPerSession = 3;  // Max 3 remote alert cycles per visitor session
+    constexpr int64_t kSnapshotRefreshUs = 15000000LL;
+    constexpr std::uint32_t kVisitorHoldMinimumMs = 1000;
+    constexpr std::uint32_t kVisitorRecordingMaxMs = 15000;
 }
 
 /**
@@ -72,20 +74,15 @@ struct VisitorSession {
     std::uint32_t alert_cycle_count{0};
     int64_t session_start_us{0};
     int64_t last_activity_us{0};
-    int64_t last_remote_alert_start_us{0};
-    int64_t last_remote_alert_end_us{0};
     int64_t last_button_press_us{0};
 
     bool early_notified{false};
     bool image_captured{false};
     bool image_uploaded{false};
     bool ptt_active{false};
-    bool followup_pending{false};
 
     static constexpr int64_t kPttIdleTimeoutUs = DoorbellPolicy::kPttIdleTimeoutUs;
     static constexpr int64_t kSessionAbsoluteMaxUs = DoorbellPolicy::kSessionAbsoluteMaxUs;
-    static constexpr int64_t kRealertCooldownUs = DoorbellPolicy::kRealertCooldownUs;
-    static constexpr std::uint32_t kMaxAlertCyclesPerSession = DoorbellPolicy::kMaxAlertCyclesPerSession;
 
     int64_t hard_deadline_us() const {
         if (session_start_us == 0) return 0;

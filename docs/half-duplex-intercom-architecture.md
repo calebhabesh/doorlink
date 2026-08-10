@@ -1,155 +1,108 @@
-# Doorlink: Half-Duplex Intercom Architecture
+# Doorlink Half-Duplex Intercom Architecture
 
-> **Implemented and exercised on hardware.** Visitor WAV upload/playback and a
-> dashboard PTT reply through the doorbell speaker have passed on the assembled
-> Rev C board. The faster, overlapped microphone/camera schedule builds and
-> still requires a flashed-board latency retest.
+The fixed-duration visitor WAV and stored dashboard-to-speaker reply path have
+passed on assembled Rev C hardware. The release-driven multi-press policy below
+is implemented and build-tested; its thresholds and latency still require a
+flashed-board validation pass.
 
-Because the ESP32-S3 is battery-powered, it spends most of its life in **Deep Sleep**. When a visitor presses the button, the board wakes up, captures a snapshot and records a brief visitor greeting, uploads them, and then enters a temporary **60-second turn-based intercom session** where it can play incoming voice turns before returning to sleep. 
+Doorlink is a turn-based voicemail relay, not a full-duplex call. The local
+chime, ICS-43434 microphone, and MAX98357A speaker share a half-duplex I2S path,
+so only one owns it at a time. MQTT transports small control commands and HTTP
+transports stored WAV media.
 
-To avoid the need for complex, processor-heavy Acoustic Echo Cancellation (AEC) on the ESP32-S3, the audio flow is modeled as a **turn-based half-duplex voicemail-relay** system, utilizing discrete voice turns rather than a continuous live audio stream.
-
----
-
-## 1. Sequence & Data Flow Diagram
+## Visitor flow
 
 ```mermaid
 sequenceDiagram
-    autonumber
     actor Visitor
-    participant ESP32 as ESP32-S3 Doorbell
-    participant GW as Spring Boot Gateway
-    participant DB as Postgres & MinIO
-    participant DBard as Next.js Dashboard
+    participant ESP as ESP32-S3
+    participant GW as Spring Gateway
+    participant UI as Dashboard
     actor Homeowner
 
-    Visitor->>ESP32: Press Doorbell Button
-    Note over ESP32: Wake from Deep Sleep (EXT0)
-    par Alert and camera path
-        ESP32->>GW: Send early authenticated alert
-        ESP32->>ESP32: RF off; capture single JPEG frame
-    and Immediate visitor greeting path
-        Note over ESP32: Short acknowledgement chime (~400 ms)<br/>then release shared I2S
-        Note over ESP32: Suppress local speaker for entire capture window
-        ESP32->>ESP32: Record 5s WAV (Mic)
+    Visitor->>ESP: First press / hold
+    par Local acknowledgement
+        ESP->>ESP: Play one complete local chime
+    and Early alert
+        ESP->>GW: POST session + press trigger
+        GW-->>UI: session-started SSE
     end
-    Note over ESP32: Reconnect Wi-Fi for media upload
-    ESP32->>GW: HTTP POST /api/events (JPEG + WAV)
-    GW->>DB: Store Media in MinIO & Event in Postgres
-    GW-->>DBard: Broadcast event via SSE (Stream)
-    GW-->>ESP32: 201 Created (Success)
-    
-    Note over ESP32: Enter bounded reply window<br/>Subscribe to MQTT topic:<br/>doorbell/commands/audio
+    ESP->>ESP: If still held, record until release (1-15 s retained)
+    ESP->>ESP: RF off, capture snapshot, camera power off
+    ESP->>GW: Upload available JPEG/WAV with stable IDs
+    GW-->>UI: session-updated SSE
 
-    DBard->>Homeowner: Ring Chime & Render Image
-    Homeowner->>DBard: Click "Play Audio"
-    DBard->>Homeowner: Play Visitor's Greeting Clip
+    Visitor->>ESP: Later press / hold
+    ESP->>ESP: LED acknowledgement; no second chime
+    ESP->>ESP: Record immediately until release (1-15 s retained)
+    ESP->>GW: Register press and upload WAV
 
-    Note over Homeowner: Push to Talk (PTT)
-    Homeowner->>DBard: Press & Hold PTT
-    Note over DBard: Record Speaker Mic (Browser)
-    DBard->>GW: POST /api/system/ptt/start
-    GW->>ESP32: MQTT PTT_START (arm/mute)
-    Homeowner->>DBard: Release PTT
-    DBard->>GW: POST /api/system/ptt (16kHz mono WAV)
-    GW->>DB: Save Homeowner WAV in MinIO
-    Note over GW: Control Plane Dispatch
-    GW->>ESP32: MQTT PLAY_AUDIO (JSON URL command)
-    
-    Note over ESP32: Receive MQTT message<br/>Turn on Amp (AMP_EN -> HIGH)<br/>Disable Mic Recording
-    ESP32->>Visitor: Play Homeowner's voice over I2S Speaker
-    Note over ESP32: Turn off Amp (AMP_EN -> LOW)
+    Homeowner->>UI: Hold PTT, then release
+    UI->>GW: Store canonical 16 kHz mono PCM WAV
+    GW->>ESP: MQTT PLAY_AUDIO with HTTP URL
+    Note over ESP: Queue behind active visitor recording
+    ESP->>ESP: Microphone off; enable amp and play complete reply
+    ESP->>GW: Playback acknowledgement
+    GW-->>UI: session-updated SSE
 ```
 
----
+The initial microphone can start only after the complete local chime. A visitor
+who releases during that chime leaves no recording. Later presses have no chime,
+so microphone capture begins on their down-edge. A release followed by another
+hold is another ordered press and recording in the same 60/90-second session.
 
-## 2. Key Design Principle: MQTT is Control Plane, HTTP is Data Plane
+## Arbitration
 
-Instead of streaming binary audio blobs over MQTT (which would bloat the broker and lead to package delivery/timing issues), **MQTT is used strictly as a control plane (command notification)**, while **HTTP is used as the data plane (audio transport)**.
+Priority is:
 
-When the homeowner uploads a voice reply, the gateway saves the WAV file in MinIO and sends a lightweight JSON command message to the ESP32-S3 over Mosquitto MQTT:
+1. Finish the first local chime.
+2. Finish an active visitor turn on release or at 15 seconds.
+3. Play a queued homeowner reply completely.
+4. If a visitor presses during that playback, finish the active reply and give
+   the microphone to a visitor who is still holding.
+5. Enforce the 90-second hard session deadline and safe shutdown.
 
-### MQTT JSON Payload Schema (`doorbell/commands/audio`)
+No voice-activity detector discards quiet speech. Recordings shorter than one
+second are discarded solely to avoid empty tap/accidental-hold files.
+
+## Control and data planes
+
+Homeowner replies are stored in MinIO before this command is published on
+`doorbell/commands/audio`:
+
 ```json
 {
   "type": "PLAY_AUDIO",
-  "eventId": "0123456789abcdef0123456789abcdef-1",
+  "eventId": "0123456789abcdef0123456789abcdef",
   "messageId": "6db2995e-4c0e-4717-9b95-8c0330031eb2",
-  "audioUrl": "http://192.168.1.10:8080/api/events/media/event-reply.wav",
-  "ackUrl": "http://192.168.1.10:8080/api/system/ptt/messages/6db2995e-4c0e-4717-9b95-8c0330031eb2/delivered",
+  "audioUrl": "http://gateway:8080/api/events/media/reply.wav",
+  "ackUrl": "http://gateway:8080/api/system/ptt/messages/6db2995e-4c0e-4717-9b95-8c0330031eb2/delivered",
   "durationMs": 3200
 }
 ```
 
-Upon receiving this payload, the ESP32-S3 pulls the WAV audio data via standard HTTP GET from the specified URL and streams it to the speaker buffer.
+`eventId` is the session target. The ESP32 fetches and streams the canonical WAV
+over HTTP, disables the amplifier after its final sample, and POSTs `ackUrl`.
+The dashboard distinguishes `Playback queued` from `Played at door` using that
+acknowledgement. A successful MQTT publish alone is reported as `ARMING`, not as
+confirmed device playback.
 
----
+## Persistence model
 
-## 3. Detailed Phase Breakdown
+- `visitor_sessions`: session bounds, activity, and explicit close state.
+- `events`: ordered physical presses and their snapshot/lifecycle state (kept as
+  the table name for compatibility).
+- `visitor_recordings`: stable recording ID, press relationship, media key, and
+  measured WAV duration.
+- `intercom_messages`: homeowner WAV, creation time, and playback delivery time.
 
-### Phase A: Wakeup & Greeting (Visitor Side)
-1. **Trigger**: The doorbell button goes LOW, triggering an `EXT0` wakeup on `DOORBELL_IN` (GPIO2).
-2. **Capture**: The ESP32-S3 wakes up and immediately captures:
-   - A single JPEG frame from the **OV5640** camera.
-   - A five-second visitor audio clip via the **ICS-43434** digital I2S microphone.
-   - While the visitor clip is active, repeated presses receive LED feedback
-     only. Local chimes and follow-up capture events are both dropped, so no
-     delayed speaker playback or surprise second recording is queued.
-   - Only the first doorbell event in a visitor session records a greeting.
-     Accepted repress cycles keep normal local chime behavior and may re-alert
-     with a new image, but they do not start another microphone window.
-3. **Transmission**: The device connects to Wi-Fi and sends a multipart HTTP POST request to `/api/events` with the image and audio payloads. It then starts a 60-second timer.
-4. **Reply Window**: The device subscribes to `doorbell/commands/audio` and waits until the 60-second idle or 90-second absolute session deadline.
+Active Event, Event Log, and Calendar consume grouped session DTOs. Legacy rows
+using numbered press IDs are grouped into closed sessions during migration.
 
-### Phase B: Homeowner Notification & Playback
-1. **Notification**: The dashboard receives the live event via Server-Sent Events (SSE). The homeowner sees the visitor snapshot.
-2. **Listening**: The homeowner clicks **Play Audio** on the dashboard, which fetches and plays the visitor's greeting clip from storage.
+## Why stored half-duplex turns
 
-### Phase C: Homeowner Reply (The Turn-Based Intercom Loop)
-1. **Record**: The homeowner holds down the **PTT** button on the dashboard. The browser records the homeowner's microphone audio via the HTML5 Web Audio API.
-2. **Arm and Send**: Press sends `PTT_START`; release encodes/resamples a canonical 16 kHz mono 16-bit WAV and posts it to `/api/system/ptt`.
-3. **Relay**: The gateway saves this audio clip and broadcasts the command payload to the ESP32-S3 via MQTT.
-4. **Speak**: The ESP32-S3 receives the MQTT payload:
-   - It pulls **AMP_EN** (GPIO44) HIGH to enable the **MAX98357A** amplifier.
-   - It streams the audio file over I2S to the speaker.
-   - **Echo Elimination**: During speaker playback, the microphone recording loop is completely disabled. This guarantees **zero acoustic echo feedback** without needing an AEC chip.
-   - Once playback finishes, it pulls **AMP_EN** LOW to conserve power and goes back to waiting.
-
----
-
-## 4. Database Modeling: The Conversation Thread
-
-Rather than storing a single audio file per event, Doorlink models the interaction as a **conversation thread** consisting of discrete voice turns. This allows the database to log a complete timeline of the encounter.
-
-### Schema Structure
-
-#### 1. `events` Table (Main Event Log)
-| Column | Type | Description |
-| :--- | :--- | :--- |
-| `id` | SERIAL PRIMARY KEY | Unique event ID |
-| `timestamp` | TIMESTAMP | Time doorbell button was pressed |
-| `event_type` | VARCHAR | e.g. `DOORBELL_PRESS` |
-| `image_key` | VARCHAR | MinIO file key for the visitor snapshot |
-
-#### 2. `intercom_messages` Table (Conversation Thread)
-| Column | Type | Description |
-| :--- | :--- | :--- |
-| `id` | SERIAL PRIMARY KEY | Unique message ID |
-| `event_id` | INT REFERENCES events(id) | Associated doorbell press event |
-| `sender` | VARCHAR | `'VISITOR'` or `'HOMEOWNER'` |
-| `audio_key` | VARCHAR | MinIO file key for the `.wav` audio clip |
-| `duration_ms` | INT | Duration of the audio clip in milliseconds |
-| `created_at` | TIMESTAMP | Message creation time |
-| `delivered_at` | TIMESTAMP (NULLable) | Time message was delivered to the ESP32-S3 |
-
-The initial visitor greeting remains the event's `audio_key`; stored homeowner
-turns are rows in `intercom_messages`. Firmware acknowledges successful
-playback so `delivered_at` distinguishes queued from delivered replies.
-
----
-
-## 5. Why this is ideal for Custom Hardware
-1. **Low Power**: Keeping the active communication file-based means the ESP32 doesn't have to keep a continuous, high-bandwidth UDP/RTP stream open, which would drain the battery rapidly.
-2. **Zero Echo**: By avoiding full-duplex transmission (playing and recording at the same time), we completely bypass acoustic echo loop issues.
-3. **Robustness**: If the Wi-Fi connection drops briefly, a file-based payload can be re-sent or buffered, whereas a live audio stream would simply crack and drop.
-4. **Resume Defensibility**: Using terms like "discrete voice turns" and "asynchronous record-and-send event followed by a short half-duplex intercom session" provides a clean, intentional, and technically grounded explanation for design decisions.
+- It avoids acoustic echo cancellation and intentional chime contamination.
+- It keeps radio activity bounded for a battery-powered device.
+- Stable files and identifiers can be retried after intermittent Wi-Fi.
+- The UI can present a truthful, durable conversation timeline rather than
+  claiming unsupported live audio streaming.

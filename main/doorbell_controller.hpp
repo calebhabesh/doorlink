@@ -22,7 +22,7 @@ enum class DeviceState : std::uint8_t {
     CameraPowerUp,
     Capturing,
     CameraPowerDown,
-    RecordingGreeting,
+    RecordingVisitor,
     WifiReconnect,
     Uploading,
     ListeningForReply,
@@ -46,14 +46,18 @@ private:
     esp_err_t handle_early_notify(const char *event_id, const char *event_type, const char *firmware_version, int remaining_ms = 30000);
     esp_err_t handle_rf_quiesce();
     esp_err_t handle_camera_capture(CapturedImage &image, int remaining_ms = 4000);
-    esp_err_t handle_upload(const CapturedImage &image,
+    esp_err_t handle_upload(const CapturedImage *image,
                              const RecordedAudio *audio,
                              const char *event_id,
                              const char *event_type,
                              const char *firmware_version,
                              int remaining_ms = 30000);
-    void execute_alert_cycle(const char *event_type, const char *firmware_version);
-    void process_button_press_event(int64_t event_time_us);
+    void execute_alert_cycle(const char *event_type, const char *firmware_version,
+                             std::uint32_t press_number);
+    void process_button_press_event(int64_t event_time_us, void *turn_data = nullptr);
+    void process_visitor_recording(void *turn_data, const char *firmware_version);
+    void start_followup_capture(std::uint32_t press_number,
+                                std::int64_t press_started_us);
     void handle_ptt_session();
 
     void start_button_monitor();
@@ -65,7 +69,7 @@ private:
                                  const char *device_id,
                                  const char *firmware_version,
                                  int timeout_ms = 5000);
-    esp_err_t upload_with_retry(const CapturedImage &image,
+    esp_err_t upload_with_retry(const CapturedImage *image,
                                 const RecordedAudio *audio,
                                 const char *event_type,
                                 const char *event_id,
@@ -82,12 +86,14 @@ private:
     TaskHandle_t button_monitor_task_{nullptr};
     volatile bool button_monitor_running_{false};
     std::atomic_bool visitor_capture_window_active_{false};
-    bool alert_cycle_in_progress_{false};
+    std::atomic_bool shutting_down_{false};
+    std::atomic_uint32_t next_press_number_{1};
     std::uint32_t alert_cycles_started_{0};
     std::uint32_t alert_cycles_finished_{0};
     std::uint32_t uploads_succeeded_{0};
     bool wifi_rf_active_{false};
     bool cam_pwr_active_{false};
+    std::int64_t last_snapshot_capture_us_{0};
 
     CameraService camera_;
     AudioService audio_;

@@ -8,24 +8,26 @@ explicit, isolated configuration.
 ## Runtime path
 
 `app_main.cpp` selects either a diagnostic image or `DoorbellController`.
-Production mode follows this bounded state sequence:
+Production mode follows this bounded session sequence:
 
 1. `BOOTING`: apply the camera/audio-safe GPIO state and classify the wake.
-2. `CONNECTING` / `TRIGGERING`: connect Wi-Fi immediately and POST a small,
-   authenticated, idempotent alert using a device-generated event ID.
+2. `LOCAL_CHIME` / `TRIGGERING`: play the first local chime completely while
+   connecting Wi-Fi and posting an authenticated session/press trigger.
 3. `DISCONNECTING`: fully release Wi-Fi and network resources, restoring the
    proven RF-off camera boundary.
 4. `CAPTURING`: enable GPIO42/U9, initialize the OV5640, capture QXGA, copy the
    JPEG to owned PSRAM, return the frame, deinitialize the driver, and disable
    U9.
-5. `CONNECTING`: initialize network resources again and reconnect Wi-Fi with a
+5. `VISITOR_RECORDING`: if GPIO2 remains held after the first chime, or on any
+   later press, retain 1-15 seconds of release-driven microphone audio.
+6. `CONNECTING`: initialize network resources again and reconnect Wi-Fi with a
    bounded retry count and timeout.
-6. `UPLOADING`: POST the JPEG and the same event ID as `DOORBELL_PRESS` or
-   `PIR_MOTION`, with one bounded upload retry. The gateway suppresses a second
-   alert when the early receipt exists and falls back to alerting here when it
-   does not.
-7. `SHUTTING_DOWN`: release the JPEG, stop and deinitialize Wi-Fi, hold camera
-   and I2S pins safe, configure wake sources, and enter deep sleep.
+7. `UPLOADING`: independently POST available JPEG and visitor WAV media under
+   stable per-press identifiers. Later presses refresh the image only after 15
+   seconds and never replay the local chime.
+8. `PTT_SESSION`: queue homeowner playback behind any active visitor capture.
+9. `SHUTTING_DOWN`: explicitly close the gateway session, release media, stop
+   Wi-Fi, hold camera/I2S pins safe, configure wake sources, and enter sleep.
 
 Camera and Wi-Fi are deliberately non-overlapping high-load phases. The camera
 frame never survives camera-driver shutdown; only the owned PSRAM copy does.
@@ -43,8 +45,9 @@ gateway and gives media a stable object key.
 | `camera_capture` | C | OV5640 configuration and guaranteed frame/driver/power cleanup |
 | `camera_power`, `ov5640_mode_fix`, bring-up modules | C | Auditable hardware sequencing and diagnostics |
 
-There is no inheritance hierarchy, exception path, RTTI dependency, or C++ heap
-allocation in the controller. ESP-IDF errors remain `esp_err_t`.
+There is no inheritance hierarchy, exception path, or RTTI dependency.
+Follow-up turn metadata is bounded heap state and visitor WAV/JPEG payloads use
+PSRAM where available. ESP-IDF errors remain `esp_err_t`.
 
 ## Wake behavior
 
@@ -102,11 +105,12 @@ isolated GPIO48 diagnostic and production path both validated an off-to-full
 1.8-second fade, 2.5-second hold, and 1.8-second fade-out without delaying Wi-Fi
 or camera work. Camera
 convergence remains the dominant image-delivery delay.
-Deep-sleep current remains unmeasured. Audio remains outside the production
-path.
+Deep-sleep current remains unmeasured. The earlier fixed-duration visitor audio
+and stored PTT playback path passed hardware tests; release-driven capture and
+multi-press arbitration are implemented and build-tested but still require an
+instrumented board validation pass.
 
-Production has a single-event concurrency policy. EXT0 is re-armed only after
-capture, upload, cleanup, and a stable 100 ms button release. Button edges while
-that event is in flight are coalesced rather than queued, preventing rapid
-repeat chimes. A press after deep-sleep re-arm creates a fresh event ID and was
-validated in the sequential two-press hardware test.
+Production has one bounded visitor-session policy. Button edges during capture
+and upload are queued as ordered presses, but only the first press plays the
+local chime. EXT0 is re-armed only after session close, cleanup, and the existing
+button-release guard.

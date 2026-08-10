@@ -1,172 +1,127 @@
-# Smart Doorbell - Real-World Behavioral Specification & Architecture Contract
+# Smart Doorbell Production Interaction Contract
 
-This document is the authoritative specification for the real-world operational behavior, lifecycle state transitions, subsystem interaction rules, and failure modes of the Smart Doorbell hardware (`ESP32-S3-WROOM-1-N16R8`, Rev B/C PCB).
+This is the locked production behavior for the Rev C door-mounted device. It
+defines product behavior; hardware-dependent timing and audio quality still
+require validation on the assembled board after firmware changes.
 
----
+## Non-negotiable hardware rules
 
-## 1. Core Architectural Invariants
+- `PWR-01`: Wi-Fi RF and `CAM_PWR_EN`/GPIO42 are never active together.
+- `PWR-02`: Camera rails and `AMP_EN`/GPIO44 are disabled immediately after use.
+- `MEM-01`: the camera frame is copied to owned PSRAM before its driver buffer is
+  returned and U9 is disabled.
+- `AUDIO-01`: local chime, visitor microphone, and homeowner reply are
+  half-duplex users of the shared I2S bus.
+- `SLEEP-01`: a button still held at shutdown is handled by the GPIO2
+  wake-on-release guard; it must not cause a wake loop or another visitor event.
 
-### Power & Hardware Invariants
-* **`PWR-01` (Wi-Fi RF & Camera Mutual Exclusion):** `WIFI_RF_ACTIVE` and `CAM_PWR_EN` (GPIO42) shall never be active simultaneously to eliminate supply voltage drops and brownout risks on battery power.
-* **`PWR-02` (Hardware Power Gating):** Camera LDOs (2.8V / 1.5V) and MAX98357A `AMP_EN` (GPIO44) shall be powered down immediately upon completing their respective tasks.
+## Visitor session
 
-### Memory & Resource Invariants
-* **`MEM-01` (Application-Owned JPEG Buffer):** Camera captures must immediately copy raw frame data into an application-owned PSRAM buffer (`camera_owned_jpeg_t` / `CapturedImage`). The camera driver framebuffer shall be returned and camera LDOs powered off **before** Wi-Fi is re-enabled for upload.
-* **`MEM-02` (Single Active Frame Policy):** Only one full QXGA JPEG buffer shall exist in PSRAM at any given time.
+The first debounced button press creates a random 32-character `sessionId` and
+press ID `<sessionId>-1`. More button-down edges before session expiry create
+ordered press IDs `<sessionId>-2`, `<sessionId>-3`, and so on.
 
-### Sleep & Wake Invariants
-* **`SLEEP-01` (Active-Low Hold Prevention):** If `DOORBELL_IN` (GPIO2) remains LOW past the release timeout, the device shall re-arm `EXT0` wake to trigger on **GPIO2 HIGH**, set the `waiting_for_release` RTC flag, and enter deep sleep. Upon release wake, the RTC flag is cleared, wake on LOW is re-armed, and the device returns to sleep without creating a false visitor event.
-* **`SLEEP-02` (Clean Cleanup Boundary):** Deep sleep shall only be entered after all peripheral rails are disabled, I2S audio playback has finished, and the button release guard is satisfied.
+The session ends at the earlier of:
 
----
+- 60 seconds since the last visitor/PTT activity; or
+- 90 seconds since the first press.
 
-## 2. 4-Layer System Architecture
+Firmware explicitly closes the session before sleep when the gateway is
+reachable. The gateway and dashboard infer closure from the same 60/90-second
+limits if that close request is lost.
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ 1. WAKE & SLEEP GUARD LAYER                                                 │
-│ - RTC Fast Wake Stub: Instant GPIO47 Status LED drive                       │
-│ - Level-Trigger Guard: Handle active-low hold via GPIO2 HIGH wake re-arm    │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                       │
-                                       ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ 2. REAL-TIME PHYSICAL INTERACTION PLANE (Fast Path)                         │
-│ - GPIO2 Debouncer -> Direct I2S Chime Task (Rewind & Play PCM buffer)       │
-│ - GPIO2 Debouncer -> Ring Animation Task (GPIO48 PWM fade-in)               │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                       │
-                                       ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ 3. VISITOR SESSION & LIFECYCLE FSM (Control Plane)                          │
-│                                                                             │
-│ [BOOT] ──► [EARLY_NOTIFY] ──► [RF_QUIESCE] ──► [CAMERA_CAPTURE]             │
-│                                                       │                     │
-│ [SLEEP] ◄── [PREPARE_SLEEP] ◄── [PTT_SESSION] ◄── [FULL_UPLOAD]             │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                       │
-                                       ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ 4. HARDWARE & SAFETY POLICY LAYER                                           │
-│ - Rule PWR-01: MUTEX(WIFI_RF_ACTIVE, CAM_PWR_EN)                            │
-│ - Rule BAT-01: Low-Battery Degradation Mode (<3.4V disables camera capture)│
-│ - Rule TIME-MAX: Absolute Hard Session Limit (90s)                          │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+Only the first press dispatches the indoor/Home Assistant chime and primary
+push notification. All later press triggers update the same persisted session.
 
----
+## First press
 
-## 3. Visitor Session Model (`VisitorSession`)
+1. GPIO2 must remain stable for 20 ms.
+2. Start the ring LED and play the local chime once, from start to finish.
+3. Start the authenticated early gateway trigger while the chime plays.
+4. If the visitor is still holding when the complete chime releases I2S, start
+   the microphone immediately and record until release or the 15-second cap.
+5. Quiesce RF, capture the initial QXGA snapshot, return the camera frame,
+   disable U9, reconnect RF, and upload available media.
+6. Open the bounded homeowner reply window.
 
-The device groups physical button interactions into a cohesive **Visitor Session**:
+A visitor recording is retained only when it contains at least 1.0 second of
+microphone audio. Releasing during the first chime, or before one second of
+post-chime microphone audio, is a normal short press and creates no empty WAV.
 
-* **Session Start (Press #1):**
-  * Generates a 32-character hex `visitor_session_id`.
-  * Triggers immediate local chime & ring LED animation.
-  * Sends early HTTP event alert to Gateway (`/api/events`).
-  * Powers off RF, captures QXGA JPEG to PSRAM, powers off camera.
-  * Reconnects RF, uploads multipart JPEG payload, and opens the Push-to-Talk (PTT) session window.
-* **Subsequent Press (Press #2+ during active session):**
-  * **Fast Path:** Instantly rewinds and plays local I2S PCM chime buffer (<20ms).
-  * **Fast Path:** Restarts GPIO48 LED ring animation.
-  * **FSM Control Path:** Increments `press_count` and queues follow-up remote alert cycles (`DOORBELL_REPRESS`) at a 6-second minimum spacing (`kRealertCooldownUs = 6.0s`), up to a maximum of 3 remote alert cycles per visitor session. Local chime feedback remains active for all represses.
-* **Session Termination:**
-  * Session termination calculation:
-    `effective_session_end = min(last_ptt_activity + 60000ms, session_start + 90000ms)`
-  * Session ends when `PTT_IDLE_TIMEOUT` (60s inactivity) or `SESSION_ABSOLUTE_MAX` (90s hard limit) expires, or when explicitly closed by the user from the dashboard. The 90s absolute hard limit always takes precedence regardless of button represses or PTT activity.
+## Later presses
 
----
+- Restart LED acknowledgement on every valid down-edge.
+- Never replay or rewind the local chime within the same session.
+- Start microphone capture on the down-edge, retaining it only after the
+  one-second threshold is crossed. Release creates one logical recording.
+- A release followed by another hold creates another ordered press/recording.
+- Refresh the snapshot only when the previous capture is at least 15 seconds
+  old. Otherwise register the press and upload only its visitor recording.
+- There is no three-press product limit. The 60/90-second session bounds and
+  memory/queue limits are the safety boundary.
 
-## 4. Lifecycle State Machine Transitions
+Recordings stay in bounded RAM through their upload attempt; firmware does not
+write visitor audio to flash.
 
-```mermaid
-stateDiagram-v2
-    [*] --> Booting
-    Booting --> EarlyNotify : Button/Motion Wake (Valid Batt)
-    Booting --> PreparingSleep : Invalid Wake / Batt Critical
+## Half-duplex arbitration
 
-    state EarlyNotify {
-        [*] --> WifiConnecting
-        WifiConnecting --> PostTrigger : Wi-Fi Associated
-        PostTrigger --> RfQuiesce : HTTP 201 Ack / Timeout
-    }
+Audio turns are never intentionally cut short except at the 90-second hard
+deadline:
 
-    EarlyNotify --> CameraPowerUp : Early Notify Finished
+1. The first local chime completes.
+2. An active visitor recording completes on release or at 15 seconds.
+3. A homeowner reply received during visitor capture is queued.
+4. The microphone is off while the queued homeowner WAV plays through the
+   speaker.
+5. An already-playing homeowner reply completes; a new visitor hold waits for
+   I2S and records afterward if the visitor is still holding.
+6. Session cleanup overrides queued work at the hard deadline.
 
-    state CameraPowerUp {
-        [*] --> AssertCamPwrEn : GPIO42 HIGH
-        AssertCamPwrEn --> Capturing : 2.8V/1.5V LDO Stabilized
-    }
+Dashboard PTT records a stored 16 kHz mono PCM WAV; it is not a live phone call.
+The gateway reports `ARMING` when it publishes the device command and reports
+reply delivery only after the ESP32 playback acknowledgement.
 
-    state Capturing {
-        [*] --> AcquireFrame : OV5640 QXGA Capture
-        AcquireFrame --> CopyToPsram : Frame Received
-        CopyToPsram --> CameraPowerDown : PSRAM Buffer Owned
-    }
+## Persisted and UI model
 
-    CameraPowerUp --> CameraPowerDown : Sensor Init / Power Fail
-
-    state CameraPowerDown {
-        [*] --> DeassertCamPwrEn : GPIO42 LOW
-        DeassertCamPwrEn --> WifiReconnect : Camera Rails Off
-    }
-
-    state WifiReconnect {
-        [*] --> ReassociateWifi
-        ReassociateWifi --> Uploading : Wi-Fi Connected / Timeout
-    }
-
-    state Uploading {
-        [*] --> PostMultipartPayload
-        PostMultipartPayload --> PttSession : Upload Finished / Failed
-    }
-
-    state PttSession {
-        [*] --> MqttSubscribe
-        MqttSubscribe --> PlayPttAudio : Audio Chunk Received
-        PlayPttAudio --> MqttSubscribe : Chunk Playback Complete
-        MqttSubscribe --> PreparingSleep : 60s Idle / 90s Hard Max / User Close
-    }
-
-    state PreparingSleep {
-        [*] --> StopPeripherals : Turn off LED/Audio/RF
-        StopPeripherals --> WaitingForRelease : Check GPIO2 State
-    }
-
-    state WaitingForRelease {
-        [*] --> CheckGpio2
-        CheckGpio2 --> EnterDeepSleep : GPIO2 HIGH (Released)
-        CheckGpio2 --> Gpio2HighWakeArm : GPIO2 LOW (Held > 5s)
-        Gpio2HighWakeArm --> EnterDeepSleep : RTC Flag = WAITING_RELEASE
-    }
-
-    EnterDeepSleep --> [*]
+```text
+Visitor session
+├── Press 1
+│   ├── optional snapshot
+│   └── zero or more visitor recordings
+├── Press 2
+│   └── zero or more visitor recordings
+└── homeowner reply turns
 ```
 
----
+`sessionId`, `pressId`, `recordingId`, and reply `messageId` are stable retry
+keys. The gateway emits lifecycle SSE updates (`session-started`,
+`press-started`, `press-ended`, `session-updated`, and `session-closed`). Active
+Event, Event Log, and Calendar render one grouped session, with an ordered
+conversation timeline instead of one card per upload.
 
-## 5. Timing Budgets & Subsystem Watchdogs
+Legacy event rows remain readable during rollout; rows with the historical
+`<sessionId>-<pressNumber>` pattern are grouped into closed sessions.
 
-| Timing Constant | Value | Purpose |
-| :--- | :--- | :--- |
-| `T_DEBOUNCE_STABLE` | `15 ms` | GPIO2 active-low stable state required for valid press recognition. |
-| `T_FAST_CHIME_LATENCY` | `< 20 ms` | Maximum delay between validated press and PCM audio buffer start. |
-| `T_WIFI_CONNECT_TIMEOUT` | `5000 ms` | Maximum time allowed to associate with Wi-Fi AP before fallback. |
-| `T_EARLY_POST_TIMEOUT` | `2500 ms` | Maximum time allowed for early HTTP trigger ACK before proceeding. |
-| `T_CAM_PWR_STABILIZE` | `50 ms` | Delay between driving `CAM_PWR_EN` (GPIO42) HIGH and probing OV5640 I2C. |
-| `T_CAMERA_CAPTURE_TIMEOUT`| `3000 ms` | Maximum time allowed to capture QXGA JPEG frame. |
-| `T_UPLOAD_TIMEOUT` | `8000 ms` | Maximum time allowed for multipart HTTP upload payload. |
-| `T_PTT_IDLE_TIMEOUT` | `60000 ms` | Inactivity timer for homeowner Push-to-Talk audio session. |
-| `T_SESSION_ABSOLUTE_MAX` | `90000 ms` | **Hard Session Watchdog:** Absolute maximum awake duration per event. |
+## Production constants
 
----
+| Constant | Value |
+| --- | ---: |
+| GPIO2 stable debounce | 20 ms |
+| Minimum retained visitor audio | 1,000 ms |
+| Maximum visitor recording | 15,000 ms |
+| Stale-snapshot threshold | 15,000 ms |
+| Session idle limit | 60,000 ms |
+| Session absolute limit | 90,000 ms |
+| Browser homeowner reply limit | 20,000 ms |
 
-## 6. Failure Recovery Matrix
+## Failure behavior
 
-| Subsystem Failure | Local Chime | Ring LED | Gateway Early Trigger | Photo Upload | Recovery Action |
-| :--- | :---: | :---: | :---: | :---: | :--- |
-| **Wi-Fi Unreachable** | ✅ Plays | ✅ Pulses | ❌ Timeout | ❌ Skipped | System continues local feedback; skips cloud stages; enters deep sleep after 5s timeout. |
-| **Camera Sensor Crash** | ✅ Plays | ✅ Pulses | ✅ Sent (<1s) | ❌ Skipped | Early HTTP trigger already alerted gateway. Upload skipped; camera rails cut immediately. |
-| **Gateway HTTP 500 Error** | ✅ Plays | ✅ Pulses | ❌ Unconfirmed| ✅ Retried | Upload payload includes event ID flag so gateway handles deduplication. |
-| **Low Battery (<3.4V)** | ✅ Short | ⚠️ Flash | ✅ Sent (LowBatt) | ❌ Disabled | Camera capture disabled to prevent LiPo brownout voltage collapse. |
-| **Button Held (>5s)** | ✅ Plays once | ✅ Pulses | ✅ Sent once | ✅ Uploaded | System enters sleep with GPIO2 wake-on-HIGH + RTC flag set to avoid wake loop. |
+- Wi-Fi failure never prevents the complete local chime or LED acknowledgement.
+- Camera failure leaves the early session/press alert intact and cuts camera
+  power; the dashboard may show snapshot pending.
+- A lost trigger or media response is retried with stable identifiers, so it
+  does not create another notification or recording.
+- Quiet speech is retained; firmware does not use voice-activity detection to
+  discard it.
+- The 15-second recording cap does not bypass stuck-button wake-on-release
+  protection.

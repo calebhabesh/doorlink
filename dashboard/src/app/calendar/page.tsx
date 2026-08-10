@@ -4,34 +4,27 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import MainLayout from '../../components/MainLayout';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Eye, ChevronDown } from 'lucide-react';
 import EventPreviewDrawer from '../../components/EventPreviewDrawer';
-
-interface DoorbellEvent {
-  id: number;
-  timestamp: string;
-  eventType: string;
-  imageKey: string;
-  audioKey?: string | null;
-}
+import { VisitorSession } from '../../lib/visitorSessions';
 
 const API_BASE_URL = `/api/events`;
 
 export default function CalendarView() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isExiting, setIsExiting] = useState(false);
-  const [events, setEvents] = useState<DoorbellEvent[]>([]);
+  const [sessions, setSessions] = useState<VisitorSession[]>([]);
   const [currentDate] = useState(new Date()); 
   const [viewDate, setViewDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1)); 
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
-  const [selectedEvent, setSelectedEvent] = useState<DoorbellEvent | null>(null);
+  const [selectedSession, setSelectedSession] = useState<VisitorSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const exitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}?size=1000`)
+    fetch(`${API_BASE_URL}/sessions?size=1000`)
       .then((res) => res.json())
       .then((data) => {
-        setEvents(data);
+        setSessions(data);
         setIsLoading(false);
       })
       .catch((err) => {
@@ -45,11 +38,11 @@ export default function CalendarView() {
 
   const selectedDayEvents = useMemo(() => {
     if (selectedDay === null) return [];
-    return events.filter(event => {
-      const d = new Date(event.timestamp);
+    return sessions.filter(session => {
+      const d = new Date(session.startedAt);
       return d.getDate() === selectedDay && d.getMonth() === viewMonth && d.getFullYear() === viewYear;
     });
-  }, [events, selectedDay, viewMonth, viewYear]);
+  }, [sessions, selectedDay, viewMonth, viewYear]);
 
   const handleDayClick = (day: number, hasEvent: boolean) => {
     setSelectedDay(day);
@@ -81,14 +74,14 @@ export default function CalendarView() {
 
   const eventsByDay = useMemo(() => {
     const map: Record<number, boolean> = {};
-    events.forEach(event => {
-      const d = new Date(event.timestamp);
+    sessions.forEach(session => {
+      const d = new Date(session.startedAt);
       if (d.getMonth() === viewMonth && d.getFullYear() === viewYear) {
         map[d.getDate()] = true;
       }
     });
     return map;
-  }, [events, viewMonth, viewYear]);
+  }, [sessions, viewMonth, viewYear]);
 
   const changeMonth = (offset: number) => {
     setViewDate(new Date(viewYear, viewMonth + offset, 1));
@@ -234,25 +227,25 @@ export default function CalendarView() {
 
             <div className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
               {selectedDayEvents.length > 0 ? (
-                selectedDayEvents.map(event => (
+                selectedDayEvents.map(session => (
                   <button 
-                    key={event.id} 
-                    onClick={() => setSelectedEvent(event)}
+                    key={session.sessionId}
+                    onClick={() => setSelectedSession(session)}
                     className="w-full text-left bg-zinc-900/50 border border-zinc-800 p-4 rounded-xl hover:border-emerald-500/50 transition-colors group flex flex-col"
                   >
                     <div className="flex justify-between items-start mb-2 w-full">
                       <span className="text-emerald-500 text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded">
-                        {event.eventType.replace('_', ' ')}
+                        {session.pressCount} {session.pressCount === 1 ? 'PRESS' : 'PRESSES'}
                       </span>
                       <div className="flex items-center gap-2">
-                         {event.audioKey && <span className="bg-zinc-800 px-1.5 py-0.5 rounded text-[9px] text-zinc-300 font-mono uppercase tracking-widest">Audio</span>}
+                         {session.recordingCount > 0 && <span className="bg-zinc-800 px-1.5 py-0.5 rounded text-[9px] text-zinc-300 font-mono uppercase tracking-widest">{session.recordingCount} Audio</span>}
                          <span className="text-zinc-500 font-mono text-[10px]">
-                           {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }).toUpperCase()}
+                           {new Date(session.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }).toUpperCase()}
                          </span>
                       </div>
                     </div>
                     <div className="flex justify-between items-center w-full">
-                      <p className="text-zinc-400 text-xs font-mono truncate max-w-[180px]">{event.imageKey}</p>
+                      <p className="text-zinc-400 text-xs font-mono truncate max-w-[180px]">{session.sessionId}</p>
                       <Eye className="w-4 h-4 text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                   </button>
@@ -267,8 +260,8 @@ export default function CalendarView() {
         )}
       </div>
       <EventPreviewDrawer 
-        event={selectedEvent} 
-        onClose={() => setSelectedEvent(null)} 
+        session={selectedSession}
+        onClose={() => setSelectedSession(null)}
       />
     </MainLayout>
   );

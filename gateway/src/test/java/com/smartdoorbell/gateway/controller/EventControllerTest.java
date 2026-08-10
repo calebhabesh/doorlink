@@ -3,10 +3,15 @@ package com.smartdoorbell.gateway.controller;
 import com.smartdoorbell.gateway.config.MqttGateway;
 import com.smartdoorbell.gateway.entity.Event;
 import com.smartdoorbell.gateway.repository.EventRepository;
+import com.smartdoorbell.gateway.repository.VisitorRecordingRepository;
+import com.smartdoorbell.gateway.repository.VisitorSessionRepository;
 import com.smartdoorbell.gateway.service.DeviceTelemetryService;
 import com.smartdoorbell.gateway.service.EventAlertService;
 import com.smartdoorbell.gateway.service.MinioService;
+import com.smartdoorbell.gateway.service.VisitorSessionService;
+import com.smartdoorbell.gateway.entity.VisitorSession;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -15,6 +20,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -26,6 +33,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @WebMvcTest(controllers = EventController.class, properties = "gateway.api.key=test-api-key")
 public class EventControllerTest {
@@ -40,6 +48,12 @@ public class EventControllerTest {
     private EventRepository eventRepository;
 
     @MockBean
+    private VisitorSessionRepository visitorSessionRepository;
+
+    @MockBean
+    private VisitorRecordingRepository visitorRecordingRepository;
+
+    @MockBean
     private MqttGateway mqttGateway;
     
     @MockBean
@@ -47,6 +61,15 @@ public class EventControllerTest {
 
     @MockBean
     private DeviceTelemetryService deviceTelemetryService;
+
+    @MockBean
+    private VisitorSessionService visitorSessionService;
+
+    @BeforeEach
+    void persistSessions() {
+        when(visitorSessionRepository.save(any(VisitorSession.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+    }
 
     @Test
     public void testUploadEventWithAudio() throws Exception {
@@ -61,14 +84,14 @@ public class EventControllerTest {
                 "audio",
                 "test.wav",
                 "audio/wav",
-                "test audio content".getBytes()
+                wav(1200)
         );
 
         when(minioService.uploadFile(imageFile,
                 "0123456789abcdef0123456789abcdef-image"))
                 .thenReturn("random-uuid.jpg");
         when(minioService.uploadFile(audioFile,
-                "0123456789abcdef0123456789abcdef-audio"))
+                "0123456789abcdef0123456789abcdef-visitor"))
                 .thenReturn("random-uuid.wav");
         when(eventRepository.save(any())).thenReturn(new Event());
 
@@ -86,12 +109,22 @@ public class EventControllerTest {
         verify(minioService).uploadFile(imageFile,
                 "0123456789abcdef0123456789abcdef-image");
         verify(minioService).uploadFile(audioFile,
-                "0123456789abcdef0123456789abcdef-audio");
+                "0123456789abcdef0123456789abcdef-visitor");
         verify(mqttGateway).sendToMqtt(anyString(), eq("doorbell/events"));
         verify(eventAlertService).completeUpload(
                 "0123456789abcdef0123456789abcdef", "DOORBELL_PRESS");
         verify(deviceTelemetryService).record("front-door", "1.0.0",
                 "DOORBELL_PRESS", "0123456789abcdef0123456789abcdef", -54);
+    }
+
+    private static byte[] wav(int durationMs) {
+        int dataLength = durationMs * 32;
+        ByteBuffer wav = ByteBuffer.allocate(44 + dataLength).order(ByteOrder.LITTLE_ENDIAN);
+        wav.put("RIFF".getBytes()).putInt(36 + dataLength).put("WAVE".getBytes());
+        wav.put("fmt ".getBytes()).putInt(16).putShort((short) 1).putShort((short) 1);
+        wav.putInt(16000).putInt(32000).putShort((short) 2).putShort((short) 16);
+        wav.put("data".getBytes()).putInt(dataLength);
+        return wav.array();
     }
 
     @Test
@@ -159,5 +192,24 @@ public class EventControllerTest {
                         """)
                 .header("X-API-Key", "test-api-key"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    public void testShortPressCompletesWithoutCreatingAudio() throws Exception {
+        String pressId = "0123456789abcdef0123456789abcdef-2";
+        Event press = new Event(pressId, LocalDateTime.now(),
+                "DOORBELL_REPRESS", Event.PENDING_IMAGE_KEY, null);
+        when(eventRepository.findByEventId(pressId)).thenReturn(Optional.of(press));
+
+        mockMvc.perform(post("/api/events/presses/{pressId}/complete", pressId)
+                        .contentType("application/json")
+                        .content("{\"durationMs\":640}")
+                        .header("X-API-Key", "test-api-key"))
+                .andExpect(status().isOk());
+
+        assertEquals("SHORT_PRESS", press.getLifecycleState());
+        assertEquals(640, press.getPressDurationMs());
+        verify(eventRepository).save(press);
+        verify(minioService, never()).uploadFile(any(), any());
     }
 }
