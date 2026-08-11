@@ -13,6 +13,9 @@ import { getSessionCoverImageKey, getSessionImages, upsertSession, VisitorSessio
 
 const API_BASE_URL = '/api/events';
 const MEDIA_BASE_URL = `${API_BASE_URL}/media`;
+const HISTORY_RETRY_DELAY_MS = 5000;
+
+type HistoryStatus = 'loading' | 'ready' | 'error';
 
 function sessionIsActive(session: VisitorSession, now: number) {
   return session.status === 'ACTIVE' && Date.parse(session.endsAt) > now;
@@ -27,6 +30,7 @@ export default function Home() {
   const [sessions, setSessions] = useState<VisitorSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
+  const [historyStatus, setHistoryStatus] = useState<HistoryStatus>('loading');
   const [latestLiveSessionId, setLatestLiveSessionId] = useState<string | null>(null);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [now, setNow] = useState(Date.now());
@@ -43,16 +47,32 @@ export default function Home() {
   useEffect(() => setIsImageLoaded(false), [activeCoverImageKey]);
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/sessions?size=100`)
-      .then((response) => {
+    let cancelled = false;
+    let historyRetryTimer: number | undefined;
+
+    const loadSessionHistory = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/sessions?size=100`, { cache: 'no-store' });
         if (!response.ok) throw new Error(`Session history returned ${response.status}`);
-        return response.json();
-      })
-      .then((data: VisitorSession[]) => {
-        setSessions(data);
+        const data: VisitorSession[] = await response.json();
+        if (cancelled) return;
+
+        // Preserve any live session update that arrived while history was loading.
+        setSessions((current) => current.reduce(
+          (merged, session) => upsertSession(merged, session),
+          data,
+        ));
         setActiveSessionId((current) => current ?? data[0]?.sessionId ?? null);
-      })
-      .catch((error) => console.error('Failed to fetch visitor sessions', error));
+        setHistoryStatus('ready');
+      } catch (error) {
+        if (cancelled) return;
+        console.error('Failed to fetch visitor sessions; retrying', error);
+        setHistoryStatus('error');
+        historyRetryTimer = window.setTimeout(loadSessionHistory, HISTORY_RETRY_DELAY_MS);
+      }
+    };
+
+    void loadSessionHistory();
 
     const eventSource = new EventSource('/stream');
     eventSource.onopen = () => setConnectionStatus('connected');
@@ -69,7 +89,11 @@ export default function Home() {
         console.error('Failed to parse session update', error);
       }
     });
-    return () => eventSource.close();
+    return () => {
+      cancelled = true;
+      if (historyRetryTimer !== undefined) window.clearTimeout(historyRetryTimer);
+      eventSource.close();
+    };
   }, []);
 
   const isMostRecent = activeSession?.sessionId === sessions[0]?.sessionId;
@@ -78,16 +102,13 @@ export default function Home() {
 
   return (
     <MainLayout status={connectionStatus} breadcrumbs={[{ label: 'Dashboard' }, { label: 'Active Event', active: true }]}>
-      {!activeSession ? (
-        <div className="flex flex-1 items-center justify-center">
-          <p className="font-mono text-sm uppercase tracking-widest text-zinc-500">Awaiting first visitor session…</p>
-        </div>
-      ) : (
-        <div className="mx-auto grid w-full max-w-[1450px] grid-cols-1 items-start gap-6 lg:grid-cols-12">
-          <div className="block lg:hidden"><ClockGlobeCard /></div>
+      <div className="mx-auto grid w-full max-w-[1450px] grid-cols-1 items-start gap-6 lg:grid-cols-12">
+        <div className="block lg:hidden"><ClockGlobeCard /></div>
 
-          <section className="flex min-w-0 flex-col gap-6 lg:col-span-8">
-            <article className="overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 shadow-2xl">
+        <section className="flex min-w-0 flex-col gap-6 lg:col-span-8">
+          {activeSession ? (
+            <>
+              <article className="overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 shadow-2xl">
               <div className="relative aspect-[4/3] w-full overflow-hidden border-b border-zinc-800 bg-zinc-900">
                 {activeCoverImageKey ? (
                   <>
@@ -133,19 +154,54 @@ export default function Home() {
                   <SessionTimeline session={activeSession} />
                 </div>
               </div>
-            </article>
-            {canReply && <QuickResponsesCard />}
-          </section>
+              </article>
+              {canReply && <QuickResponsesCard />}
+            </>
+          ) : (
+            <article className="overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 shadow-2xl">
+              <div className="relative aspect-[4/3] w-full overflow-hidden border-b border-zinc-800 bg-zinc-900">
+                <div className="absolute inset-0 grid place-items-center px-6 text-center">
+                  <div>
+                    <div className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-2xl border border-zinc-800 bg-zinc-950/70 text-zinc-500 shadow-lg">
+                      <Camera className="h-8 w-8" />
+                    </div>
+                    <p className="text-lg font-black text-zinc-200">
+                      {historyStatus === 'loading' ? 'Loading recent sessions' : historyStatus === 'error' ? 'Session history unavailable' : 'No active event'}
+                    </p>
+                    <p className="mx-auto mt-2 max-w-md font-mono text-xs uppercase leading-6 tracking-wider text-zinc-500">
+                      {historyStatus === 'error' ? 'Unable to reach the gateway. Retrying automatically.' : 'The next doorbell press will appear here automatically.'}
+                    </p>
+                  </div>
+                </div>
+                <div className="absolute right-5 top-5 rounded-full border border-zinc-700 bg-zinc-950/70 px-4 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-zinc-400 backdrop-blur">
+                  Standby
+                </div>
+              </div>
 
-          <aside className="flex min-w-0 flex-col gap-6 lg:col-span-4">
-            <div className="hidden lg:block"><ClockGlobeCard /></div>
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-6 shadow-lg">
-              <div className="mb-4 flex items-center gap-3 border-b border-zinc-800 pb-4 text-xs font-black tracking-[0.2em] text-zinc-500"><Clock3 className="h-4 w-4 text-emerald-400" /> Recent Sessions</div>
-              <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
-                {sessions.map((session) => {
+              <div className="bg-zinc-900/40 p-5 sm:p-8">
+                <p className="mb-2 text-[10px] font-black tracking-[0.22em] text-emerald-400">Visitor Session</p>
+                <h1 className="text-2xl font-black tracking-tight text-zinc-100 sm:text-3xl">
+                  {historyStatus === 'error' ? 'Reconnecting to Doorlink' : 'Waiting for a visitor'}
+                </h1>
+                <p className="mt-3 max-w-xl text-sm leading-6 text-zinc-500">
+                  {historyStatus === 'ready'
+                    ? 'There are no saved sessions yet. The dashboard will update when a new event arrives.'
+                    : 'Saved sessions will appear here as soon as the gateway connection is restored.'}
+                </p>
+              </div>
+            </article>
+          )}
+        </section>
+
+        <aside className="flex min-w-0 flex-col gap-6 lg:col-span-4">
+          <div className="hidden lg:block"><ClockGlobeCard /></div>
+          <div className="rounded-3xl border border-zinc-800 bg-zinc-950/60 p-6 shadow-lg">
+            <div className="mb-4 flex items-center gap-3 border-b border-zinc-800 pb-4 text-xs font-black tracking-[0.2em] text-zinc-500"><Clock3 className="h-4 w-4 text-emerald-400" /> Recent Sessions</div>
+            <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
+              {sessions.length > 0 ? sessions.map((session) => {
                   const coverImageKey = getSessionCoverImageKey(session);
                   const imageCount = getSessionImages(session).length;
-                  const isSelected = activeSession.sessionId === session.sessionId;
+                  const isSelected = activeSession?.sessionId === session.sessionId;
                   return (
                   <button key={session.sessionId} onClick={() => setActiveSessionId(session.sessionId)} className={`group relative w-full overflow-hidden rounded-2xl border p-3 text-left transition ${isSelected ? 'border-emerald-500/50 bg-gradient-to-r from-emerald-500/[0.09] to-zinc-950 shadow-[0_0_24px_rgba(16,185,129,0.07)]' : 'border-zinc-800 bg-zinc-950 hover:border-zinc-700 hover:bg-zinc-900/70'} ${latestLiveSessionId === session.sessionId ? 'animate-slide-in' : ''}`}>
                     {isSelected && <span className="absolute inset-y-3 left-0 w-0.5 rounded-full bg-emerald-400" />}
@@ -172,13 +228,22 @@ export default function Home() {
                       </div>
                     </div>
                   </button>
-                );})}
-              </div>
+                );}) : (
+                <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-950/50 px-5 py-8 text-center">
+                  <Clock3 className="mx-auto h-6 w-6 text-zinc-600" />
+                  <p className="mt-3 text-sm font-bold text-zinc-300">
+                    {historyStatus === 'ready' ? 'No session history' : 'Session history unavailable'}
+                  </p>
+                  <p className="mt-2 text-xs leading-5 text-zinc-600">
+                    {historyStatus === 'ready' ? 'Saved visitor sessions will be listed here.' : 'Waiting for the gateway connection.'}
+                  </p>
+                </div>
+              )}
             </div>
-            <div className="hidden md:block"><ShipmentsCard /></div>
-          </aside>
-        </div>
-      )}
+          </div>
+          <div className="hidden md:block"><ShipmentsCard /></div>
+        </aside>
+      </div>
     </MainLayout>
   );
 }
