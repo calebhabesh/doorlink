@@ -109,7 +109,7 @@ export default function HouseholdPage() {
       <div className="mx-auto w-full max-w-5xl space-y-6">
         <header className="flex items-start gap-4">
           <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-3 text-emerald-400"><Users className="h-6 w-6" /></div>
-          <div><h1 className="text-2xl font-black text-white">Household access</h1><p className="mt-1 text-sm text-zinc-400">Enroll browsers once, then revoke individual devices whenever needed.</p></div>
+          <div><h1 className="text-2xl font-black text-white">Household Access</h1><p className="mt-1 text-sm text-zinc-400">Enroll browsers once, then revoke individual devices whenever needed.</p></div>
         </header>
 
         {error && <div className="flex items-center justify-between rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-300"><span>{error}</span><button onClick={() => setError(null)}><X className="h-4 w-4" /></button></div>}

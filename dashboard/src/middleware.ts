@@ -32,17 +32,21 @@ async function bootstrapRequired(): Promise<boolean> {
   }
 }
 
-async function deviceIsAuthorized(request: NextRequest): Promise<boolean> {
+async function checkDeviceSession(request: NextRequest): Promise<{ authorized: boolean; error?: boolean }> {
   const cookie = request.headers.get('cookie');
-  if (!cookie || !request.cookies.has(DEVICE_COOKIE)) return false;
+  if (!cookie || !request.cookies.has(DEVICE_COOKIE)) return { authorized: false, error: false };
   try {
     const response = await fetch(gatewayUrl('/api/household/session'), {
       headers: { cookie },
       cache: 'no-store',
     });
-    return response.ok;
+    if (response.ok) return { authorized: true, error: false };
+    if (response.status === 401 || response.status === 403) {
+      return { authorized: false, error: false };
+    }
+    return { authorized: false, error: true };
   } catch {
-    return false;
+    return { authorized: false, error: true };
   }
 }
 
@@ -81,18 +85,27 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  const session = await checkDeviceSession(request);
+
   if (path === '/setup') {
-    if (await deviceIsAuthorized(request)) {
+    if (session.authorized) {
       return NextResponse.redirect(new URL('/', request.url));
     }
     return NextResponse.next();
   }
 
-  if (await deviceIsAuthorized(request)) return NextResponse.next();
+  if (session.authorized) return NextResponse.next();
+
+  if (session.error) {
+    // Gateway is temporarily down or restarting: preserve the device cookie
+    return NextResponse.next();
+  }
 
   const destination = await bootstrapRequired() ? '/setup' : '/access';
   const response = NextResponse.redirect(new URL(destination, request.url));
-  response.cookies.delete(DEVICE_COOKIE);
+  if (request.cookies.has(DEVICE_COOKIE)) {
+    response.cookies.delete(DEVICE_COOKIE);
+  }
   return response;
 }
 
