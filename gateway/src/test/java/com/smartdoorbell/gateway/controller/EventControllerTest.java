@@ -9,6 +9,7 @@ import com.smartdoorbell.gateway.service.DeviceTelemetryService;
 import com.smartdoorbell.gateway.service.EventAlertService;
 import com.smartdoorbell.gateway.service.MinioService;
 import com.smartdoorbell.gateway.service.VisitorSessionService;
+import com.smartdoorbell.gateway.service.HouseholdAuthService;
 import com.smartdoorbell.gateway.entity.VisitorSession;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,6 +32,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -64,6 +66,9 @@ public class EventControllerTest {
 
     @MockBean
     private VisitorSessionService visitorSessionService;
+
+    @MockBean
+    private HouseholdAuthService householdAuthService;
 
     @BeforeEach
     void persistSessions() {
@@ -158,6 +163,12 @@ public class EventControllerTest {
                         {"eventId":"0123456789abcdef0123456789abcdef",
                          "eventType":"DOORBELL_PRESS"}
                         """))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    public void testEventHistoryRequiresAnEnrolledBrowser() throws Exception {
+        mockMvc.perform(get("/api/events"))
                 .andExpect(status().isUnauthorized());
     }
 

@@ -1,61 +1,94 @@
-# Cloudflare Tunnel & Zero Trust Setup
+# Cloudflare Tunnel and household device access
 
-This guide details how to securely expose the Smart Doorbell Dashboard (`http://localhost:3000`) to the public internet without opening any router ports, protected by an email-based One-Time Password (OTP) whitelist.
+Doorlink uses Cloudflare Tunnel for private origin connectivity and its own
+revocable household-device sessions for browser authentication. Cloudflare
+Access email OTP must not sit in front of the hostname: its one-month maximum
+session would reintroduce the login prompt before Doorlink can see the device
+cookie.
 
-## Phase 1: Create the Tunnel (Cloudflare Dashboard)
+## Traffic path
 
-1. Log into the [Cloudflare Zero Trust Dashboard](https://one.dash.cloudflare.com/).
-2. On the left sidebar, navigate to **Networks > Tunnels**.
-3. Click **Create a tunnel**.
-4. Choose **Cloudflared** as the connector type and click Next.
-5. Name the tunnel (e.g., `doorbell-pi`) and click **Save tunnel**.
-6. Cloudflare will display an installation command for different operating systems.
+`doorbell.example.com` → Cloudflare Tunnel → Next.js on `localhost:3000` →
+Spring gateway on `127.0.0.1:8080`
 
-## Phase 2: Install the Tunnel (Raspberry Pi)
+No router port is opened. Cloudflare still provides DNS proxying, TLS, Tunnel,
+and normal edge/WAF protections. Doorlink authenticates every dashboard page,
+API read/write, event stream, and media response.
 
-SSH into your Raspberry Pi (`192.168.1.10`).
+## 1. Keep or create the tunnel
 
-1. Select the **Debian** environment in the Cloudflare UI and choose the **64-bit** architecture (if you are running a 64-bit Pi OS, otherwise 32-bit/ARMv7).
-2. Copy the provided command that looks like this:
-   ```bash
-   curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb
-   sudo dpkg -i cloudflared.deb
-   sudo cloudflared service install <YOUR_SECRET_TOKEN>
-   ```
-3. Run those commands on the Pi. Once installed, the daemon will automatically start and connect to Cloudflare.
-4. Back in the Cloudflare Dashboard, the connector status should change to **Connected**. Click **Next**.
+In **Cloudflare Zero Trust → Networks → Tunnels**, keep the `doorbell-pi`
+connector and its public hostname:
 
-## Phase 3: Route the Traffic
+- Hostname: `doorbell.example.com`
+- Service: `HTTP`
+- URL: `localhost:3000`
 
-1. In the **Public Hostnames** tab, configure the routing:
-   * **Subdomain:** `doorbell`
-   * **Domain:** `calebhabesh.com`
-   * **Path:** *(leave blank)*
-   * **Service Type:** `HTTP`
-   * **URL:** `localhost:3000` (Since `cloudflared` is running on the same Pi as the dashboard)
-2. Click **Save hostname**.
+If the connector is not installed yet, use the Cloudflare-provided ARM64
+installation command on the Raspberry Pi. Never commit its tunnel token.
 
-At this point, visiting `https://doorbell.example.com` will load your Next.js dashboard, but it is entirely public.
+## 2. Remove the interactive Access challenge
 
-## Phase 4: Secure with Cloudflare Access (Zero Trust)
+In **Zero Trust → Access → Applications**, remove the existing Smart Doorbell
+self-hosted application, or add a highest-priority **Bypass** policy for this
+exact hostname. Confirm in a private browser that Cloudflare no longer displays
+an email/OTP page and Doorlink displays its own “device needs an invitation”
+screen instead.
 
-Now, we put the authentication wall in front of it.
+Do not point the tunnel directly at port 8080. Only the Next.js service on port
+3000 should be public through the tunnel.
 
-1. In the Zero Trust left sidebar, go to **Access > Applications**.
-2. Click **Add an application** and select **Self-hosted**.
-3. **Application Configuration:**
-   * **Application name:** `Smart Doorbell`
-   * **Session Duration:** `1 Month` (so you don't have to constantly log in on your phone)
-   * **Application domain:** `doorbell.example.com`
-   * Click **Next**.
-4. **Add a Policy:**
-   * **Policy name:** `Allow Household Emails`
-   * **Action:** `Allow`
-   * **Include rules:** 
-     * *Selector:* `Emails` (or `Emails ending in` for a whole domain)
-     * *Value:* Type the allowed email addresses (e.g., `youremail@example.com`, `partner@example.com`).
-   * Click **Next** and then **Add application**.
+## 3. Configure the one-time owner bootstrap secret
 
-## Result
+On a trusted machine, generate a secret:
 
-Whenever someone clicks the link in the `ntfy` push notification (`https://doorbell.example.com`), they will be intercepted by a Cloudflare login screen. Only users whose emails are in the policy can request a login code. Once they enter the OTP sent to their email, they gain access to the dashboard for 1 month.
+```bash
+openssl rand -base64 32
+```
+
+Set it as `HOUSEHOLD_BOOTSTRAP_TOKEN` in the Pi checkout's ignored `.env` file,
+then deploy/restart both gateway and dashboard. Visit:
+
+```text
+https://doorbell.example.com/setup
+```
+
+Enter the secret, owner details, and a recognizable device name. After setup,
+remove `HOUSEHOLD_BOOTSTRAP_TOKEN` from `.env`; the bootstrap endpoint is also
+permanently disabled by the stored owner record.
+
+For isolated local development, provide the same variable when starting the
+stack, for example `HOUSEHOLD_BOOTSTRAP_TOKEN=... ./scripts/run-dev.sh`.
+
+The gateway stores only SHA-256 hashes of session and enrollment tokens.
+Browser cookies are Secure, HttpOnly, SameSite=Lax, and renewed while a device
+is used. The browser's practical 400-day cookie cap is handled by renewal, so an
+active device remains signed in without a monthly prompt.
+
+## 4. Add household devices
+
+Open **Household** in Doorlink:
+
+1. Add a person's name and email.
+2. Copy the generated single-use enrollment link and send it privately.
+3. They open the link on the exact phone/browser they want to enroll and give
+   that device a name.
+4. Repeat **New device link** for another browser or phone.
+
+Enrollment links expire after 72 hours by default. They contain a short-lived
+secret, so do not post them publicly. ntfy action links contain no bearer token;
+they open the ordinary dashboard URL, where the device cookie authenticates the
+browser.
+
+The owner can revoke one device or remove a member (which revokes every device).
+Revoked devices immediately lose new API and media access, any open event stream
+is closed by the next 20-second heartbeat, and the browser is redirected to the
+enrollment screen on its next page request.
+
+## ntfy membership
+
+Doorlink's current `ntfy.sh` topic is still a shared, hard-to-guess topic. Device
+revocation in Doorlink does not remotely unsubscribe the ntfy mobile app. If
+notification subscription must be revoked per person too, use authenticated
+ntfy users/topic ACLs (hosted or self-hosted) and manage those subscriptions
+separately. Never put a permanent Doorlink session token in an ntfy URL.

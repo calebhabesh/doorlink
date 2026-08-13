@@ -167,6 +167,6 @@ For the ESP32-S3 firmware to successfully communicate with this Pi, ensure your 
 
 ## External Access (WAN)
 
-To securely access the Next.js Dashboard and Gateway API from outside the local network without exposing ports to the public internet, we utilize **Cloudflare Tunnels** (`cloudflared`). 
+To securely access the Next.js Dashboard and Gateway API from outside the local network without exposing ports to the public internet, we use **Cloudflare Tunnel** (`cloudflared`) plus Doorlink's revocable household-device sessions.
 
 See `docs/cloudflare-tunnel.md` for the Cloudflare Tunnel and Access configuration.

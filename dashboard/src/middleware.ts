@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+const DEVICE_COOKIE = 'doorlink_device';
+
+function gatewayUrl(path: string): URL {
+  return new URL(path, process.env.GATEWAY_URL || 'http://127.0.0.1:8080');
+}
+
 function hasSameOrigin(request: NextRequest, origin: string): boolean {
   try {
     const originUrl = new URL(origin);
@@ -13,10 +19,37 @@ function hasSameOrigin(request: NextRequest, origin: string): boolean {
   }
 }
 
-export function middleware(request: NextRequest) {
+async function bootstrapRequired(): Promise<boolean> {
+  try {
+    const response = await fetch(gatewayUrl('/api/household/bootstrap/status'), {
+      cache: 'no-store',
+    });
+    if (!response.ok) return false;
+    const status: { needsBootstrap: boolean } = await response.json();
+    return status.needsBootstrap;
+  } catch {
+    return false;
+  }
+}
+
+async function deviceIsAuthorized(request: NextRequest): Promise<boolean> {
+  const cookie = request.headers.get('cookie');
+  if (!cookie || !request.cookies.has(DEVICE_COOKIE)) return false;
+  try {
+    const response = await fetch(gatewayUrl('/api/household/session'), {
+      headers: { cookie },
+      cache: 'no-store',
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
-  if (path.startsWith('/api')) {
+  if (path.startsWith('/api/')) {
     const gatewayReadOnly = process.env.GATEWAY_READ_ONLY === 'true';
     const methodIsReadOnly = request.method === 'GET'
       || request.method === 'HEAD'
@@ -25,10 +58,7 @@ export function middleware(request: NextRequest) {
     if (gatewayReadOnly && !methodIsReadOnly) {
       return NextResponse.json(
         { error: 'The development gateway proxy is read-only.' },
-        {
-          status: 405,
-          headers: { Allow: 'GET, HEAD, OPTIONS' },
-        },
+        { status: 405, headers: { Allow: 'GET, HEAD, OPTIONS' } },
       );
     }
 
@@ -37,30 +67,35 @@ export function middleware(request: NextRequest) {
       return new NextResponse('Invalid CORS request', { status: 403 });
     }
 
-    const backendUrl = process.env.GATEWAY_URL || 'http://127.0.0.1:8080';
-    const url = new URL(request.nextUrl.pathname + request.nextUrl.search, backendUrl);
-
+    const url = gatewayUrl(request.nextUrl.pathname + request.nextUrl.search);
     const requestHeaders = new Headers(request.headers);
-    if (gatewayReadOnly) {
-      requestHeaders.delete('X-API-Key');
-    } else {
-      const apiKey = process.env.GATEWAY_API_KEY || 'default-dev-api-key';
-      requestHeaders.set('X-API-Key', apiKey);
-    }
-    // The browser talks to this same-origin proxy, not directly to Spring.
-    // Do not make Spring apply browser CORS policy to the internal rewrite.
+    // Never turn an Internet-facing browser request into a hardware request.
+    // The ESP32 talks to the gateway directly on the LAN with this header.
+    requestHeaders.delete('X-API-Key');
     requestHeaders.delete('origin');
 
-    return NextResponse.rewrite(url, {
-      request: {
-        headers: requestHeaders,
-      },
-    });
+    return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
   }
 
-  return NextResponse.next();
+  if (path === '/access' || path.startsWith('/enroll/')) {
+    return NextResponse.next();
+  }
+
+  if (path === '/setup') {
+    if (await deviceIsAuthorized(request)) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+    return NextResponse.next();
+  }
+
+  if (await deviceIsAuthorized(request)) return NextResponse.next();
+
+  const destination = await bootstrapRequired() ? '/setup' : '/access';
+  const response = NextResponse.redirect(new URL(destination, request.url));
+  response.cookies.delete(DEVICE_COOKIE);
+  return response;
 }
 
 export const config = {
-  matcher: '/api/:path*',
+  matcher: ['/((?!_next/static|_next/image|icon.svg|favicon.ico).*)'],
 };

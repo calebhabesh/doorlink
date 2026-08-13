@@ -9,6 +9,9 @@ import com.smartdoorbell.gateway.repository.SystemSettingsRepository;
 import com.smartdoorbell.gateway.repository.VisitorSessionRepository;
 import com.smartdoorbell.gateway.service.MinioService;
 import com.smartdoorbell.gateway.service.SystemHealthService;
+import com.smartdoorbell.gateway.service.HouseholdAuthService;
+import com.smartdoorbell.gateway.entity.HouseholdMember;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -52,6 +55,7 @@ class SystemControllerTest {
     @MockBean private IntercomMessageRepository intercomMessageRepository;
     @MockBean private MinioService minioService;
     @MockBean private EventController eventController;
+    @MockBean private HouseholdAuthService householdAuthService;
 
     @BeforeEach
     void configureActiveEvent() {
@@ -60,6 +64,10 @@ class SystemControllerTest {
         when(eventRepository.findById(42L)).thenReturn(Optional.of(event));
         when(mqttConfig.getPttAudioTopic()).thenReturn("doorbell/commands/audio");
         when(intercomMessageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(householdAuthService.authenticate(eq("test-device-session"), any()))
+                .thenReturn(Optional.of(new HouseholdAuthService.Principal(
+                        7L, 3L, "Test Owner", "owner@example.com",
+                        HouseholdMember.Role.OWNER, "Test browser")));
     }
 
     @Test
@@ -67,7 +75,8 @@ class SystemControllerTest {
         mockMvc.perform(post("/api/system/ptt/start")
                         .contentType("application/json")
                         .content("{\"eventId\":42}")
-                        .header("X-API-Key", "test-api-key"))
+                        .cookie(new Cookie(HouseholdAuthService.COOKIE_NAME,
+                                "test-device-session")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("ARMING"));
 
@@ -75,6 +84,15 @@ class SystemControllerTest {
         verify(mqttGateway).sendToMqtt(payload.capture(), eq("doorbell/commands/audio"));
         assertTrue(payload.getValue().contains("\"type\":\"PTT_START\""));
         assertTrue(payload.getValue().contains(EVENT_KEY));
+    }
+
+    @Test
+    void pttDoesNotAcceptTheHardwareKeyAsBrowserAuthentication() throws Exception {
+        mockMvc.perform(post("/api/system/ptt/start")
+                        .contentType("application/json")
+                        .content("{\"eventId\":42}")
+                        .header("X-API-Key", "test-api-key"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -89,7 +107,8 @@ class SystemControllerTest {
                         .file(audio)
                         .param("eventId", "42")
                         .param("durationMs", "1000")
-                        .header("X-API-Key", "test-api-key"))
+                        .cookie(new Cookie(HouseholdAuthService.COOKIE_NAME,
+                                "test-device-session")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("PLAYBACK_QUEUED"))
                 .andExpect(jsonPath("$.durationMs").value(1000));
@@ -111,7 +130,8 @@ class SystemControllerTest {
                         .file(audio)
                         .param("eventId", "42")
                         .param("durationMs", "1000")
-                        .header("X-API-Key", "test-api-key"))
+                        .cookie(new Cookie(HouseholdAuthService.COOKIE_NAME,
+                                "test-device-session")))
                 .andExpect(status().isBadRequest());
     }
 

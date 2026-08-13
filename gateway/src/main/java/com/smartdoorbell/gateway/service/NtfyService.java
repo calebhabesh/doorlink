@@ -44,6 +44,9 @@ public class NtfyService {
         boolean motion = "PIR_MOTION".equals(eventType);
         headers.set("Title", motion ? "Motion detected at the door" : "Someone rang the doorbell");
         headers.set("Tags", motion ? "doorbell, motion" : "doorbell, bell");
+        // Tapping the notification itself opens Doorlink; the action remains
+        // available for ntfy clients that do not honor the Click header.
+        headers.set("Click", dashboardUrl);
         headers.set("Actions", "view, Open Dashboard, " + dashboardUrl);
 
         // The fast trigger intentionally runs before camera capture, so never

@@ -13,6 +13,7 @@ import com.smartdoorbell.gateway.service.DeviceTelemetryService;
 import com.smartdoorbell.gateway.service.EventAlertService;
 import com.smartdoorbell.gateway.service.MinioService;
 import com.smartdoorbell.gateway.service.VisitorSessionService;
+import com.smartdoorbell.gateway.service.HouseholdAuthService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -35,6 +36,7 @@ import java.util.regex.Pattern;
 import java.util.UUID;
 
 import com.fasterxml.jackson.databind.SerializationFeature;
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/events")
@@ -49,7 +51,8 @@ public class EventController {
     private final DeviceTelemetryService deviceTelemetryService;
     private final VisitorSessionService visitorSessionService;
     private final ObjectMapper objectMapper;
-    private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
+    private final HouseholdAuthService householdAuthService;
+    private final List<AuthenticatedEmitter> emitters = new CopyOnWriteArrayList<>();
 
     @Value("${mqtt.topic.events:doorbell/events}")
     private String eventsTopic;
@@ -70,7 +73,8 @@ public class EventController {
                            MqttGateway mqttGateway,
                            EventAlertService eventAlertService,
                            DeviceTelemetryService deviceTelemetryService,
-                           VisitorSessionService visitorSessionService) {
+                           VisitorSessionService visitorSessionService,
+                           HouseholdAuthService householdAuthService) {
         this.minioService = minioService;
         this.eventRepository = eventRepository;
         this.sessionRepository = sessionRepository;
@@ -79,6 +83,7 @@ public class EventController {
         this.eventAlertService = eventAlertService;
         this.deviceTelemetryService = deviceTelemetryService;
         this.visitorSessionService = visitorSessionService;
+        this.householdAuthService = householdAuthService;
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
         this.objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
@@ -411,8 +416,15 @@ public class EventController {
     }
 
     @GetMapping(path = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public ResponseEntity<SseEmitter> streamEvents() {
+    public ResponseEntity<SseEmitter> streamEvents(HttpServletRequest request) {
         SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
+        Object authentication = request.getAttribute(
+                HouseholdAuthService.PRINCIPAL_ATTRIBUTE);
+        if (!(authentication instanceof HouseholdAuthService.Principal principal)) {
+            return ResponseEntity.status(401).build();
+        }
+        AuthenticatedEmitter authenticatedEmitter =
+                new AuthenticatedEmitter(emitter, principal.sessionId());
         
         try {
             emitter.send(SseEmitter.event().comment("connection-open"));
@@ -420,14 +432,14 @@ public class EventController {
                     .name("init")
                     .data("Connection established"));
             
-            this.emitters.add(emitter);
+            this.emitters.add(authenticatedEmitter);
         } catch (IOException e) {
             return ResponseEntity.internalServerError().build();
         }
 
-        emitter.onCompletion(() -> this.emitters.remove(emitter));
-        emitter.onTimeout(() -> this.emitters.remove(emitter));
-        emitter.onError((ex) -> this.emitters.remove(emitter));
+        emitter.onCompletion(() -> this.emitters.remove(authenticatedEmitter));
+        emitter.onTimeout(() -> this.emitters.remove(authenticatedEmitter));
+        emitter.onError((ex) -> this.emitters.remove(authenticatedEmitter));
 
         org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
         headers.add("Cache-Control", "no-cache, no-store, max-age=0, must-revalidate");
@@ -451,14 +463,21 @@ public class EventController {
 
     @Scheduled(fixedRate = 20000)
     public void sendHeartbeat() {
-        List<SseEmitter> deadEmitters = new ArrayList<>();
-        for (SseEmitter emitter : emitters) {
+        List<AuthenticatedEmitter> deadEmitters = new ArrayList<>();
+        for (AuthenticatedEmitter authenticatedEmitter : emitters) {
+            SseEmitter emitter = authenticatedEmitter.emitter();
+            if (!householdAuthService.sessionIsActive(
+                    authenticatedEmitter.deviceSessionId())) {
+                emitter.complete();
+                deadEmitters.add(authenticatedEmitter);
+                continue;
+            }
             try {
                 emitter.send(SseEmitter.event()
                         .name("heartbeat")
                         .data("keep-alive"));
             } catch (IOException e) {
-                deadEmitters.add(emitter);
+                deadEmitters.add(authenticatedEmitter);
             }
         }
         emitters.removeAll(deadEmitters);
@@ -470,14 +489,20 @@ public class EventController {
     }
 
     private void broadcastDoorbellEvent(String payload) {
-        List<SseEmitter> deadEmitters = new ArrayList<>();
-        for (SseEmitter emitter : emitters) {
+        List<AuthenticatedEmitter> deadEmitters = new ArrayList<>();
+        for (AuthenticatedEmitter authenticatedEmitter : emitters) {
+            if (!householdAuthService.sessionIsActive(
+                    authenticatedEmitter.deviceSessionId())) {
+                authenticatedEmitter.emitter().complete();
+                deadEmitters.add(authenticatedEmitter);
+                continue;
+            }
             try {
-                emitter.send(SseEmitter.event()
+                authenticatedEmitter.emitter().send(SseEmitter.event()
                         .name("doorbell-event")
                         .data(payload));
             } catch (IOException | IllegalStateException e) {
-                deadEmitters.add(emitter);
+                deadEmitters.add(authenticatedEmitter);
             }
         }
         emitters.removeAll(deadEmitters);
@@ -488,13 +513,20 @@ public class EventController {
         try {
             String payload = objectMapper.writeValueAsString(
                     visitorSessionService.view(session));
-            List<SseEmitter> deadEmitters = new ArrayList<>();
-            for (SseEmitter emitter : emitters) {
+            List<AuthenticatedEmitter> deadEmitters = new ArrayList<>();
+            for (AuthenticatedEmitter authenticatedEmitter : emitters) {
+                if (!householdAuthService.sessionIsActive(
+                        authenticatedEmitter.deviceSessionId())) {
+                    authenticatedEmitter.emitter().complete();
+                    deadEmitters.add(authenticatedEmitter);
+                    continue;
+                }
                 try {
+                    SseEmitter emitter = authenticatedEmitter.emitter();
                     emitter.send(SseEmitter.event().name(lifecycle).data(payload));
                     emitter.send(SseEmitter.event().name("session-update").data(payload));
                 } catch (IOException | IllegalStateException exception) {
-                    deadEmitters.add(emitter);
+                    deadEmitters.add(authenticatedEmitter);
                 }
             }
             emitters.removeAll(deadEmitters);
@@ -506,4 +538,6 @@ public class EventController {
     public void publishSessionUpdate(VisitorSession session) {
         if (session != null) broadcastSession("session-updated", session);
     }
+
+    private record AuthenticatedEmitter(SseEmitter emitter, long deviceSessionId) {}
 }

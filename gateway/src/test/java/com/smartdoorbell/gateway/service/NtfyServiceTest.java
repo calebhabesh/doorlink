@@ -41,6 +41,7 @@ public class NtfyServiceTest {
         HttpHeaders headers = entityCaptor.getValue().getHeaders();
         assertEquals("Someone rang the doorbell", headers.getFirst("Title"));
         assertEquals("doorbell, bell", headers.getFirst("Tags"));
+        assertEquals("http://test.com", headers.getFirst("Click"));
         assertTrue(headers.getFirst("Actions").contains("http://test.com"));
     }
 }

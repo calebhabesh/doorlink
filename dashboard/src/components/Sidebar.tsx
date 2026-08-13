@@ -1,8 +1,9 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { LayoutDashboard, Database, CalendarDays, Activity, Settings } from 'lucide-react';
+import { LayoutDashboard, Database, CalendarDays, Activity, Settings, Users, LogOut } from 'lucide-react';
 import LogoIcon from './LogoIcon';
 
 interface SidebarProps {
@@ -11,6 +12,15 @@ interface SidebarProps {
 
 export default function Sidebar({ onNavigate }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isOwner, setIsOwner] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/household/session', { cache: 'no-store' })
+      .then(response => response.ok ? response.json() : null)
+      .then(session => setIsOwner(session?.role === 'OWNER'))
+      .catch(() => setIsOwner(false));
+  }, []);
 
   const menuItems = [
     { label: 'Dashboard', icon: LayoutDashboard, href: '/' },
@@ -18,7 +28,19 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
     { label: 'Calendar View', icon: CalendarDays, href: '/calendar' },
     { label: 'System Health', icon: Activity, href: '/health' },
     { label: 'Settings', icon: Settings, href: '/settings' },
+    ...(isOwner ? [{ label: 'Household', icon: Users, href: '/household' }] : []),
   ];
+
+  async function logout() {
+    const response = await fetch('/api/household/session', { method: 'DELETE' });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({ error: 'Could not sign out this device' }));
+      window.alert(body.error ?? 'Could not sign out this device');
+      return;
+    }
+    router.replace('/access');
+    router.refresh();
+  }
 
   return (
     <aside className="w-full lg:w-64 bg-zinc-950 flex flex-col h-full lg:h-screen shrink-0 z-20">
@@ -53,6 +75,9 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
           );
         })}
       </nav>
+      <button onClick={logout} className="flex items-center border-t border-zinc-800 px-6 py-5 text-sm font-medium uppercase tracking-wider text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200">
+        <LogOut className="mr-4 h-5 w-5" /> Sign out this device
+      </button>
     </aside>
   );
 }

@@ -232,6 +232,9 @@ esp_err_t IntercomService::play_wav(const IntercomCommand &command,
         audio_bus_release();
         return ESP_ERR_NO_MEM;
     }
+#ifdef GATEWAY_API_KEY
+    esp_http_client_set_header(client, "X-API-Key", GATEWAY_API_KEY);
+#endif
 
     if (esp_http_client_open(client, 0) != ESP_OK ||
         esp_http_client_fetch_headers(client) < 0 ||
