@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import MainLayout from '../../components/MainLayout';
-import { Check, Copy, Link2, ShieldCheck, Smartphone, UserPlus, Users, X } from 'lucide-react';
+import { Check, Copy, Link2, Pencil, ShieldCheck, Smartphone, UserPlus, Users, X } from 'lucide-react';
 
 type Device = {
   id: number;
@@ -38,6 +38,9 @@ export default function HouseholdPage() {
   const [error, setError] = useState<string | null>(null);
   const [invitation, setInvitation] = useState<Invitation | null>(null);
   const [copied, setCopied] = useState(false);
+  const [editingDeviceId, setEditingDeviceId] = useState<number | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const [savingDeviceId, setSavingDeviceId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     const response = await fetch('/api/household/members', { cache: 'no-store' });
@@ -79,6 +82,44 @@ export default function HouseholdPage() {
     if (!response.ok) return setError(body.error ?? 'Could not create enrollment link');
     setInvitation(body);
     setCopied(false);
+  }
+
+  function startEditingDevice(device: Device) {
+    setEditingDeviceId(device.id);
+    setEditingName(device.name);
+    setError(null);
+  }
+
+  function cancelEditingDevice() {
+    setEditingDeviceId(null);
+    setEditingName('');
+  }
+
+  async function handleRenameDevice(event: FormEvent<HTMLFormElement>, deviceId: number) {
+    event.preventDefault();
+    const trimmed = editingName.trim();
+    if (!trimmed) return;
+    setSavingDeviceId(deviceId);
+    setError(null);
+    try {
+      const response = await fetch(`/api/household/devices/${deviceId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(body.error ?? 'Could not rename device');
+        return;
+      }
+      setEditingDeviceId(null);
+      setEditingName('');
+      await load();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Could not rename device');
+    } finally {
+      setSavingDeviceId(null);
+    }
   }
 
   async function revokeDevice(deviceId: number) {
@@ -136,10 +177,75 @@ export default function HouseholdPage() {
 
               <div className="mt-5 space-y-2 border-t border-zinc-800 pt-4">
                 {member.devices.length === 0 && <p className="text-sm text-zinc-600">No enrolled devices yet.</p>}
-                {member.devices.map(device => <div key={device.id} className="flex flex-col justify-between gap-3 rounded-2xl bg-zinc-900/70 p-4 sm:flex-row sm:items-center">
-                  <div className="flex min-w-0 items-start gap-3"><Smartphone className="mt-0.5 h-5 w-5 shrink-0 text-zinc-500" /><div className="min-w-0"><p className="font-bold text-zinc-200">{device.name} {device.revokedAt && <span className="ml-2 text-xs text-rose-400">Revoked</span>}</p><p className="mt-1 truncate text-xs text-zinc-600">Last used {new Date(device.lastSeenAt).toLocaleString()}</p></div></div>
-                  {!device.revokedAt && <button onClick={() => revokeDevice(device.id)} className="self-start rounded-lg px-3 py-2 text-xs font-bold text-rose-300 hover:bg-rose-500/10 sm:self-auto">Revoke</button>}
-                </div>)}
+                {member.devices.map(device => (
+                  <div key={device.id} className="flex flex-col justify-between gap-3 rounded-2xl bg-zinc-900/70 p-4 sm:flex-row sm:items-center">
+                    {editingDeviceId === device.id ? (
+                      <form onSubmit={(e) => handleRenameDevice(e, device.id)} className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex flex-1 items-center gap-3">
+                          <Smartphone className="h-5 w-5 shrink-0 text-emerald-400" />
+                          <input
+                            type="text"
+                            value={editingName}
+                            onChange={e => setEditingName(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Escape') cancelEditingDevice(); }}
+                            placeholder="Device name"
+                            maxLength={100}
+                            autoFocus
+                            required
+                            className="w-full max-w-md rounded-xl border border-zinc-700 bg-zinc-950 px-3.5 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-500"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2 self-end sm:self-auto">
+                          <button
+                            type="submit"
+                            disabled={savingDeviceId === device.id || !editingName.trim()}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-3.5 py-2 text-xs font-bold text-zinc-950 hover:bg-emerald-400 disabled:opacity-50"
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                            {savingDeviceId === device.id ? 'Saving…' : 'Save'}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={savingDeviceId === device.id}
+                            onClick={cancelEditingDevice}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-900 px-3.5 py-2 text-xs font-bold text-zinc-300 hover:bg-zinc-800"
+                          >
+                            <X className="h-3.5 w-3.5" /> Cancel
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <>
+                        <div className="flex min-w-0 items-start gap-3">
+                          <Smartphone className="mt-0.5 h-5 w-5 shrink-0 text-zinc-500" />
+                          <div className="min-w-0">
+                            <p className="font-bold text-zinc-200">
+                              {device.name}
+                              {device.revokedAt && <span className="ml-2 rounded-full bg-rose-500/10 px-2 py-0.5 text-xs font-medium text-rose-400">Revoked</span>}
+                            </p>
+                            <p className="mt-1 truncate text-xs text-zinc-600">Last used {new Date(device.lastSeenAt).toLocaleString()}</p>
+                          </div>
+                        </div>
+                        {!device.revokedAt && (
+                          <div className="flex items-center gap-2 self-start sm:self-auto">
+                            <button
+                              onClick={() => startEditingDevice(device)}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs font-bold text-zinc-200 hover:border-emerald-500 hover:text-white transition-colors"
+                            >
+                              <Pencil className="h-3.5 w-3.5 text-zinc-400" /> Rename
+                            </button>
+                            <button
+                              onClick={() => revokeDevice(device.id)}
+                              className="rounded-xl border border-rose-500/30 px-3 py-2 text-xs font-bold text-rose-300 hover:bg-rose-500/10 transition-colors"
+                            >
+                              Revoke
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ))}
               </div>
             </article>)}
           </div>

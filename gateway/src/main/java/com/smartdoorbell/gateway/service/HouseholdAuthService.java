@@ -176,6 +176,18 @@ public class HouseholdAuthService {
     }
 
     @Transactional
+    public DeviceView renameDevice(long deviceId, String newName) {
+        HouseholdDeviceSession device = deviceRepository.findById(deviceId)
+                .orElseThrow(() -> new NotFoundException("Device not found"));
+        if (device.getRevokedAt() != null) {
+            throw new ConflictException("Cannot rename a revoked device");
+        }
+        device.rename(validDeviceName(newName));
+        HouseholdDeviceSession saved = deviceRepository.save(device);
+        return deviceView(saved);
+    }
+
+    @Transactional
     public void revokeDevice(long deviceId) {
         HouseholdDeviceSession device = deviceRepository.findById(deviceId)
                 .orElseThrow(() -> new NotFoundException("Device not found"));

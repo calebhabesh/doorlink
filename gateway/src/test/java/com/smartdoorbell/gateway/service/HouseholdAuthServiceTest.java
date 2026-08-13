@@ -101,4 +101,37 @@ class HouseholdAuthServiceTest {
         assertTrue(cookie.contains("HttpOnly"));
         assertTrue(cookie.contains("SameSite=Lax"));
     }
+
+    @Test
+    void renameDeviceUpdatesDeviceName() {
+        var issue = householdAuth.bootstrap("test-bootstrap-token", "Caleb",
+                "caleb@example.com", "Caleb Pixel 6A", "test-agent", "127.0.0.1");
+
+        long deviceId = issue.principal().sessionId();
+        var updated = householdAuth.renameDevice(deviceId, "Pixel 6A");
+        assertEquals("Pixel 6A", updated.name());
+
+        var members = householdAuth.members();
+        assertEquals(1, members.size());
+        assertEquals("Pixel 6A", members.get(0).devices().get(0).name());
+    }
+
+    @Test
+    void cannotRenameRevokedOrInvalidDevice() {
+        var issue = householdAuth.bootstrap("test-bootstrap-token", "Caleb",
+                "caleb@example.com", "First Phone", "test-agent", "127.0.0.1");
+
+        var replacement = householdAuth.inviteDevice(issue.principal().memberId());
+        String token = replacement.enrollmentUrl().substring(replacement.enrollmentUrl().lastIndexOf('/') + 1);
+        householdAuth.enroll(token, "Second Phone", "test-agent", "127.0.0.1");
+
+        householdAuth.revokeDevice(issue.principal().sessionId());
+
+        assertThrows(HouseholdAuthService.ConflictException.class,
+                () -> householdAuth.renameDevice(issue.principal().sessionId(), "New Name"));
+        assertThrows(HouseholdAuthService.ValidationException.class,
+                () -> householdAuth.renameDevice(issue.principal().sessionId() + 1, "   "));
+        assertThrows(HouseholdAuthService.NotFoundException.class,
+                () -> householdAuth.renameDevice(99999L, "New Name"));
+    }
 }

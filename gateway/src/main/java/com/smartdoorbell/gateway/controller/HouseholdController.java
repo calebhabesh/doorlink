@@ -92,6 +92,19 @@ public class HouseholdController {
         return ResponseEntity.noContent().build();
     }
 
+    @RequestMapping(value = "/devices/{deviceId}", method = {RequestMethod.PATCH, RequestMethod.PUT})
+    public HouseholdAuthService.DeviceView renameDevice(
+            @PathVariable long deviceId,
+            @RequestBody RenameDeviceRequest body,
+            HttpServletRequest request) {
+        requireOwner(request);
+        String name = body != null ? body.resolveName() : null;
+        if (name == null) {
+            throw new HouseholdAuthService.ValidationException("Device name is required");
+        }
+        return householdAuth.renameDevice(deviceId, name);
+    }
+
     @DeleteMapping("/devices/{deviceId}")
     public ResponseEntity<Void> revokeDevice(@PathVariable long deviceId,
                                              HttpServletRequest request) {
@@ -118,4 +131,11 @@ public class HouseholdController {
                                    String deviceName) {}
     public record EnrollRequest(String deviceName) {}
     public record InviteMemberRequest(String name, String email) {}
+    public record RenameDeviceRequest(String name, String deviceName) {
+        public String resolveName() {
+            if (name != null && !name.isBlank()) return name.trim();
+            if (deviceName != null && !deviceName.isBlank()) return deviceName.trim();
+            return null;
+        }
+    }
 }

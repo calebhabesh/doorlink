@@ -80,5 +80,9 @@ public class HouseholdDeviceSession {
         this.lastIp = ip;
     }
 
+    public void rename(String deviceName) {
+        this.deviceName = deviceName;
+    }
+
     public void revoke(LocalDateTime at) { this.revokedAt = at; }
 }
