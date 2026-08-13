@@ -50,6 +50,14 @@ async function checkDeviceSession(request: NextRequest): Promise<{ authorized: b
   }
 }
 
+function redirectWithCookieCleanup(request: NextRequest, destination: string): NextResponse {
+  const response = NextResponse.redirect(new URL(destination, request.url));
+  if (request.cookies.has(DEVICE_COOKIE)) {
+    response.cookies.delete(DEVICE_COOKIE);
+  }
+  return response;
+}
+
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
@@ -81,34 +89,53 @@ export async function middleware(request: NextRequest) {
     return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
   }
 
-  if (path === '/access' || path.startsWith('/enroll/')) {
+  // Enrollment links are single-use invitation tokens and always accessible
+  if (path.startsWith('/enroll/')) {
     return NextResponse.next();
   }
 
   const session = await checkDeviceSession(request);
 
-  if (path === '/setup') {
-    if (session.authorized) {
+  // Authenticated / Enrolled browsers
+  if (session.authorized) {
+    if (path === '/setup' || path === '/access') {
       return NextResponse.redirect(new URL('/', request.url));
     }
     return NextResponse.next();
   }
 
-  if (session.authorized) return NextResponse.next();
-
+  // Preserve cookie during transient gateway outages/restarts
   if (session.error) {
-    // Gateway is temporarily down or restarting: preserve the device cookie
     return NextResponse.next();
   }
 
-  const destination = await bootstrapRequired() ? '/setup' : '/access';
-  const response = NextResponse.redirect(new URL(destination, request.url));
-  if (request.cookies.has(DEVICE_COOKIE)) {
-    response.cookies.delete(DEVICE_COOKIE);
+  // Unauthenticated / Revoked browsers: check whether first-time household setup is required
+  const needsBootstrap = await bootstrapRequired();
+
+  if (path === '/setup') {
+    if (needsBootstrap) {
+      return NextResponse.next();
+    }
+    return redirectWithCookieCleanup(request, '/access');
   }
-  return response;
+
+  if (path === '/access') {
+    if (needsBootstrap) {
+      return redirectWithCookieCleanup(request, '/setup');
+    }
+    const response = NextResponse.next();
+    if (request.cookies.has(DEVICE_COOKIE)) {
+      response.cookies.delete(DEVICE_COOKIE);
+    }
+    return response;
+  }
+
+  // Any other protected route (e.g. /, /events, /calendar, /health, /settings, /household)
+  const destination = needsBootstrap ? '/setup' : '/access';
+  return redirectWithCookieCleanup(request, destination);
 }
 
 export const config = {
   matcher: ['/((?!_next/static|_next/image|icon.svg|favicon.ico).*)'],
 };
+

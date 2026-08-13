@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import LogoIcon from '../../components/LogoIcon';
 import { KeyRound } from 'lucide-react';
@@ -9,6 +9,31 @@ export default function SetupPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/household/bootstrap/status')
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return response.json();
+      })
+      .then((data) => {
+        if (!active) return;
+        if (data && data.needsBootstrap === false) {
+          router.replace('/access');
+        } else {
+          setCheckingStatus(false);
+        }
+      })
+      .catch(() => {
+        if (active) setCheckingStatus(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [router]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -33,6 +58,21 @@ export default function SetupPage() {
     }
     router.replace('/');
     router.refresh();
+  }
+
+  if (checkingStatus) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-zinc-950 px-5 py-10 text-zinc-100">
+        <section className="w-full max-w-lg rounded-3xl border border-zinc-800 bg-zinc-900/70 p-8 shadow-2xl">
+          <LogoIcon className="mb-6 h-14 w-14" />
+          <div className="mb-3 flex items-center gap-3 text-emerald-400">
+            <KeyRound className="h-5 w-5" />
+            <span className="text-xs font-black uppercase tracking-[0.2em]">One-time setup</span>
+          </div>
+          <p className="text-sm animate-pulse text-zinc-400">Checking household setup status…</p>
+        </section>
+      </main>
+    );
   }
 
   return (
