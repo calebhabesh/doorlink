@@ -36,6 +36,7 @@ public class HomeAssistantChimeService implements ChimeService {
     @Value("${chime.homeassistant.min-interval-ms:750}")
     private long minIntervalMs;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public HomeAssistantChimeService(RestTemplate restTemplate) {
         this(restTemplate, Executors.newSingleThreadScheduledExecutor(
                 daemonThreadFactory()), System::nanoTime);
