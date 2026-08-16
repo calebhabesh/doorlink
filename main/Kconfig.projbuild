@@ -50,7 +50,13 @@ config SMART_DOORBELL_CAMERA_OVERLAP_ACK_ATTENUATION_DB
     int "Camera-overlap chime attenuation (dB)"
     depends on SMART_DOORBELL_CAMERA_OVERLAP_ACK
     range 12 24
-    default 18
+    default 12
+    help
+        Twelve dB is the loudest supported camera-overlap setting. It uses
+        approximately one-quarter of the speaker power of the normal -6 dB
+        chime while the camera rails are active. Higher-volume overlap is not
+        supported until supply droop, resets, camera integrity, and amplifier
+        temperature are measured on the assembled 4-ohm unit.
 
 config SMART_DOORBELL_CAMERA_OVERLAP_ACK_DURATION_MS
     int "Camera-overlap chime duration (ms)"

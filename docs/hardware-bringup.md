@@ -1161,7 +1161,7 @@ flashed-board A/B retest with the 4-ohm speaker before that speaker is accepted
 for production.
 
 The 2026-08-16 experimental follow-up keeps the full 6 dB chime ahead of camera
-startup, then permits the complete normal waveform at 18 dB attenuation
+startup, then permits the complete normal waveform at 12 dB attenuation
 throughout RF shutdown, U9 rail startup, and camera capture. The earlier 250 ms
 crop sounded muddy and unlike a normal press in physical testing. Repeated
 presses may restart the quiet full waveform.
@@ -1174,8 +1174,11 @@ muting a chime that had already started.
 This is a software power-limiting experiment, not evidence that full chime and
 camera loads are safe together. Validate `SYS`, reset reason, amplifier
 temperature, camera completion, and image integrity with the 4-ohm speaker.
+The -12 dB overlap target uses approximately one-quarter of the speaker power
+of the normal -6 dB chime and is the loudest supported overlap setting pending
+those measurements.
 Whole-home alert receipts are keyed per physical press, while Home Assistant
-calls use a 2.6-second leading-edge cooldown with no trailing queue; retries
+calls use a 1-second leading-edge cooldown with no trailing queue; retries
 remain idempotent for each `pressId`.
 
 The same run reported a FreeRTOS stack overflow in task `main` at the start of multipart

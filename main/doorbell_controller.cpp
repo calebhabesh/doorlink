@@ -673,7 +673,7 @@ void DoorbellController::execute_alert_cycle(const char *event_type,
     }
 
     // 2. Enter camera-overlap mode. The existing full-volume chime drains
-    // first; new presses retain the normal waveform at -18 dB. That bounded
+    // first; new presses retain the normal waveform at -12 dB. That bounded
     // low-power profile remains available through RF shutdown, U9 rail
     // startup, and camera capture.
     CameraSpeakerPowerBoundary speaker_boundary;

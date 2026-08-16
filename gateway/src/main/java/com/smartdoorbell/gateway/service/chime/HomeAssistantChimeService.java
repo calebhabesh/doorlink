@@ -34,7 +34,7 @@ public class HomeAssistantChimeService implements ChimeService {
     @Value("${chime.homeassistant.webhook-url}")
     private String webhookUrl;
 
-    @Value("${chime.homeassistant.min-interval-ms:2600}")
+    @Value("${chime.homeassistant.min-interval-ms:1000}")
     private long minIntervalMs;
 
     @org.springframework.beans.factory.annotation.Autowired
