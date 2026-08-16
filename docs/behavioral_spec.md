@@ -66,6 +66,10 @@ post-chime microphone audio, is a normal short press and creates no empty WAV.
 - Treat repress chimes as interruptible: a visitor still holding after 1,200 ms
   stops the repress chime cleanly and receives the microphone. A tap may let
   its acknowledgement chime finish.
+- Until that same down-edge has remained continuously held for 1,200 ms, it
+  cannot reserve the microphone or stop a local chime. A newer down-edge
+  invalidates every older pending hold classification, so an old tap cannot
+  mistake the new press for its own continued hold.
 - Retain visitor microphone audio only after the one-second recording threshold
   is crossed. Release creates one logical recording.
 - A release followed by another hold creates another ordered press/recording.
@@ -92,6 +96,8 @@ the 90-second hard deadline:
    yields it to the microphone.
 2. A repress acknowledgement may play only while I2S is otherwise idle; a
    sustained visitor hold or arriving homeowner WAV interrupts it cleanly.
+   The repress does not claim the microphone window until its own continuous
+   1,200 ms hold qualification completes.
 3. An active visitor recording completes on release or at 15 seconds.
 4. A homeowner reply received during visitor capture is queued.
 5. The microphone is off while the queued homeowner WAV plays through the

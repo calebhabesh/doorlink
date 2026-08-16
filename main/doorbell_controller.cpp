@@ -35,6 +35,7 @@ constexpr std::uint32_t kVisitorHoldMinimumMs =
 constexpr std::uint32_t kRepressChimeHoldHandoffMs =
     DoorbellPolicy::kRepressChimeHoldHandoffMs;
 constexpr std::uint32_t kChimeDrainBeforeSleepMs = 4000;
+portMUX_TYPE s_button_turn_lock = portMUX_INITIALIZER_UNLOCKED;
 
 class CameraSpeakerPowerBoundary final {
 public:
@@ -161,6 +162,7 @@ struct FollowupTurn {
     DoorbellController *controller;
     std::atomic_bool *capture_window_active;
     std::atomic_bool *shutting_down;
+    std::atomic_uint32_t *latest_press_number;
     std::uint32_t press_number;
     std::int64_t press_started_us;
     bool dispatch_alerts;
@@ -170,82 +172,145 @@ struct FollowupTurn {
     esp_err_t result{ESP_FAIL};
 };
 
-void record_followup_turn_task(void *arg)
+void complete_followup_turn(FollowupTurn *turn)
 {
-    auto *turn = static_cast<FollowupTurn *>(arg);
-    const std::int64_t wait_deadline_us = esp_timer_get_time() + 500000LL;
-    if (turn->shutting_down->load()) {
-        turn->result = ESP_ERR_INVALID_STATE;
-        SystemEvent ready{EventType::VisitorRecordingReady,
-                          static_cast<std::uint32_t>(esp_timer_get_time() / 1000LL),
-                          turn->result, turn};
-        (void)turn->controller->post_event(ready);
-        vTaskDelete(nullptr);
-        return;
-    }
-    bool expected = false;
-    bool acquired = turn->capture_window_active->compare_exchange_strong(expected, true);
-    while (!acquired && esp_timer_get_time() < wait_deadline_us) {
-        expected = false;
-        vTaskDelay(pdMS_TO_TICKS(10));
-        acquired = turn->capture_window_active->compare_exchange_strong(expected, true);
-    }
-    if (!acquired) {
-        turn->result = ESP_ERR_TIMEOUT;
-    } else if (turn->shutting_down->load() ||
-               turn->max_duration_ms < kVisitorHoldMinimumMs) {
-        turn->result = ESP_OK;
-        turn->capture_window_active->store(false);
-    } else {
-        // A repress gets immediate local acknowledgement when I2S is idle. A
-        // deliberate sustained repress makes the active local stream
-        // interruptible and yields it to the visitor microphone.
-        const std::int64_t handoff_us =
-            turn->press_started_us +
-            static_cast<std::int64_t>(kRepressChimeHoldHandoffMs) * 1000LL;
-        while (chime_player_is_playing() &&
-               esp_timer_get_time() < handoff_us &&
-               !turn->shutting_down->load()) {
-            vTaskDelay(pdMS_TO_TICKS(10));
-        }
-        bool button_still_held = gpio_get_level(DOORBELL_BUTTON_PIN) == 0;
-        if (!button_still_held) {
-            // Match the product's 20 ms release debounce before classifying a
-            // repress as a tap and abandoning its possible visitor turn.
-            vTaskDelay(pdMS_TO_TICKS(20));
-            button_still_held = gpio_get_level(DOORBELL_BUTTON_PIN) == 0;
-        }
-        if (chime_player_is_interruptible() && button_still_held) {
-            ESP_LOGI(kTag,
-                     "Repress hold crossed %u ms; yielding local chime to visitor microphone",
-                     static_cast<unsigned>(kRepressChimeHoldHandoffMs));
-            chime_player_request_stop();
-        }
-        if (!button_still_held) {
-            // The tap's chime may finish, but it no longer reserves a visitor
-            // turn. An arriving homeowner WAV can now interrupt that chime.
-            turn->result = ESP_OK;
-        } else {
-            while (chime_player_is_playing() &&
-                   !turn->shutting_down->load()) {
-                vTaskDelay(pdMS_TO_TICKS(10));
-            }
-
-            // record_button_hold() performs a final level check so a release
-            // during I2S handoff remains a normal tap without an empty WAV.
-            (void)ring_animation_start(100, turn->max_duration_ms, 150);
-            turn->result = turn->audio_service->record_button_hold(
-                turn->recording, turn->max_duration_ms, kVisitorHoldMinimumMs,
-                turn->recorded_duration_ms);
-            ring_fade_stop();
-        }
-        turn->capture_window_active->store(false);
-    }
     SystemEvent ready{EventType::VisitorRecordingReady,
                       static_cast<std::uint32_t>(esp_timer_get_time() / 1000LL),
                       turn->result, turn};
     (void)turn->controller->post_event(ready);
     vTaskDelete(nullptr);
+}
+
+void record_followup_turn_task(void *arg)
+{
+    auto *turn = static_cast<FollowupTurn *>(arg);
+    if (turn->shutting_down->load()) {
+        turn->result = ESP_ERR_INVALID_STATE;
+        complete_followup_turn(turn);
+        return;
+    }
+
+    // A tap must never reserve the microphone or make a later press's chime
+    // interruptible. Wait for this exact down-edge to remain continuously held
+    // through the handoff threshold before touching audio arbitration.
+    const std::int64_t handoff_us =
+        turn->press_started_us +
+        static_cast<std::int64_t>(kRepressChimeHoldHandoffMs) * 1000LL;
+    std::int64_t release_candidate_us = 0;
+    while (esp_timer_get_time() < handoff_us &&
+           !turn->shutting_down->load()) {
+        const std::int64_t now_us = esp_timer_get_time();
+        if (turn->latest_press_number->load() != turn->press_number) {
+            turn->result = ESP_OK;
+            complete_followup_turn(turn);
+            return;
+        }
+        if (gpio_get_level(DOORBELL_BUTTON_PIN) == 0) {
+            release_candidate_us = 0;
+        } else if (release_candidate_us == 0) {
+            release_candidate_us = now_us;
+        } else if (now_us - release_candidate_us >= 20000LL) {
+            turn->result = ESP_OK;
+            complete_followup_turn(turn);
+            return;
+        }
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+
+    if (turn->shutting_down->load()) {
+        turn->result = ESP_ERR_INVALID_STATE;
+        complete_followup_turn(turn);
+        return;
+    }
+    if (turn->max_duration_ms < kVisitorHoldMinimumMs ||
+        turn->latest_press_number->load() != turn->press_number ||
+        gpio_get_level(DOORBELL_BUTTON_PIN) != 0) {
+        turn->result = ESP_OK;
+        complete_followup_turn(turn);
+        return;
+    }
+
+    // Only a qualified continuous hold may wait for the microphone window.
+    // Wait while it remains the latest physical press instead of timing out
+    // behind an older turn and reporting a false recording failure.
+    const std::int64_t turn_deadline_us =
+        turn->press_started_us +
+        static_cast<std::int64_t>(turn->max_duration_ms) * 1000LL;
+    bool acquired = false;
+    while (!turn->shutting_down->load() &&
+           turn->latest_press_number->load() == turn->press_number &&
+           esp_timer_get_time() < turn_deadline_us) {
+        if (gpio_get_level(DOORBELL_BUTTON_PIN) != 0) {
+            turn->result = ESP_OK;
+            complete_followup_turn(turn);
+            return;
+        }
+        bool expected = false;
+        acquired = turn->capture_window_active->compare_exchange_strong(
+            expected, true);
+        if (acquired) break;
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+    if (!acquired) {
+        turn->result = turn->shutting_down->load()
+                           ? ESP_ERR_INVALID_STATE
+                           : ESP_OK;
+        complete_followup_turn(turn);
+        return;
+    }
+
+    if (turn->latest_press_number->load() != turn->press_number ||
+        gpio_get_level(DOORBELL_BUTTON_PIN) != 0) {
+        turn->capture_window_active->store(false);
+        turn->result = ESP_OK;
+        complete_followup_turn(turn);
+        return;
+    }
+
+    ESP_LOGI(kTag,
+             "Repress press=%" PRIu32 " held continuously for %u ms; arming visitor microphone",
+             turn->press_number,
+             static_cast<unsigned>(kRepressChimeHoldHandoffMs));
+    bool yielded_chime = false;
+    portENTER_CRITICAL(&s_button_turn_lock);
+    if (turn->latest_press_number->load() == turn->press_number &&
+        gpio_get_level(DOORBELL_BUTTON_PIN) == 0 &&
+        chime_player_is_interruptible()) {
+        chime_player_request_stop();
+        yielded_chime = true;
+    }
+    portEXIT_CRITICAL(&s_button_turn_lock);
+    if (yielded_chime) {
+        ESP_LOGI(kTag, "Repress press=%" PRIu32
+                       " yielding its local chime to visitor microphone",
+                 turn->press_number);
+    }
+    while (chime_player_is_playing() &&
+           !turn->shutting_down->load() &&
+           turn->latest_press_number->load() == turn->press_number) {
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+
+    if (turn->shutting_down->load() ||
+        turn->latest_press_number->load() != turn->press_number ||
+        gpio_get_level(DOORBELL_BUTTON_PIN) != 0) {
+        turn->capture_window_active->store(false);
+        turn->result = turn->shutting_down->load()
+                           ? ESP_ERR_INVALID_STATE
+                           : ESP_OK;
+        complete_followup_turn(turn);
+        return;
+    }
+
+    // record_button_hold() performs a final level check so a release during
+    // I2S handoff remains a normal tap without an empty WAV.
+    (void)ring_animation_start(100, turn->max_duration_ms, 150);
+    turn->result = turn->audio_service->record_button_hold(
+        turn->recording, turn->max_duration_ms, kVisitorHoldMinimumMs,
+        turn->recorded_duration_ms);
+    ring_fade_stop();
+    turn->capture_window_active->store(false);
+    complete_followup_turn(turn);
 }
 
 const char *wake_name(WakeReason reason)
@@ -469,6 +534,7 @@ void DoorbellController::start_followup_capture(std::uint32_t press_number,
         .controller = this,
         .capture_window_active = &visitor_capture_window_active_,
         .shutting_down = &shutting_down_,
+        .latest_press_number = &next_press_number_,
         .press_number = press_number,
         .press_started_us = press_started_us,
         .dispatch_alerts = dispatch_alerts,
@@ -541,6 +607,18 @@ void DoorbellController::start_button_monitor()
                     button_released = false;
                     ESP_LOGI(kTag, "⚡ Button repress detected by ButtonMonitor!");
 
+                    // Publish the new physical edge before touching either
+                    // side of I2S. Older hold tasks must observe that they no
+                    // longer own the button, and any old microphone capture
+                    // must stop before this press can qualify for a new turn.
+                    portENTER_CRITICAL(&s_button_turn_lock);
+                    const std::uint32_t press_number =
+                        self->next_press_number_.fetch_add(1) + 1;
+                    portEXIT_CRITICAL(&s_button_turn_lock);
+                    if (self->audio_.capture_active()) {
+                        self->audio_.request_capture_stop();
+                    }
+
                     // Every new down-edge is one press/possible visitor turn.
                     // Repress audio is opportunistic and never queues behind
                     // an active microphone or homeowner reply. If the local
@@ -553,8 +631,6 @@ void DoorbellController::start_button_monitor()
                         ESP_LOGW(kTag, "Could not start repress chime: %s",
                                  esp_err_to_name(chime_err));
                     }
-                    const std::uint32_t press_number =
-                        self->next_press_number_.fetch_add(1) + 1;
                     // Publish the pending edge before attempting to reserve
                     // the immediate-alert slot. This ordering prevents the
                     // controller from reopening the slot between reservation

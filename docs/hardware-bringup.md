@@ -1202,6 +1202,15 @@ persisted with alerts suppressed, and a later upload cannot generate a fallback
 repress chime. This revision passes the production ESP-IDF build and gateway
 tests but requires a flashed-board button-to-frame and rapid-repress test.
 
+The rapid-repress audio follow-up restores the intended 1,200 ms continuous
+hold gate for the visitor microphone. A repress now remains a tap until that
+same physical down-edge crosses the gate; before then it cannot reserve the
+microphone or stop the local chime. Each newer down-edge invalidates older hold
+classifiers, removing the false 500 ms `ESP_ERR_TIMEOUT` recording failures and
+preventing an old tap from cutting off a newer acknowledgement. The production
+firmware builds successfully, but rapid-tap audio continuity and tap-versus-hold
+classification still require validation on the flashed assembled board.
+
 The same run reported a FreeRTOS stack overflow in task `main` at the start of multipart
 upload. The production controller was still using the configured 3,584-byte
 ESP-IDF main-task stack. It now runs in a dedicated 16 KiB `doorbell_ctrl` task,
