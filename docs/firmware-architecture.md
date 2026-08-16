@@ -110,7 +110,13 @@ and stored PTT playback path passed hardware tests; release-driven capture and
 multi-press arbitration are implemented and build-tested but still require an
 instrumented board validation pass.
 
-Production has one bounded visitor-session policy. Button edges during capture
-and upload are queued as ordered presses, but only the first press plays the
-local chime. EXT0 is re-armed only after session close, cleanup, and the existing
-button-release guard.
+The current production flow supersedes the USB-validated trigger-first order:
+the first QXGA frame is captured before Wi-Fi starts, then its owned JPEG is
+uploaded before the controller waits for a held-button recording. Repress
+lifecycle work may remain ordered for persistence, but only the press reserved
+for immediate controller handling can dispatch remote alerts; all others are
+registered with alerts permanently suppressed. Repress local acknowledgements
+remain opportunistic and are never queued behind microphone or homeowner audio.
+This revision is compiler- and gateway-test-verified and still needs
+flashed-board timing validation. EXT0 is re-armed only after session close,
+cleanup, and the existing button-release guard.

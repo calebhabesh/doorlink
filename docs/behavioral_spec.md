@@ -31,23 +31,26 @@ reachable. The gateway and dashboard infer closure from the same 60/90-second
 limits if that close request is lost.
 
 Every press is persisted with its own idempotency key. The first press dispatches
-the indoor/Home Assistant chime immediately. Rapid represses remain persisted,
-but whole-home chime requests during its playback cooldown are suppressed.
+the indoor/Home Assistant chime immediately after the initial shutter closes.
+Rapid represses remain persisted, but whole-home chime requests during its
+playback cooldown are suppressed.
 
 ## First press
 
 1. GPIO2 must remain stable for 20 ms.
 2. Start the ring LED and the complete local chime on the camera-safe 12 dB
    profile.
-3. Start the authenticated early gateway trigger while the chime plays.
-4. Quiesce RF and start the initial QXGA snapshot without waiting for the
+3. Keep RF quiesced and start the initial QXGA snapshot without waiting for the
    camera-safe chime to finish. Capture the first complete frame; do not spend
    several QXGA frame periods on unrequested convergence discards.
-5. If the visitor is still holding when the complete chime releases I2S, start
+4. Return the camera frame, disable U9, connect Wi-Fi, and send the authenticated
+   gateway trigger.
+5. Upload the owned JPEG immediately, without waiting for button release or a
+   visitor recording to finish.
+6. If the visitor is still holding when the complete chime releases I2S, start
    the microphone immediately and record until release or the 15-second cap.
-6. Return the camera frame, disable U9, reconnect RF, and upload available
-   media.
-7. Open the bounded homeowner reply window.
+   Attach any retained WAV to the existing press in a separate upload.
+7. Open the bounded homeowner reply window after the visitor turn finishes.
 
 A visitor recording is retained only when it contains at least 1.0 second of
 microphone audio. Releasing during the first chime, or before one second of
@@ -68,6 +71,10 @@ post-chime microphone audio, is a normal short press and creates no empty WAV.
 - A release followed by another hold creates another ordered press/recording.
 - Refresh the snapshot only when the previous capture is at least 15 seconds
   old. Otherwise register the press and upload only its visitor recording.
+- Only a repress accepted by the live controller loop may request the remote
+  alert. Represses received while another capture/alert cycle owns that slot
+  are still persisted, but carry `dispatchAlerts=false`; later lifecycle or
+  media work cannot turn them into delayed whole-home chimes.
 - There is no three-press product limit. The 60/90-second session bounds and
   memory/queue limits are the safety boundary.
 
@@ -107,13 +114,16 @@ are build-time configurable through
 `CONFIG_SMART_DOORBELL_SPEAKER_ATTENUATION_DB` and
 `CONFIG_SMART_DOORBELL_SPEAKER_RAMP_MS`.
 
-The early remote notification remains ahead of camera capture and is
-idempotent per physical `pressId`. The gateway acknowledges and persists each
-press without waiting for Home Assistant. Whole-home webhook delivery uses a
-1-second leading-edge cooldown: the first request
+The initial camera capture runs before Wi-Fi startup so network latency cannot
+move the shutter toward button release. Its owned JPEG is also uploaded before
+joining a held-button recording. Gateway triggers remain idempotent per physical
+`pressId`, and the gateway acknowledges and persists each press without waiting
+for Home Assistant. Whole-home webhook delivery uses a 1-second leading-edge
+cooldown: the first request
 dispatches immediately, requests during the cooldown are dropped, and the first
 request after expiry dispatches immediately. No trailing webhook is retained,
-so rapid presses cannot become a delayed playback burst.
+so rapid presses cannot become a delayed playback burst. Repress uploads never
+act as fallback chime requests.
 
 The first press claims the bounded 12 dB camera-overlap profile before playback
 starts, so RF shutdown and camera startup no longer wait for the complete

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stddef.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "esp_err.h"
@@ -14,11 +15,13 @@ esp_err_t wifi_bringup_connect_bounded_timeout(int timeout_ms);
 esp_err_t wifi_bringup_trigger_event(const char *event_id,
                                      const char *event_type,
                                      const char *device_id,
-                                     const char *firmware_version);
+                                     const char *firmware_version,
+                                     bool dispatch_alerts);
 esp_err_t wifi_bringup_trigger_event_timeout(const char *event_id,
                                              const char *event_type,
                                              const char *device_id,
                                              const char *firmware_version,
+                                             bool dispatch_alerts,
                                              int timeout_ms);
 esp_err_t wifi_bringup_upload_jpeg(const uint8_t *jpeg,
                                    size_t jpeg_len,

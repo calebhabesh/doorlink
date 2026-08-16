@@ -39,7 +39,7 @@ public class HomeAssistantChimeService implements ChimeService {
 
     @org.springframework.beans.factory.annotation.Autowired
     public HomeAssistantChimeService(RestTemplate restTemplate) {
-        this(restTemplate, Executors.newSingleThreadExecutor(
+        this(restTemplate, Executors.newCachedThreadPool(
                 daemonThreadFactory()), System::nanoTime);
     }
 

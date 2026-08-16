@@ -306,6 +306,7 @@ esp_err_t wifi_bringup_trigger_event_timeout(const char *event_id,
                                              const char *event_type,
                                              const char *device_id,
                                              const char *firmware_version,
+                                             bool dispatch_alerts,
                                              int timeout_ms)
 {
     if (!event_id || strlen(event_id) < 8 || !event_type ||
@@ -321,18 +322,22 @@ esp_err_t wifi_bringup_trigger_event_timeout(const char *event_id,
         body_len = snprintf(body, sizeof(body),
                             "{\"eventId\":\"%s\",\"eventType\":\"%s\","
                             "\"deviceId\":\"%s\",\"firmwareVersion\":\"%s\","
+                            "\"dispatchAlerts\":%s,"
                             "\"wifiRssiDbm\":%d}",
                             event_id, event_type,
                             device_id ? device_id : "",
                             firmware_version ? firmware_version : "",
+                            dispatch_alerts ? "true" : "false",
                             rssi_dbm);
     } else {
         body_len = snprintf(body, sizeof(body),
                             "{\"eventId\":\"%s\",\"eventType\":\"%s\","
-                            "\"deviceId\":\"%s\",\"firmwareVersion\":\"%s\"}",
+                            "\"deviceId\":\"%s\",\"firmwareVersion\":\"%s\","
+                            "\"dispatchAlerts\":%s}",
                             event_id, event_type,
                             device_id ? device_id : "",
-                            firmware_version ? firmware_version : "");
+                            firmware_version ? firmware_version : "",
+                            dispatch_alerts ? "true" : "false");
     }
     if (body_len < 0 || (size_t)body_len >= sizeof(body)) {
         return ESP_ERR_INVALID_SIZE;
@@ -374,10 +379,12 @@ esp_err_t wifi_bringup_trigger_event_timeout(const char *event_id,
 esp_err_t wifi_bringup_trigger_event(const char *event_id,
                                      const char *event_type,
                                      const char *device_id,
-                                     const char *firmware_version)
+                                     const char *firmware_version,
+                                     bool dispatch_alerts)
 {
     return wifi_bringup_trigger_event_timeout(event_id, event_type, device_id,
-                                               firmware_version, 5000);
+                                               firmware_version,
+                                               dispatch_alerts, 5000);
 }
 
 esp_err_t wifi_bringup_close_session(const char *session_id, int timeout_ms)

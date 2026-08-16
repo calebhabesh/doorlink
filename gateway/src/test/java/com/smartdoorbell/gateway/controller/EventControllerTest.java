@@ -136,7 +136,7 @@ public class EventControllerTest {
     public void testAuthenticatedEarlyTrigger() throws Exception {
         LocalDateTime triggeredAt = LocalDateTime.of(2026, 8, 5, 12, 0);
         when(eventAlertService.trigger(
-                "0123456789abcdef0123456789abcdef", "DOORBELL_PRESS"))
+                "0123456789abcdef0123456789abcdef", "DOORBELL_PRESS", true))
                 .thenReturn(new EventAlertService.TriggerOutcome(
                         "0123456789abcdef0123456789abcdef", true, triggeredAt));
 
@@ -160,7 +160,7 @@ public class EventControllerTest {
         String sessionId = "0123456789abcdef0123456789abcdef";
         String pressId = sessionId + "-2";
         LocalDateTime triggeredAt = LocalDateTime.of(2026, 8, 16, 7, 0);
-        when(eventAlertService.trigger(pressId, "DOORBELL_REPRESS"))
+        when(eventAlertService.trigger(pressId, "DOORBELL_REPRESS", true))
                 .thenReturn(new EventAlertService.TriggerOutcome(
                         pressId, true, triggeredAt));
 
@@ -174,7 +174,30 @@ public class EventControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.sessionId").value(sessionId));
 
-        verify(eventAlertService).trigger(pressId, "DOORBELL_REPRESS");
+        verify(eventAlertService).trigger(pressId, "DOORBELL_REPRESS", true);
+    }
+
+    @Test
+    public void testDelayedRepressIsPersistedWithoutDispatchingAlerts() throws Exception {
+        String sessionId = "0123456789abcdef0123456789abcdef";
+        String pressId = sessionId + "-3";
+        LocalDateTime triggeredAt = LocalDateTime.of(2026, 8, 16, 7, 1);
+        when(eventAlertService.trigger(pressId, "DOORBELL_REPRESS", false))
+                .thenReturn(new EventAlertService.TriggerOutcome(
+                        pressId, true, triggeredAt));
+
+        mockMvc.perform(post("/api/events/trigger")
+                .contentType("application/json")
+                .content("""
+                        {"eventId":"%s","eventType":"DOORBELL_REPRESS",
+                         "deviceId":"front-door","firmwareVersion":"1.0.0",
+                         "dispatchAlerts":false}
+                        """.formatted(pressId))
+                .header("X-API-Key", "test-api-key"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sessionId").value(sessionId));
+
+        verify(eventAlertService).trigger(pressId, "DOORBELL_REPRESS", false);
     }
 
     @Test

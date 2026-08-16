@@ -2,6 +2,8 @@ package com.smartdoorbell.gateway.service;
 
 import com.smartdoorbell.gateway.entity.EventTriggerReceipt;
 import com.smartdoorbell.gateway.repository.EventTriggerReceiptRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -10,6 +12,8 @@ import java.util.Optional;
 
 @Service
 public class EventAlertService {
+    private static final Logger logger = LoggerFactory.getLogger(EventAlertService.class);
+
     private final EventTriggerReceiptRepository receiptRepository;
     private final ChimeService chimeService;
     private final NtfyService ntfyService;
@@ -24,6 +28,12 @@ public class EventAlertService {
 
     @Transactional
     public synchronized TriggerOutcome trigger(String eventId, String eventType) {
+        return trigger(eventId, eventType, true);
+    }
+
+    @Transactional
+    public synchronized TriggerOutcome trigger(String eventId, String eventType,
+                                               boolean dispatchAlerts) {
         Optional<EventTriggerReceipt> existing = receiptRepository.findById(eventId);
         if (existing.isPresent()) {
             return new TriggerOutcome(eventId, false, existing.get().getTriggeredAt());
@@ -33,8 +43,14 @@ public class EventAlertService {
         EventTriggerReceipt receipt =
                 new EventTriggerReceipt(eventId, eventType, triggeredAt);
 
-        // Dispatch immediately so Home Assistant chime webhook fires without waiting for DB persistence
-        dispatch(eventType);
+        // A delayed firmware lifecycle event is persisted with a receipt but
+        // can never turn into a trailing chime after the cooldown has elapsed.
+        if (dispatchAlerts) {
+            dispatch(eventType);
+        } else {
+            logger.info(
+                    "Persisting delayed {} trigger without dispatching alerts", eventType);
+        }
         receiptRepository.saveAndFlush(receipt);
         return new TriggerOutcome(eventId, true, triggeredAt);
     }
@@ -49,16 +65,25 @@ public class EventAlertService {
                 return false;
             }
             LocalDateTime now = LocalDateTime.now();
-            dispatch(eventType);
+            // Upload is a last-resort alert path only for the initial press.
+            // A repress must be evaluated at its physical edge; falling back
+            // here would manufacture the delayed/queued chime we prohibit.
+            boolean dispatchFallback = !"DOORBELL_REPRESS".equals(eventType);
+            if (dispatchFallback) {
+                dispatch(eventType);
+            }
             EventTriggerReceipt fallbackReceipt =
                     new EventTriggerReceipt(eventId, eventType, now);
             fallbackReceipt.markUploaded(now);
             receiptRepository.save(fallbackReceipt);
-            return true;
+            return dispatchFallback;
         }
 
-        dispatch(eventType);
-        return true;
+        boolean dispatchFallback = !"DOORBELL_REPRESS".equals(eventType);
+        if (dispatchFallback) {
+            dispatch(eventType);
+        }
+        return dispatchFallback;
     }
 
     private void dispatch(String eventType) {

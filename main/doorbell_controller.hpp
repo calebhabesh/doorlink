@@ -39,11 +39,13 @@ public:
 
     [[noreturn]] void run();
     esp_err_t post_event(const SystemEvent &event);
-    esp_err_t post_button_event(const SystemEvent &event);
 
 private:
     void set_state(DeviceState state);
-    esp_err_t handle_early_notify(const char *event_id, const char *event_type, const char *firmware_version, int remaining_ms = 30000);
+    esp_err_t handle_early_notify(const char *event_id, const char *event_type,
+                                  const char *firmware_version,
+                                  bool dispatch_alerts = true,
+                                  int remaining_ms = 30000);
     esp_err_t handle_rf_quiesce();
     esp_err_t handle_camera_capture(CapturedImage &image, int remaining_ms = 4000);
     esp_err_t handle_upload(const CapturedImage *image,
@@ -53,11 +55,13 @@ private:
                              const char *firmware_version,
                              int remaining_ms = 30000);
     void execute_alert_cycle(const char *event_type, const char *firmware_version,
-                             std::uint32_t press_number);
+                             std::uint32_t press_number,
+                             bool dispatch_alerts = true);
     void process_button_press_event(int64_t event_time_us, void *turn_data = nullptr);
     void process_visitor_recording(void *turn_data, const char *firmware_version);
     void start_followup_capture(std::uint32_t press_number,
-                                std::int64_t press_started_us);
+                                std::int64_t press_started_us,
+                                bool dispatch_alerts);
     void handle_ptt_session();
 
     void start_button_monitor();
@@ -68,6 +72,7 @@ private:
                                  const char *event_type,
                                  const char *device_id,
                                  const char *firmware_version,
+                                 bool dispatch_alerts,
                                  int timeout_ms = 5000);
     esp_err_t upload_with_retry(const CapturedImage *image,
                                 const RecordedAudio *audio,
@@ -82,12 +87,17 @@ private:
     DeviceState state_{DeviceState::Booting};
     VisitorSession session_{};
     QueueHandle_t event_queue_{nullptr};
-    QueueHandle_t button_mailbox_{nullptr};
     TaskHandle_t button_monitor_task_{nullptr};
     volatile bool button_monitor_running_{false};
     std::atomic_bool visitor_capture_window_active_{false};
     std::atomic_bool shutting_down_{false};
     std::atomic_uint32_t next_press_number_{1};
+    // A true value means the controller event loop can handle one repress now.
+    // The button monitor atomically reserves it; all other represses retain
+    // their lifecycle data but are forbidden from dispatching delayed alerts.
+    std::atomic_bool repress_alert_slot_available_{false};
+    std::atomic_uint32_t pending_button_events_{0};
+    std::atomic_uint32_t outstanding_followup_turns_{0};
     std::uint32_t alert_cycles_started_{0};
     std::uint32_t alert_cycles_finished_{0};
     std::uint32_t uploads_succeeded_{0};

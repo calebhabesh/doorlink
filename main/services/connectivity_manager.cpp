@@ -31,13 +31,15 @@ esp_err_t ConnectivityManager::trigger(const char *event_id,
                                        const char *event_type,
                                        const char *device_id,
                                        const char *firmware_version,
+                                       bool dispatch_alerts,
                                        int timeout_ms) const
 {
     if (!connected_) {
         return ESP_ERR_INVALID_STATE;
     }
     return wifi_bringup_trigger_event_timeout(event_id, event_type, device_id,
-                                      firmware_version, timeout_ms);
+                                      firmware_version, dispatch_alerts,
+                                      timeout_ms);
 }
 
 esp_err_t ConnectivityManager::upload(const CapturedImage *image,

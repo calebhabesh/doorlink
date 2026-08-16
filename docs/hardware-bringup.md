@@ -1194,6 +1194,14 @@ Whole-home alert receipts are keyed per physical press, while Home Assistant
 calls use a 1-second leading-edge cooldown with no trailing queue; retries
 remain idempotent for each `pressId`.
 
+The subsequent processing-flow revision moves the first QXGA shutter ahead of
+Wi-Fi startup and uploads the owned JPEG before waiting for button release or a
+visitor WAV. It also stamps each repress with remote-alert eligibility at its
+physical edge: lifecycle work accepted while another repress/capture is busy is
+persisted with alerts suppressed, and a later upload cannot generate a fallback
+repress chime. This revision passes the production ESP-IDF build and gateway
+tests but requires a flashed-board button-to-frame and rapid-repress test.
+
 The same run reported a FreeRTOS stack overflow in task `main` at the start of multipart
 upload. The production controller was still using the configured 3,584-byte
 ESP-IDF main-task stack. It now runs in a dedicated 16 KiB `doorbell_ctrl` task,

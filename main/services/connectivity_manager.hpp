@@ -18,6 +18,7 @@ public:
     esp_err_t trigger(const char *event_id, const char *event_type,
                       const char *device_id,
                       const char *firmware_version,
+                      bool dispatch_alerts,
                       int timeout_ms = 0) const;
     esp_err_t upload(const CapturedImage *image, const RecordedAudio *audio,
                      const char *event_type,

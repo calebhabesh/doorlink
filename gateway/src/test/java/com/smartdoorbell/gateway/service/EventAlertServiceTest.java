@@ -65,6 +65,22 @@ class EventAlertServiceTest {
     }
 
     @Test
+    void suppressedDelayedTriggerPersistsReceiptWithoutDispatching() {
+        String eventId = "0123456789abcdef0123456789abcdef-2";
+        when(receiptRepository.findById(eventId)).thenReturn(Optional.empty());
+        when(receiptRepository.saveAndFlush(any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        EventAlertService.TriggerOutcome outcome =
+                service.trigger(eventId, "DOORBELL_REPRESS", false);
+
+        assertTrue(outcome.created());
+        verify(receiptRepository).saveAndFlush(any(EventTriggerReceipt.class));
+        verify(chimeService, never()).ring(any());
+        verify(ntfyService, never()).sendNotification(any());
+    }
+
+    @Test
     void differentPressesInOneSessionEachDispatch() {
         String sessionId = "0123456789abcdef0123456789abcdef";
         String firstPressId = sessionId + "-1";
@@ -104,6 +120,17 @@ class EventAlertServiceTest {
         assertTrue(service.completeUpload(eventId, "DOORBELL_PRESS"));
         verify(chimeService).ring("DOORBELL_PRESS");
         verify(ntfyService).sendNotification("DOORBELL_PRESS");
+        verify(receiptRepository).save(any(EventTriggerReceipt.class));
+    }
+
+    @Test
+    void repressUploadWithoutReceiptNeverCreatesDelayedFallbackChime() {
+        String eventId = "0123456789abcdef0123456789abcdef-2";
+        when(receiptRepository.findById(eventId)).thenReturn(Optional.empty());
+
+        assertFalse(service.completeUpload(eventId, "DOORBELL_REPRESS"));
+        verify(chimeService, never()).ring(any());
+        verify(ntfyService, never()).sendNotification(any());
         verify(receiptRepository).save(any(EventTriggerReceipt.class));
     }
 }

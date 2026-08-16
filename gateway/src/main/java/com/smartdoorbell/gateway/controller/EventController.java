@@ -248,7 +248,8 @@ public class EventController {
         sessionRepository.save(session);
 
         EventAlertService.TriggerOutcome outcome =
-                eventAlertService.trigger(eventId, eventType);
+                eventAlertService.trigger(eventId, eventType,
+                        request.dispatchAlerts() == null || request.dispatchAlerts());
         deviceTelemetryService.record(request.deviceId(),
                 request.firmwareVersion(), eventType, eventId,
                 sanitizeRssi(request.wifiRssiDbm()));
@@ -339,7 +340,7 @@ public class EventController {
     public record TriggerRequest(String eventId, String sessionId, String pressId,
                                  Integer pressNumber, String eventType,
                                  String deviceId, String firmwareVersion,
-                                 Integer wifiRssiDbm) {}
+                                 Integer wifiRssiDbm, Boolean dispatchAlerts) {}
 
     public record TriggerResponse(String pressId, String sessionId,
                                   boolean pressCreated, boolean created,
