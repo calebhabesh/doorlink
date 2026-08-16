@@ -39,7 +39,7 @@ class CameraSpeakerPowerBoundary final {
 public:
     CameraSpeakerPowerBoundary()
     {
-        chime_player_set_camera_power_blocked(true);
+        chime_player_set_camera_overlap_mode(true);
     }
 
     ~CameraSpeakerPowerBoundary()
@@ -50,7 +50,7 @@ public:
     void release()
     {
         if (active_) {
-            chime_player_set_camera_power_blocked(false);
+            chime_player_set_camera_overlap_mode(false);
             active_ = false;
         }
     }
@@ -196,8 +196,8 @@ void record_followup_turn_task(void *arg)
         turn->capture_window_active->store(false);
     } else {
         // A repress gets immediate local acknowledgement when I2S is idle. A
-        // sustained hold may stop only this interruptible repress chime; the
-        // non-interruptible first chime always completes.
+        // deliberate sustained repress makes the active local stream
+        // interruptible and yields it to the visitor microphone.
         const std::int64_t handoff_us =
             turn->press_started_us +
             static_cast<std::int64_t>(kRepressChimeHoldHandoffMs) * 1000LL;
@@ -672,10 +672,9 @@ void DoorbellController::execute_alert_cycle(const char *event_type,
         return;
     }
 
-    // 2. Close the speaker/camera power boundary. New chime requests are
-    // suppressed first, then any already-active chime drains and mutes U4.
-    // This preserves the complete initial chime without overlapping its 4-ohm
-    // load with U9/camera startup.
+    // 2. Enter camera-overlap mode. The existing full chime drains first; new
+    // presses use only the short -18 dB profile. That bounded profile remains
+    // available through RF shutdown, U9 rail startup, and camera capture.
     CameraSpeakerPowerBoundary speaker_boundary;
     ESP_LOGI(kTag, "Waiting for local chime to finish before camera power-up");
     const esp_err_t chime_idle_err = chime_player_wait_until_idle(
@@ -690,7 +689,7 @@ void DoorbellController::execute_alert_cycle(const char *event_type,
         return;
     }
     ESP_LOGI(kTag,
-             "[MONOTONIC_TIMING] t=%.1f ms | STAGE_COMPLETE: Speaker idle (amplifier muted before camera)",
+             "[MONOTONIC_TIMING] t=%.1f ms | STAGE_COMPLETE: Full chime drained; bounded startup overlap armed",
              static_cast<double>(esp_timer_get_time() - session_.session_start_us) /
                  1000.0);
 

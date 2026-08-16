@@ -31,11 +31,20 @@ unsigned speaker_output_ramp_ms(void) {
 
 void speaker_envelope_init(speaker_envelope_t *envelope,
                            uint32_t sample_rate_hz, size_t total_frames) {
+  speaker_envelope_init_profile(envelope, sample_rate_hz, total_frames,
+                                speaker_output_attenuation_db(),
+                                speaker_output_ramp_ms());
+}
+
+void speaker_envelope_init_profile(speaker_envelope_t *envelope,
+                                   uint32_t sample_rate_hz,
+                                   size_t total_frames,
+                                   unsigned attenuation_db,
+                                   unsigned ramp_ms) {
   if (envelope == NULL) {
     return;
   }
 
-  unsigned attenuation_db = speaker_output_attenuation_db();
   const unsigned max_db =
       (unsigned)(sizeof(s_attenuation_q15) / sizeof(s_attenuation_q15[0]) - 1U);
   if (attenuation_db > max_db) {
@@ -45,7 +54,7 @@ void speaker_envelope_init(speaker_envelope_t *envelope,
   envelope->target_gain_q15 = s_attenuation_q15[attenuation_db];
   envelope->total_frames = total_frames;
   envelope->ramp_frames =
-      ((size_t)sample_rate_hz * speaker_output_ramp_ms()) / 1000U;
+      ((size_t)sample_rate_hz * ramp_ms) / 1000U;
 }
 
 int16_t speaker_envelope_apply(const speaker_envelope_t *envelope,

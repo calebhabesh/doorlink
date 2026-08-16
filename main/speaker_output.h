@@ -19,6 +19,13 @@ typedef struct {
 void speaker_envelope_init(speaker_envelope_t *envelope,
                            uint32_t sample_rate_hz, size_t total_frames);
 
+/** Initialize an envelope with an explicit experimental output profile. */
+void speaker_envelope_init_profile(speaker_envelope_t *envelope,
+                                   uint32_t sample_rate_hz,
+                                   size_t total_frames,
+                                   unsigned attenuation_db,
+                                   unsigned ramp_ms);
+
 /** Apply configured attenuation and the start/end ramp to one signed sample. */
 int16_t speaker_envelope_apply(const speaker_envelope_t *envelope,
                                int16_t sample, size_t frame_index);

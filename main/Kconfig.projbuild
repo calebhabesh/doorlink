@@ -34,6 +34,39 @@ config SMART_DOORBELL_SPEAKER_RAMP_MS
         Apply a linear ramp at both ends of local chimes and homeowner replies
         to reduce clicks and abrupt current transients. Set to zero to disable.
 
+config SMART_DOORBELL_CAMERA_OVERLAP_ACK
+    bool "Allow a limited local acknowledgement during camera capture"
+    depends on SMART_DOORBELL_PRODUCTION_APP
+    default y
+    help
+        Permit represses from the camera-startup boundary through capture to
+        play a short, strongly attenuated prefix of the chime. The initial full
+        chime still drains before startup. Represses may restart the bounded
+        prefix while the camera is active. This mode requires validation with
+        the 4-ohm speaker and must never bypass the configured limits below.
+
+config SMART_DOORBELL_CAMERA_OVERLAP_ACK_ATTENUATION_DB
+    int "Camera-overlap acknowledgement attenuation (dB)"
+    depends on SMART_DOORBELL_CAMERA_OVERLAP_ACK
+    range 12 24
+    default 18
+
+config SMART_DOORBELL_CAMERA_OVERLAP_ACK_DURATION_MS
+    int "Camera-overlap acknowledgement duration (ms)"
+    depends on SMART_DOORBELL_CAMERA_OVERLAP_ACK
+    range 50 500
+    default 250
+
+config SMART_DOORBELL_REPRESS_HOLD_TO_TALK_MS
+    int "Repress hold duration before visitor microphone handoff (ms)"
+    depends on SMART_DOORBELL_PRODUCTION_APP
+    range 500 3000
+    default 1200
+    help
+        Require a deliberate hold before interrupting the local repress chime
+        and handing the shared I2S bus to the visitor microphone. Shorter
+        presses remain local acknowledgements and never start recording.
+
 config SMART_DOORBELL_WAKE_SLEEP_DIAGNOSTIC
     bool "Build the button/PIR wake and deep-sleep diagnostic"
     default n

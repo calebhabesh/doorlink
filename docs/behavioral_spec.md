@@ -30,8 +30,9 @@ Firmware explicitly closes the session before sleep when the gateway is
 reachable. The gateway and dashboard infer closure from the same 60/90-second
 limits if that close request is lost.
 
-Only the first press dispatches the indoor/Home Assistant chime and primary
-push notification. All later press triggers update the same persisted session.
+Every press is persisted with its own idempotency key. The first press dispatches
+the indoor/Home Assistant chime immediately; rapid represses are delivered
+through the bounded whole-home coalescing policy described below.
 
 ## First press
 
@@ -55,7 +56,7 @@ post-chime microphone audio, is a normal short press and creates no empty WAV.
   delayed chime behind visitor microphone or homeowner playback. If a local
   chime is already audible, rewind its live stream at the next PCM chunk
   boundary so every valid physical down-edge gets prompt audible feedback.
-- Treat repress chimes as interruptible: a visitor still holding after 400 ms
+- Treat repress chimes as interruptible: a visitor still holding after 1,200 ms
   stops the repress chime cleanly and receives the microphone. A tap may let
   its acknowledgement chime finish.
 - Retain visitor microphone audio only after the one-second recording threshold
@@ -71,11 +72,13 @@ write visitor audio to flash.
 
 ## Half-duplex arbitration
 
-The first chime and established visitor/homeowner turns are never intentionally
-cut short except at the 90-second hard deadline. Repress acknowledgement is the
-deliberately interruptible exception:
+The first press starts a complete chime. A later deliberate 1,200 ms hold may
+reclassify the active local stream as interruptible so the visitor can claim
+the microphone. Established visitor/homeowner turns remain protected except at
+the 90-second hard deadline:
 
-1. The first local chime completes.
+1. The first local chime completes unless a subsequent held repress explicitly
+   yields it to the microphone.
 2. A repress acknowledgement may play only while I2S is otherwise idle; a
    sustained visitor hold or arriving homeowner WAV interrupts it cleanly.
 3. An active visitor recording completes on release or at 15 seconds.
@@ -100,13 +103,23 @@ are build-time configurable through
 `CONFIG_SMART_DOORBELL_SPEAKER_ATTENUATION_DB` and
 `CONFIG_SMART_DOORBELL_SPEAKER_RAMP_MS`.
 
-The early remote notification remains ahead of camera capture. After it is
-sent, firmware atomically suppresses new chime starts/retriggers, allows an
-already-playing first chime to finish, and verifies that the amplifier is muted
-before enabling the camera power domain. Speaker playback stays blocked until
-capture has returned and the camera rails are off. Exhausting the session
-deadline while draining the speaker aborts capture instead of overlapping the
-two loads.
+The early remote notification remains ahead of camera capture and is
+idempotent per physical `pressId`. The gateway acknowledges and persists each
+press without waiting for Home Assistant. Whole-home webhook delivery uses a
+750 ms leading/trailing coalescing window: the first request is queued
+immediately, one trailing request is retained, and additional requests in the
+same burst merge into that pending delivery. This prevents overlapping Home
+Assistant calls without restoring the old multi-second dead period.
+
+Before camera startup, firmware allows the initial 6 dB chime to finish, then
+arms the bounded camera-overlap profile. From RF shutdown through U9 rail
+startup and camera capture, represses may play or restart a 250 ms chime prefix
+at 18 dB attenuation. If that low-power acknowledgement already owns AMP_EN,
+camera rail enable waits for its 25 ms ramp plus a 5 ms guard before adding the
+camera load. Camera startup still refuses overlap with any unverified speaker
+owner. Visitor microphone and homeowner playback retain I2S priority and cause
+the acknowledgement to be skipped. Exhausting the session deadline while
+draining the initial full chime still aborts capture.
 
 ## Persisted and UI model
 
@@ -136,9 +149,11 @@ Legacy event rows remain readable during rollout; rows with the historical
 | GPIO2 stable debounce | 20 ms |
 | Minimum retained visitor audio | 1,000 ms |
 | Maximum visitor recording | 15,000 ms |
-| Repress chime-to-microphone handoff | 400 ms |
+| Repress chime-to-microphone handoff | 1,200 ms |
 | Production speaker attenuation | 6 dB |
 | Speaker fade-in/fade-out | 25 ms |
+| Camera-overlap acknowledgement | 250 ms at 18 dB attenuation |
+| Whole-home webhook coalescing interval | 750 ms |
 | Stale-snapshot threshold | 15,000 ms |
 | Session idle limit | 60,000 ms |
 | Session absolute limit | 90,000 ms |
@@ -148,11 +163,11 @@ Legacy event rows remain readable during rollout; rows with the historical
 
 - Wi-Fi failure never prevents the complete first local chime or LED
   acknowledgement.
-- The first chime is not stopped on a timer. A physical repress may restart its
-  live stream from sample zero; after the final quick press, the restarted
-  chime is allowed to complete.
-- The complete-chime guarantee applies to the first press. Repress chimes may
-  yield to a sustained visitor hold, homeowner WAV, or safe shutdown.
+- The first chime is not stopped merely because time elapsed. A physical
+  repress may restart its live stream from sample zero; a deliberate held
+  repress may yield it to the microphone after 1,200 ms.
+- After the final quick press, the restarted chime is allowed to complete.
+  Repress chimes may also yield to homeowner WAV or safe shutdown.
 - Camera failure leaves the early session/press alert intact and cuts camera
   power; the dashboard may show snapshot pending.
 - A lost trigger or media response is retried with stable identifiers, so it

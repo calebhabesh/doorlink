@@ -46,12 +46,17 @@ bool chime_player_is_playing(void);
 bool chime_player_is_interruptible(void);
 
 /**
- * @brief Prevent new/retriggered chimes while camera power is pending or on.
- *
- * An already-active chime is allowed to finish. After blocking new requests,
- * call chime_player_wait_until_idle() before enabling the camera rail.
+ * @brief Confirm AMP_EN belongs to the bounded low-power camera overlap path.
  */
-void chime_player_set_camera_power_blocked(bool blocked);
+bool chime_player_camera_overlap_active(void);
+
+/**
+ * @brief Select the bounded low-power acknowledgement profile around camera use.
+ *
+ * An already-active full chime may finish before startup. New requests use the
+ * configured overlap attenuation/duration and may continue while U9 starts.
+ */
+void chime_player_set_camera_overlap_mode(bool enabled);
 
 /**
  * @brief Wait until the amplifier has been muted and chime playback released.

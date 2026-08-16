@@ -1140,7 +1140,7 @@ chime plays completely and continuing to hold records after it. The subsequent
 interaction update preserves that non-interruptible first chime while restoring
 immediate onboard acknowledgement for represses whenever I2S is idle. A repress
 while a local chime is already audible rewinds the live PCM stream without
-tearing down I2S. A repress held for 400 ms yields interruptible repress audio
+tearing down I2S. A repress held for 1,200 ms yields interruptible repress audio
 to the visitor microphone; an arriving homeowner WAV may also interrupt it,
 and repress chimes are skipped rather than queued during active dialogue. The
 one-second minimum, 15-second cap, and this multi-press arbitration require
@@ -1159,6 +1159,19 @@ notification is still sent before this wait. Reset-reason logging was also
 added. These mitigations do not modify the immutable PCB releases and require a
 flashed-board A/B retest with the 4-ohm speaker before that speaker is accepted
 for production.
+
+The 2026-08-16 experimental follow-up keeps the full 6 dB chime ahead of camera
+startup, then permits the 18 dB/250 ms acknowledgement throughout RF shutdown,
+U9 rail startup, and camera capture. Repeated presses may restart that prefix.
+When AMP_EN is already active, camera power-up verifies that the chime player
+owns it in the bounded overlap profile and waits for the 25 ms ramp plus a 5 ms
+guard before enabling U9. Any other AMP_EN owner still aborts camera startup.
+This is a software power-limiting experiment, not evidence that full chime and
+camera loads are safe together. Validate `SYS`, reset reason, amplifier
+temperature, camera completion, and image integrity with the 4-ohm speaker.
+Whole-home alert receipts are keyed per physical press, while the Home
+Assistant calls use a 750 ms leading/trailing coalescing window; retries remain
+idempotent for each `pressId`.
 
 The same run reported a FreeRTOS stack overflow in task `main` at the start of multipart
 upload. The production controller was still using the configured 3,584-byte

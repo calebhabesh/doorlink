@@ -156,6 +156,28 @@ public class EventControllerTest {
     }
 
     @Test
+    public void testRepressTriggersWholeHomeChimeByPressId() throws Exception {
+        String sessionId = "0123456789abcdef0123456789abcdef";
+        String pressId = sessionId + "-2";
+        LocalDateTime triggeredAt = LocalDateTime.of(2026, 8, 16, 7, 0);
+        when(eventAlertService.trigger(pressId, "DOORBELL_REPRESS"))
+                .thenReturn(new EventAlertService.TriggerOutcome(
+                        pressId, true, triggeredAt));
+
+        mockMvc.perform(post("/api/events/trigger")
+                .contentType("application/json")
+                .content("""
+                        {"eventId":"%s","eventType":"DOORBELL_REPRESS",
+                         "deviceId":"front-door","firmwareVersion":"1.0.0"}
+                        """.formatted(pressId))
+                .header("X-API-Key", "test-api-key"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sessionId").value(sessionId));
+
+        verify(eventAlertService).trigger(pressId, "DOORBELL_REPRESS");
+    }
+
+    @Test
     public void testEarlyTriggerRequiresApiKey() throws Exception {
         mockMvc.perform(post("/api/events/trigger")
                 .contentType("application/json")

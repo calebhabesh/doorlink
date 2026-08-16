@@ -17,16 +17,31 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "speaker_output.h"
+#include "sdkconfig.h"
 
 #define CHIME_SAMPLE_RATE_HZ 44100
 #define CHIME_WRITE_CHUNK_BYTES 1024
+
+#ifndef CONFIG_SMART_DOORBELL_CAMERA_OVERLAP_ACK
+#define CONFIG_SMART_DOORBELL_CAMERA_OVERLAP_ACK 0
+#endif
+#ifndef CONFIG_SMART_DOORBELL_CAMERA_OVERLAP_ACK_ATTENUATION_DB
+#define CONFIG_SMART_DOORBELL_CAMERA_OVERLAP_ACK_ATTENUATION_DB 18
+#endif
+#ifndef CONFIG_SMART_DOORBELL_CAMERA_OVERLAP_ACK_DURATION_MS
+#define CONFIG_SMART_DOORBELL_CAMERA_OVERLAP_ACK_DURATION_MS 250
+#endif
 
 static const char *TAG = "chime_player";
 static atomic_bool s_is_playing = false;
 static atomic_bool s_retrigger_requested = false;
 static atomic_bool s_stop_requested = false;
 static atomic_bool s_interruptible = false;
-static atomic_bool s_camera_power_blocked = false;
+static atomic_bool s_camera_overlap_mode = false;
+static atomic_bool s_tearing_down = false;
+static atomic_bool s_restart_after_teardown = false;
+static atomic_bool s_low_power_overlap = false;
+static atomic_bool s_output_active = false;
 static portMUX_TYPE s_claim_lock = portMUX_INITIALIZER_UNLOCKED;
 
 static void release_playback_claim(void)
@@ -34,6 +49,10 @@ static void release_playback_claim(void)
     atomic_store(&s_retrigger_requested, false);
     atomic_store(&s_stop_requested, false);
     atomic_store(&s_interruptible, false);
+    atomic_store(&s_tearing_down, false);
+    atomic_store(&s_restart_after_teardown, false);
+    atomic_store(&s_low_power_overlap, false);
+    atomic_store(&s_output_active, false);
     // Publish idle last so a new caller cannot claim playback while the old
     // task is still resetting shared state.
     atomic_store(&s_is_playing, false);
@@ -89,8 +108,14 @@ static esp_err_t init_speaker_i2s(i2s_chan_handle_t *tx_chan)
     return ESP_OK;
 }
 
-static esp_err_t play_claimed_chime(TickType_t bus_timeout_ticks)
+static esp_err_t play_claimed_chime(TickType_t bus_timeout_ticks,
+                                    size_t playback_len,
+                                    unsigned attenuation_db,
+                                    unsigned ramp_ms,
+                                    bool allow_retrigger,
+                                    const char *description)
 {
+restart_playback:
     if (!audio_bus_acquire(bus_timeout_ticks)) {
         if (bus_timeout_ticks == 0) {
             ESP_LOGI(TAG,
@@ -112,6 +137,7 @@ static esp_err_t play_claimed_chime(TickType_t bus_timeout_ticks)
     gpio_reset_pin(AMP_EN_PIN);
     gpio_set_direction(AMP_EN_PIN, GPIO_MODE_OUTPUT);
     gpio_set_level(AMP_EN_PIN, 1);
+    atomic_store(&s_output_active, true);
     vTaskDelay(pdMS_TO_TICKS(10)); // Allow amp power-on settle
 
     i2s_chan_handle_t tx_chan = NULL;
@@ -123,24 +149,29 @@ static esp_err_t play_claimed_chime(TickType_t bus_timeout_ticks)
         return err;
     }
 
-    ESP_LOGI(TAG, "Playing local doorbell chime (%u bytes PCM @ 44.1kHz stereo)...",
-             (unsigned)g_doorbell_chime_pcm_len);
-    ESP_LOGI(TAG, "Speaker protection: attenuation=-%u dB ramp=%u ms",
-             speaker_output_attenuation_db(), speaker_output_ramp_ms());
+    if (playback_len > g_doorbell_chime_pcm_len) {
+        playback_len = g_doorbell_chime_pcm_len;
+    }
+    playback_len &= ~(size_t)3U;
+    ESP_LOGI(TAG,
+             "Playing %s (%u bytes PCM @ 44.1kHz stereo, attenuation=-%u dB ramp=%u ms)",
+             description, (unsigned)playback_len, attenuation_db, ramp_ms);
 
     size_t offset = 0;
     size_t bytes_written = 0;
     int16_t scaled_samples[CHIME_WRITE_CHUNK_BYTES / sizeof(int16_t)];
     speaker_envelope_t envelope;
-    speaker_envelope_init(&envelope, CHIME_SAMPLE_RATE_HZ,
-                          g_doorbell_chime_pcm_len / 4U);
+    speaker_envelope_init_profile(&envelope, CHIME_SAMPLE_RATE_HZ,
+                                  playback_len / 4U, attenuation_db, ramp_ms);
 
-    while (offset < g_doorbell_chime_pcm_len) {
+stream_live_channel:
+    while (offset < playback_len) {
         if (atomic_load(&s_stop_requested)) {
             ESP_LOGI(TAG, "Local chime yielded to higher-priority audio");
             break;
         }
-        if (atomic_exchange(&s_retrigger_requested, false)) {
+        if (allow_retrigger &&
+            atomic_exchange(&s_retrigger_requested, false)) {
             // Keep the amplifier and I2S channel live. Rewinding at a 1 KiB
             // PCM boundary acknowledges a new press without task creation,
             // bus reacquisition, or an audible mute/teardown gap.
@@ -149,7 +180,7 @@ static esp_err_t play_claimed_chime(TickType_t bus_timeout_ticks)
                      "Button repress retriggered local chime from sample 0");
         }
 
-        size_t chunk_len = g_doorbell_chime_pcm_len - offset;
+        size_t chunk_len = playback_len - offset;
         if (chunk_len > CHIME_WRITE_CHUNK_BYTES) {
             chunk_len = CHIME_WRITE_CHUNK_BYTES;
         }
@@ -183,88 +214,195 @@ static esp_err_t play_claimed_chime(TickType_t bus_timeout_ticks)
                       pdMS_TO_TICKS(100));
     vTaskDelay(pdMS_TO_TICKS(50)); // Allow hardware DMA buffer to complete playback
 
+    // A down-edge may arrive after the stream's final chunk but before the
+    // amplifier/I2S teardown completes. Consume that edge while the live
+    // channel is still available; otherwise it would be acknowledged by the
+    // caller and then silently discarded during teardown.
+    bool rewind_before_teardown = false;
+    portENTER_CRITICAL(&s_claim_lock);
+    if (allow_retrigger && err == ESP_OK &&
+        !atomic_load(&s_stop_requested) &&
+        atomic_exchange(&s_retrigger_requested, false)) {
+        rewind_before_teardown = true;
+    } else {
+        atomic_store(&s_tearing_down, true);
+    }
+    portEXIT_CRITICAL(&s_claim_lock);
+
+    if (rewind_before_teardown) {
+        ESP_LOGI(TAG, "Late button repress reused the live I2S channel");
+        offset = 0;
+        goto stream_live_channel;
+    }
+
     // Mute amp first, then tear down I2S channel
+    atomic_store(&s_output_active, false);
     gpio_set_level(AMP_EN_PIN, 0);
     i2s_channel_disable(tx_chan);
     i2s_del_channel(tx_chan);
 
     ESP_LOGI(TAG, "Local doorbell chime playback completed cleanly");
     audio_bus_release();
-    release_playback_claim();
+
+    bool restart_after_teardown = false;
+    portENTER_CRITICAL(&s_claim_lock);
+    if (allow_retrigger && err == ESP_OK &&
+        !atomic_load(&s_stop_requested) &&
+        atomic_exchange(&s_restart_after_teardown, false)) {
+        atomic_store(&s_tearing_down, false);
+        atomic_store(&s_interruptible, true);
+        restart_after_teardown = true;
+    } else {
+        // Publish IDLE while holding the same lock used by claimers. A press
+        // can now either request this task's restart or become the next owner;
+        // it cannot land between the final restart check and IDLE publication.
+        release_playback_claim();
+    }
+    portEXIT_CRITICAL(&s_claim_lock);
+
+    if (restart_after_teardown) {
+        ESP_LOGI(TAG, "Button repress arrived during teardown; restarting chime");
+        goto restart_playback;
+    }
+
     return ESP_OK;
 }
 
-static bool claim_chime_playback(bool interruptible)
+typedef enum {
+    CHIME_CLAIM_HANDLED,
+    CHIME_CLAIM_NORMAL,
+    CHIME_CLAIM_CAMERA_ACK,
+} chime_claim_t;
+
+static chime_claim_t claim_chime_playback(bool interruptible,
+                                          bool allow_camera_ack)
 {
     enum {
         CLAIM_STARTED,
+        CLAIM_CAMERA_ACK_STARTED,
         CLAIM_RETRIGGERED,
+        CLAIM_RESTART_QUEUED,
         CLAIM_CAMERA_BLOCKED,
         CLAIM_STOPPING,
     } outcome;
 
     portENTER_CRITICAL(&s_claim_lock);
-    if (atomic_load(&s_camera_power_blocked)) {
-        outcome = CLAIM_CAMERA_BLOCKED;
+    if (atomic_load(&s_camera_overlap_mode)) {
+        bool expected = false;
+        if (!allow_camera_ack || !CONFIG_SMART_DOORBELL_CAMERA_OVERLAP_ACK) {
+            outcome = CLAIM_CAMERA_BLOCKED;
+        } else if (atomic_compare_exchange_strong(&s_is_playing, &expected, true)) {
+            atomic_store(&s_retrigger_requested, false);
+            atomic_store(&s_stop_requested, false);
+            atomic_store(&s_interruptible, true);
+            atomic_store(&s_low_power_overlap, true);
+            outcome = CLAIM_CAMERA_ACK_STARTED;
+        } else if (atomic_load(&s_stop_requested)) {
+            outcome = CLAIM_STOPPING;
+        } else if (atomic_load(&s_tearing_down)) {
+            atomic_store(&s_restart_after_teardown, true);
+            atomic_store(&s_interruptible, true);
+            outcome = CLAIM_RESTART_QUEUED;
+        } else {
+            atomic_store(&s_retrigger_requested, true);
+            atomic_store(&s_interruptible, true);
+            outcome = CLAIM_RETRIGGERED;
+        }
     } else {
         bool expected = false;
         if (atomic_compare_exchange_strong(&s_is_playing, &expected, true)) {
             atomic_store(&s_retrigger_requested, false);
             atomic_store(&s_stop_requested, false);
             atomic_store(&s_interruptible, interruptible);
+            atomic_store(&s_low_power_overlap, false);
             outcome = CLAIM_STARTED;
         } else if (atomic_load(&s_stop_requested)) {
             outcome = CLAIM_STOPPING;
+        } else if (atomic_load(&s_tearing_down)) {
+            atomic_store(&s_restart_after_teardown, true);
+            outcome = CLAIM_RESTART_QUEUED;
         } else {
             atomic_store(&s_retrigger_requested, true);
+            if (interruptible) {
+                atomic_store(&s_interruptible, true);
+            }
             outcome = CLAIM_RETRIGGERED;
         }
     }
     portEXIT_CRITICAL(&s_claim_lock);
 
     if (outcome == CLAIM_CAMERA_BLOCKED) {
-        ESP_LOGI(TAG, "Chime suppressed across camera power boundary");
-        return false;
+        ESP_LOGI(TAG, "Camera-overlap acknowledgement disabled; chime suppressed");
+        return CHIME_CLAIM_HANDLED;
     }
     if (outcome == CLAIM_STOPPING) {
         ESP_LOGI(TAG, "Chime retrigger suppressed while playback is yielding");
-        return false;
+        return CHIME_CLAIM_HANDLED;
     }
     if (outcome == CLAIM_RETRIGGERED) {
         // A physical repress must remain perceptible even while the local
         // speaker is already ringing. The owner task consumes this flag at
         // the next PCM chunk boundary and rewinds without releasing I2S.
         ESP_LOGI(TAG, "Chime already audible; queued immediate sample-0 retrigger");
-        return false;
+        return CHIME_CLAIM_HANDLED;
     }
-    return true;
+    if (outcome == CLAIM_RESTART_QUEUED) {
+        ESP_LOGI(TAG, "Chime teardown active; queued immediate restart");
+        return CHIME_CLAIM_HANDLED;
+    }
+    return outcome == CLAIM_CAMERA_ACK_STARTED
+               ? CHIME_CLAIM_CAMERA_ACK
+               : CHIME_CLAIM_NORMAL;
 }
 
 esp_err_t chime_player_play_sync(void)
 {
-    if (!claim_chime_playback(false)) {
+    if (claim_chime_playback(false, false) != CHIME_CLAIM_NORMAL) {
         return ESP_OK;
     }
-    return play_claimed_chime(portMAX_DELAY);
+    return play_claimed_chime(portMAX_DELAY, g_doorbell_chime_pcm_len,
+                              speaker_output_attenuation_db(),
+                              speaker_output_ramp_ms(), true,
+                              "local doorbell chime");
 }
 
 static void first_chime_play_task(void *pvParameters)
 {
     (void)pvParameters;
-    play_claimed_chime(portMAX_DELAY);
+    play_claimed_chime(portMAX_DELAY, g_doorbell_chime_pcm_len,
+                       speaker_output_attenuation_db(),
+                       speaker_output_ramp_ms(), true,
+                       "local doorbell chime");
     vTaskDelete(NULL);
 }
 
 static void repress_chime_play_task(void *pvParameters)
 {
     (void)pvParameters;
-    (void)play_claimed_chime(0);
+    (void)play_claimed_chime(0, g_doorbell_chime_pcm_len,
+                             speaker_output_attenuation_db(),
+                             speaker_output_ramp_ms(), true,
+                             "local repress chime");
+    vTaskDelete(NULL);
+}
+
+static void camera_overlap_ack_task(void *pvParameters)
+{
+    (void)pvParameters;
+    const size_t playback_len =
+        ((size_t)CHIME_SAMPLE_RATE_HZ *
+         CONFIG_SMART_DOORBELL_CAMERA_OVERLAP_ACK_DURATION_MS / 1000U) * 4U;
+    (void)play_claimed_chime(
+        0, playback_len,
+        CONFIG_SMART_DOORBELL_CAMERA_OVERLAP_ACK_ATTENUATION_DB,
+        speaker_output_ramp_ms(), true,
+        "camera-overlap acknowledgement");
     vTaskDelete(NULL);
 }
 
 esp_err_t chime_player_play_async(void)
 {
-    if (!claim_chime_playback(false)) {
+    if (claim_chime_playback(false, false) != CHIME_CLAIM_NORMAL) {
         return ESP_OK;
     }
 
@@ -281,14 +419,19 @@ esp_err_t chime_player_play_async(void)
 
 esp_err_t chime_player_play_repress_async(void)
 {
-    if (!claim_chime_playback(true)) {
+    const chime_claim_t claim = claim_chime_playback(true, true);
+    if (claim == CHIME_CLAIM_HANDLED) {
         return ESP_OK;
     }
 
-    BaseType_t ret = xTaskCreate(repress_chime_play_task, "repress_chime", 4096,
-                                 NULL, configMAX_PRIORITIES - 2, NULL);
+    const bool camera_ack = claim == CHIME_CLAIM_CAMERA_ACK;
+    BaseType_t ret = xTaskCreate(
+        camera_ack ? camera_overlap_ack_task : repress_chime_play_task,
+        camera_ack ? "camera_ack" : "repress_chime", 4096,
+        NULL, configMAX_PRIORITIES - 2, NULL);
     if (ret != pdPASS) {
-        ESP_LOGE(TAG, "Failed to create repress chime task");
+        ESP_LOGE(TAG, "Failed to create %s task",
+                 camera_ack ? "camera acknowledgement" : "repress chime");
         release_playback_claim();
         return ESP_ERR_NO_MEM;
     }
@@ -306,10 +449,17 @@ bool chime_player_is_interruptible(void)
     return atomic_load(&s_is_playing) && atomic_load(&s_interruptible);
 }
 
-void chime_player_set_camera_power_blocked(bool blocked)
+bool chime_player_camera_overlap_active(void)
+{
+    return atomic_load(&s_is_playing) &&
+           atomic_load(&s_low_power_overlap) &&
+           atomic_load(&s_output_active);
+}
+
+void chime_player_set_camera_overlap_mode(bool enabled)
 {
     portENTER_CRITICAL(&s_claim_lock);
-    atomic_store(&s_camera_power_blocked, blocked);
+    atomic_store(&s_camera_overlap_mode, enabled);
     portEXIT_CRITICAL(&s_claim_lock);
 }
 

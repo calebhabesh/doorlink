@@ -34,7 +34,7 @@ sequenceDiagram
 
     Visitor->>ESP: Later press / hold
     ESP->>ESP: LED + interruptible local chime if I2S idle
-    ESP->>ESP: If held 400 ms, stop repress chime and record
+    ESP->>ESP: If held 1,200 ms, stop repress chime and record
     ESP->>GW: Register press and upload WAV
 
     Homeowner->>UI: Hold PTT, then release
@@ -50,7 +50,7 @@ The initial microphone can start only after the complete local chime. A visitor
 who releases during that chime leaves no recording. Later presses request an
 immediate local acknowledgement only when I2S is idle. A tap may let that chime
 finish; a new valid down-edge while a local chime is audible rewinds the live
-stream at its next PCM chunk boundary. A hold continuing for 400 ms interrupts
+stream at its next PCM chunk boundary. A hold continuing for 1,200 ms interrupts
 interruptible repress audio and hands I2S to the microphone. Repress chimes are
 skipped, not delayed, while visitor or homeowner audio owns the bus. A release
 followed by another hold is another ordered press and recording in the same

@@ -65,6 +65,25 @@ class EventAlertServiceTest {
     }
 
     @Test
+    void differentPressesInOneSessionEachDispatch() {
+        String sessionId = "0123456789abcdef0123456789abcdef";
+        String firstPressId = sessionId + "-1";
+        String secondPressId = sessionId + "-2";
+        when(receiptRepository.findById(firstPressId)).thenReturn(Optional.empty());
+        when(receiptRepository.findById(secondPressId)).thenReturn(Optional.empty());
+        when(receiptRepository.saveAndFlush(any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        assertTrue(service.trigger(firstPressId, "DOORBELL_PRESS").created());
+        assertTrue(service.trigger(secondPressId, "DOORBELL_REPRESS").created());
+
+        verify(chimeService).ring("DOORBELL_PRESS");
+        verify(chimeService).ring("DOORBELL_REPRESS");
+        verify(ntfyService).sendNotification("DOORBELL_PRESS");
+        verify(ntfyService).sendNotification("DOORBELL_REPRESS");
+    }
+
+    @Test
     void uploadWithReceiptSuppressesFallback() {
         String eventId = "0123456789abcdef0123456789abcdef";
         EventTriggerReceipt receipt = new EventTriggerReceipt(

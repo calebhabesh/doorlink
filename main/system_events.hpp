@@ -5,6 +5,7 @@
 #include <algorithm>
 
 #include "esp_err.h"
+#include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -57,12 +58,16 @@ enum class AlertCycleOutcome : std::uint8_t {
  * Centralized policy limits governing visitor interaction and remote alerts.
  */
 namespace DoorbellPolicy {
+#ifndef CONFIG_SMART_DOORBELL_REPRESS_HOLD_TO_TALK_MS
+#define CONFIG_SMART_DOORBELL_REPRESS_HOLD_TO_TALK_MS 1200
+#endif
     constexpr int64_t kPttIdleTimeoutUs = 60000000LL;       // 60 seconds idle PTT session timeout
     constexpr int64_t kSessionAbsoluteMaxUs = 90000000LL;   // 90 seconds absolute session hard cap
     constexpr int64_t kSnapshotRefreshUs = 15000000LL;
     constexpr std::uint32_t kVisitorHoldMinimumMs = 1000;
     constexpr std::uint32_t kVisitorRecordingMaxMs = 15000;
-    constexpr std::uint32_t kRepressChimeHoldHandoffMs = 400;
+    constexpr std::uint32_t kRepressChimeHoldHandoffMs =
+        CONFIG_SMART_DOORBELL_REPRESS_HOLD_TO_TALK_MS;
 }
 
 /**

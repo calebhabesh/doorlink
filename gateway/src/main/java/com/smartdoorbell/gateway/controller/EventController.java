@@ -205,7 +205,7 @@ public class EventController {
             
             boolean fallbackNotification =
                     eventAlertService.completeUpload(
-                            session == null ? eventId : session.getSessionId(), eventType);
+                            pressId != null ? pressId : eventId, eventType);
             deviceTelemetryService.record(deviceId, firmwareVersion, eventType,
                     pressId, sanitizeRssi(wifiRssiDbm));
             
@@ -248,7 +248,7 @@ public class EventController {
         sessionRepository.save(session);
 
         EventAlertService.TriggerOutcome outcome =
-                eventAlertService.trigger(sessionId, eventType);
+                eventAlertService.trigger(eventId, eventType);
         deviceTelemetryService.record(request.deviceId(),
                 request.firmwareVersion(), eventType, eventId,
                 sanitizeRssi(request.wifiRssiDbm()));
