@@ -11,9 +11,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.time.Instant;
-import java.util.concurrent.atomic.AtomicReference;
-
 @Service
 @ConditionalOnProperty(name = "chime.provider", havingValue = "homeassistant")
 public class HomeAssistantChimeService implements ChimeService {
@@ -21,10 +18,6 @@ public class HomeAssistantChimeService implements ChimeService {
     private static final Logger logger = LoggerFactory.getLogger(HomeAssistantChimeService.class);
 
     private final RestTemplate restTemplate;
-    private final AtomicReference<Instant> lastRingTime = new AtomicReference<>(Instant.MIN);
-
-    @Value("${chime.cooldown.seconds:10}")
-    private long cooldownSeconds;
 
     @Value("${chime.homeassistant.webhook-url}")
     private String webhookUrl;
@@ -36,17 +29,6 @@ public class HomeAssistantChimeService implements ChimeService {
     @Override
     @Async
     public void ring(String eventType) {
-        Instant now = Instant.now();
-        Instant last = lastRingTime.get();
-
-        if (now.isBefore(last.plusSeconds(cooldownSeconds))) {
-            logger.info("Chime request skipped (within {}s cooldown window)", cooldownSeconds);
-            return;
-        }
-
-        // Update the last ring time
-        lastRingTime.set(now);
-
         if (webhookUrl == null || webhookUrl.isEmpty()) {
             logger.warn("Home Assistant webhook URL is not configured. Chime skipped.");
             return;
