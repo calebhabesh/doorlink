@@ -34,6 +34,7 @@ constexpr std::uint32_t kVisitorHoldMinimumMs =
     DoorbellPolicy::kVisitorHoldMinimumMs;
 constexpr std::uint32_t kRepressChimeHoldHandoffMs =
     DoorbellPolicy::kRepressChimeHoldHandoffMs;
+constexpr std::uint32_t kChimeDrainBeforeSleepMs = 4000;
 
 class CameraSpeakerPowerBoundary final {
 public:
@@ -586,6 +587,10 @@ void DoorbellController::execute_alert_cycle(const char *event_type,
         return;
     }
 
+    // Keep every chime request on the bounded camera-safe profile until this
+    // cycle has either completed camera work or returned through an error path.
+    CameraSpeakerPowerBoundary speaker_boundary;
+
     session_.alert_cycle_count++;
     alert_cycles_started_++;
 
@@ -672,25 +677,30 @@ void DoorbellController::execute_alert_cycle(const char *event_type,
         return;
     }
 
-    // 2. Enter camera-overlap mode. The existing full-volume chime drains
-    // first; new presses retain the normal waveform at -12 dB. That bounded
-    // low-power profile remains available through RF shutdown, U9 rail
-    // startup, and camera capture.
-    CameraSpeakerPowerBoundary speaker_boundary;
-    ESP_LOGI(kTag, "Waiting for local chime to finish before camera power-up");
-    const esp_err_t chime_idle_err = chime_player_wait_until_idle(
-        pdMS_TO_TICKS(static_cast<std::uint32_t>(remaining_ms)));
-    if (chime_idle_err != ESP_OK) {
-        ESP_LOGE(kTag,
-                 "session=%s cycle=%" PRIu32 " ALERT_FAILED reason=speaker_camera_boundary_timeout",
-                 session_.session_id, session_.alert_cycle_count);
-        finish_greeting_task();
-        visitor_capture_window_active_.store(false);
-        alert_cycles_finished_++;
-        return;
+    // 2. A camera-safe -12 dB chime may continue through capture. A stale
+    // snapshot cycle can begin with a normal -6 dB repress that was claimed
+    // before this task classified it; only that higher-power stream must drain.
+    if (chime_player_is_playing() &&
+        !chime_player_camera_overlap_active()) {
+        ESP_LOGI(kTag,
+                 "Waiting for non-overlap local chime to finish before camera power-up");
+        const esp_err_t chime_idle_err = chime_player_wait_until_idle(
+            pdMS_TO_TICKS(static_cast<std::uint32_t>(remaining_ms)));
+        if (chime_idle_err != ESP_OK) {
+            ESP_LOGE(kTag,
+                     "session=%s cycle=%" PRIu32 " ALERT_FAILED reason=speaker_camera_boundary_timeout",
+                     session_.session_id, session_.alert_cycle_count);
+            finish_greeting_task();
+            visitor_capture_window_active_.store(false);
+            alert_cycles_finished_++;
+            return;
+        }
+    } else {
+        ESP_LOGI(kTag,
+                 "Camera-safe local chime may continue while camera starts");
     }
     ESP_LOGI(kTag,
-             "[MONOTONIC_TIMING] t=%.1f ms | STAGE_COMPLETE: Full chime drained; bounded startup overlap armed",
+             "[MONOTONIC_TIMING] t=%.1f ms | STAGE_COMPLETE: Camera-safe speaker boundary ready",
              static_cast<double>(esp_timer_get_time() - session_.session_start_us) /
                  1000.0);
 
@@ -983,11 +993,24 @@ void DoorbellController::handle_ptt_session()
     set_state(DeviceState::PreparingSleep);
     shutting_down_.store(true);
     stop_button_monitor();
-    chime_player_request_stop();
-    const std::int64_t chime_stop_deadline = esp_timer_get_time() + 500000LL;
-    while (chime_player_is_playing() &&
-           esp_timer_get_time() < chime_stop_deadline) {
-        vTaskDelay(pdMS_TO_TICKS(10));
+    if (chime_player_is_playing()) {
+        ESP_LOGI(kTag,
+                 "Session ended with a local chime active; draining it before sleep");
+        const esp_err_t drain_err = chime_player_wait_until_idle(
+            pdMS_TO_TICKS(kChimeDrainBeforeSleepMs));
+        if (drain_err != ESP_OK) {
+            // A wedged peripheral must not prevent bounded shutdown forever.
+            // This is a fault fallback, not a normal chime interruption path.
+            ESP_LOGE(kTag,
+                     "Local chime did not drain before sleep; forcing audio shutdown");
+            chime_player_request_stop();
+            const std::int64_t stop_deadline_us =
+                esp_timer_get_time() + 500000LL;
+            while (chime_player_is_playing() &&
+                   esp_timer_get_time() < stop_deadline_us) {
+                vTaskDelay(pdMS_TO_TICKS(10));
+            }
+        }
     }
     audio_.request_capture_stop();
     const std::int64_t capture_stop_deadline = esp_timer_get_time() + 500000LL;
@@ -1035,6 +1058,10 @@ void DoorbellController::handle_ptt_session()
             ESP_LOGE(kTag, "GPIO48 fade-in failed: %s",
                      esp_err_to_name(fade_err));
         }
+        // The first photo must not wait for a full-power chime. Arm the bounded
+        // overlap profile before claiming I2S so this complete waveform can
+        // safely continue through camera startup and capture.
+        chime_player_set_camera_overlap_mode(true);
         const esp_err_t chime_err = chime_player_play_async();
         if (chime_err != ESP_OK) {
             ESP_LOGE(kTag, "Local chime playback failed: %s",

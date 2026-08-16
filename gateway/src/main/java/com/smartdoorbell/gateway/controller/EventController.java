@@ -430,6 +430,7 @@ public class EventController {
             emitter.send(SseEmitter.event().comment("connection-open"));
             emitter.send(SseEmitter.event()
                     .name("init")
+                    .reconnectTime(1000)
                     .data("Connection established"));
             
             this.emitters.add(authenticatedEmitter);
@@ -442,7 +443,7 @@ public class EventController {
         emitter.onError((ex) -> this.emitters.remove(authenticatedEmitter));
 
         org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
-        headers.add("Cache-Control", "no-cache, no-store, max-age=0, must-revalidate");
+        headers.add("Cache-Control", "no-cache, no-store, no-transform, max-age=0, must-revalidate");
         headers.add("X-Accel-Buffering", "no");
         headers.add("Connection", "keep-alive");
 
@@ -461,7 +462,7 @@ public class EventController {
         return ResponseEntity.notFound().build();
     }
 
-    @Scheduled(fixedRate = 20000)
+    @Scheduled(fixedRate = 10000)
     public void sendHeartbeat() {
         List<AuthenticatedEmitter> deadEmitters = new ArrayList<>();
         for (AuthenticatedEmitter authenticatedEmitter : emitters) {

@@ -1177,6 +1177,19 @@ temperature, camera completion, and image integrity with the 4-ohm speaker.
 The -12 dB overlap target uses approximately one-quarter of the speaker power
 of the normal -6 dB chime and is the loudest supported overlap setting pending
 those measurements.
+The next responsiveness revision starts the first complete chime on that
+camera-safe profile instead of draining a -6 dB waveform before U9 startup. It
+also removes the five default discarded QXGA convergence frames; production
+now requests the first complete post-initialization JPEG. This removes the two
+known intentional delays ahead of the shutter. The camera helper now observes
+its deadline between frame requests, and the chime retries transient I2S DMA
+backpressure rather than truncating playback. Exposure/white-balance quality,
+button-to-frame latency, supply droop, and complete audio must be remeasured on
+the assembled unit before this overlap is accepted.
+Normal session expiry now stops accepting button input and drains an audible
+local chime before sleep. A forced cutoff is reserved for playback that remains
+wedged past the four-second shutdown deadline; confirm that ordinary expiry no
+longer clips the waveform during the long-session test.
 Whole-home alert receipts are keyed per physical press, while Home Assistant
 calls use a 1-second leading-edge cooldown with no trailing queue; retries
 remain idempotent for each `pressId`.

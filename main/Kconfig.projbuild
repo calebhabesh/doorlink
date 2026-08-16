@@ -68,6 +68,17 @@ config SMART_DOORBELL_CAMERA_OVERLAP_ACK_DURATION_MS
         player clamps longer settings to the actual clip length. Short values
         crop the waveform and can sound unlike the normal doorbell.
 
+config SMART_DOORBELL_CAMERA_CONVERGENCE_FRAMES
+    int "Discarded camera convergence frames before the snapshot"
+    depends on SMART_DOORBELL_PRODUCTION_APP
+    range 0 5
+    default 0
+    help
+        Zero captures the first complete QXGA JPEG available after sensor
+        initialization. Each discarded QXGA frame adds substantial doorbell
+        latency. Raise this only when physical testing demonstrates that the
+        faster first frame has unacceptable exposure or white balance.
+
 config SMART_DOORBELL_REPRESS_HOLD_TO_TALK_MS
     int "Repress hold duration before visitor microphone handoff (ms)"
     depends on SMART_DOORBELL_PRODUCTION_APP

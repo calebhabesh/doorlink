@@ -21,6 +21,7 @@
 
 #define CHIME_SAMPLE_RATE_HZ 44100
 #define CHIME_WRITE_CHUNK_BYTES 1024
+#define CHIME_WRITE_TIMEOUT_MS 100
 
 #ifndef CONFIG_SMART_DOORBELL_CAMERA_OVERLAP_ACK
 #define CONFIG_SMART_DOORBELL_CAMERA_OVERLAP_ACK 0
@@ -198,14 +199,60 @@ stream_live_channel:
                 speaker_envelope_apply(&envelope, sample, frame_index);
         }
 
-        err = i2s_channel_write(tx_chan, scaled_samples,
-                                chunk_len, &bytes_written, pdMS_TO_TICKS(100));
-        if (err != ESP_OK) {
-            ESP_LOGE(TAG, "I2S write failed at offset %u: %s", (unsigned)offset,
-                     esp_err_to_name(err));
+        size_t chunk_written = 0;
+        unsigned stalled_writes = 0;
+        while (chunk_written < chunk_len &&
+               !atomic_load(&s_stop_requested)) {
+            bytes_written = 0;
+            err = i2s_channel_write(
+                tx_chan,
+                (const uint8_t *)scaled_samples + chunk_written,
+                chunk_len - chunk_written, &bytes_written,
+                pdMS_TO_TICKS(CHIME_WRITE_TIMEOUT_MS));
+            chunk_written += bytes_written;
+
+            if (chunk_written == chunk_len) {
+                // Some driver versions report a timeout even when the final
+                // partial write completed. Completion of this exact buffer is
+                // authoritative; do not truncate the following chunks.
+                err = ESP_OK;
+                break;
+            }
+
+            if (err == ESP_ERR_TIMEOUT) {
+                // QXGA capture and PSRAM copies can transiently delay the I2S
+                // DMA consumer. A timeout is not an instruction to truncate
+                // the doorbell: retain ownership and resume the same chunk.
+                if (bytes_written == 0U) {
+                    ++stalled_writes;
+                    if (stalled_writes == 1U || stalled_writes % 10U == 0U) {
+                        ESP_LOGW(TAG,
+                                 "I2S backpressure at offset %u; playback retained",
+                                 (unsigned)(offset + chunk_written));
+                    }
+                } else {
+                    stalled_writes = 0;
+                }
+                continue;
+            }
+            if (err != ESP_OK) {
+                ESP_LOGE(TAG, "I2S write failed at offset %u: %s",
+                         (unsigned)(offset + chunk_written),
+                         esp_err_to_name(err));
+                break;
+            }
+            if (bytes_written == 0U) {
+                err = ESP_FAIL;
+                ESP_LOGE(TAG,
+                         "I2S write made no progress at offset %u",
+                         (unsigned)(offset + chunk_written));
+                break;
+            }
+        }
+        offset += chunk_written;
+        if (atomic_load(&s_stop_requested) || err != ESP_OK) {
             break;
         }
-        offset += bytes_written;
     }
 
     // Flush with silence and wait for DMA to drain to avoid click/pop or repeating buffer noise
@@ -402,14 +449,19 @@ static void camera_overlap_ack_task(void *pvParameters)
 
 esp_err_t chime_player_play_async(void)
 {
-    if (claim_chime_playback(false, false) != CHIME_CLAIM_NORMAL) {
+    const chime_claim_t claim = claim_chime_playback(false, true);
+    if (claim == CHIME_CLAIM_HANDLED) {
         return ESP_OK;
     }
 
-    BaseType_t ret = xTaskCreate(first_chime_play_task, "first_chime", 4096,
-                                 NULL, configMAX_PRIORITIES - 2, NULL);
+    const bool camera_profile = claim == CHIME_CLAIM_CAMERA_ACK;
+    BaseType_t ret = xTaskCreate(
+        camera_profile ? camera_overlap_ack_task : first_chime_play_task,
+        camera_profile ? "first_camera_chime" : "first_chime", 4096,
+        NULL, configMAX_PRIORITIES - 2, NULL);
     if (ret != pdPASS) {
-        ESP_LOGE(TAG, "Failed to create first chime task");
+        ESP_LOGE(TAG, "Failed to create first %s chime task",
+                 camera_profile ? "camera-overlap" : "normal");
         release_playback_claim();
         return ESP_ERR_NO_MEM;
     }

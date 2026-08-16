@@ -49,8 +49,11 @@ export default function Home() {
   useEffect(() => {
     let cancelled = false;
     let historyRetryTimer: number | undefined;
+    let historyLoadInFlight = false;
 
     const loadSessionHistory = async () => {
+      if (historyLoadInFlight) return;
+      historyLoadInFlight = true;
       try {
         const response = await fetch(`${API_BASE_URL}/sessions?size=100`, { cache: 'no-store' });
         if (!response.ok) throw new Error(`Session history returned ${response.status}`);
@@ -68,7 +71,10 @@ export default function Home() {
         if (cancelled) return;
         console.error('Failed to fetch visitor sessions; retrying', error);
         setHistoryStatus('error');
+        if (historyRetryTimer !== undefined) window.clearTimeout(historyRetryTimer);
         historyRetryTimer = window.setTimeout(loadSessionHistory, HISTORY_RETRY_DELAY_MS);
+      } finally {
+        historyLoadInFlight = false;
       }
     };
 
@@ -76,8 +82,17 @@ export default function Home() {
 
     const eventSource = new EventSource('/stream');
     eventSource.onopen = () => setConnectionStatus('connected');
-    eventSource.onerror = () => setConnectionStatus('connecting');
-    eventSource.addEventListener('init', () => setConnectionStatus('connected'));
+    eventSource.onerror = () => {
+      setConnectionStatus('connecting');
+      void loadSessionHistory();
+    };
+    eventSource.addEventListener('init', () => {
+      setConnectionStatus('connected');
+      // SSE does not replay messages missed while the browser was offline.
+      // Reconcile immediately after every reconnect instead of waiting for a
+      // page reload or a future doorbell event.
+      void loadSessionHistory();
+    });
     eventSource.addEventListener('session-update', (event) => {
       setConnectionStatus('connected');
       try {
@@ -89,10 +104,17 @@ export default function Home() {
         console.error('Failed to parse session update', error);
       }
     });
+    const reconcileWhenVisible = () => {
+      if (document.visibilityState === 'visible') void loadSessionHistory();
+    };
+    window.addEventListener('focus', reconcileWhenVisible);
+    document.addEventListener('visibilitychange', reconcileWhenVisible);
     return () => {
       cancelled = true;
       if (historyRetryTimer !== undefined) window.clearTimeout(historyRetryTimer);
       eventSource.close();
+      window.removeEventListener('focus', reconcileWhenVisible);
+      document.removeEventListener('visibilitychange', reconcileWhenVisible);
     };
   }, []);
 

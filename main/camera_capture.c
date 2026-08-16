@@ -26,8 +26,8 @@ static const char *TAG = "camera_capture";
 #define CAMERA_MAX_EXPOSURE_LINES 0 /* Full AEC shutter integration for max image quality */
 #endif
 
-#ifndef CAMERA_POST_BLC_CONVERGENCE_FRAMES
-#define CAMERA_POST_BLC_CONVERGENCE_FRAMES 5
+#ifndef CONFIG_SMART_DOORBELL_CAMERA_CONVERGENCE_FRAMES
+#define CONFIG_SMART_DOORBELL_CAMERA_CONVERGENCE_FRAMES 0
 #endif
 
 #ifndef CAMERA_DENOISE_LEVEL
@@ -88,9 +88,21 @@ static void log_sensor_diag(sensor_t *sensor, const char *stage, unsigned frame_
              (unsigned)hts, (unsigned)vts);
 }
 
-static esp_err_t discard_frames(sensor_t *sensor, unsigned count, const char *reason, int64_t capture_started_us)
+static bool capture_deadline_expired(int64_t capture_deadline_us)
+{
+    return esp_timer_get_time() >= capture_deadline_us;
+}
+
+static esp_err_t discard_frames(sensor_t *sensor, unsigned count,
+                                const char *reason, int64_t capture_started_us,
+                                int64_t capture_deadline_us)
 {
     for (unsigned i = 0; i < count; ++i) {
+        if (capture_deadline_expired(capture_deadline_us)) {
+            ESP_LOGE(TAG, "%s exceeded capture deadline before frame %u/%u",
+                     reason, i + 1U, count);
+            return ESP_ERR_TIMEOUT;
+        }
         camera_fb_t *frame = esp_camera_fb_get();
         if (!frame) {
             ESP_LOGE(TAG, "%s frame %u/%u failed", reason, i + 1U, count);
@@ -122,16 +134,16 @@ esp_err_t camera_capture_qxga_owned(camera_owned_jpeg_t *result)
 
 esp_err_t camera_capture_qxga_owned_timeout(camera_owned_jpeg_t *result, int timeout_ms)
 {
-    if (!result) {
+    if (!result || timeout_ms <= 0) {
         return ESP_ERR_INVALID_ARG;
     }
     camera_capture_release(result);
 
-    (void)timeout_ms;
-
     bool camera_initialized = false;
     camera_fb_t *frame = NULL;
     int64_t capture_started_us = esp_timer_get_time();
+    const int64_t capture_deadline_us =
+        capture_started_us + (int64_t)timeout_ms * 1000LL;
     esp_err_t err = camera_power_enable();
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Camera rail enable failed: %s", esp_err_to_name(err));
@@ -229,8 +241,10 @@ esp_err_t camera_capture_qxga_owned_timeout(camera_owned_jpeg_t *result, int tim
     log_sensor_diag(sensor, "POST_INIT", 0, capture_started_us);
 
     int64_t stage_started_us = esp_timer_get_time();
-    err = discard_frames(sensor, CAMERA_POST_BLC_CONVERGENCE_FRAMES,
-                         "AEC/AWB convergence", capture_started_us);
+    err = discard_frames(sensor,
+                         CONFIG_SMART_DOORBELL_CAMERA_CONVERGENCE_FRAMES,
+                         "AEC/AWB convergence", capture_started_us,
+                         capture_deadline_us);
     if (err != ESP_OK) {
         goto cleanup;
     }
@@ -247,6 +261,11 @@ esp_err_t camera_capture_qxga_owned_timeout(camera_owned_jpeg_t *result, int tim
              CAMERA_GAIN_CEILING);
 
     stage_started_us = esp_timer_get_time();
+    if (capture_deadline_expired(capture_deadline_us)) {
+        ESP_LOGE(TAG, "Capture deadline expired before final QXGA frame");
+        err = ESP_ERR_TIMEOUT;
+        goto cleanup;
+    }
     frame = esp_camera_fb_get();
     if (!jpeg_has_markers(frame) || frame->width != 2048 || frame->height != 1536) {
         ESP_LOGE(TAG, "QXGA capture failed or returned invalid JPEG");
@@ -254,7 +273,9 @@ esp_err_t camera_capture_qxga_owned_timeout(camera_owned_jpeg_t *result, int tim
         goto cleanup;
     }
 
-    log_sensor_diag(sensor, "FINAL_CAPTURE", CAMERA_POST_BLC_CONVERGENCE_FRAMES + 1, capture_started_us);
+    log_sensor_diag(sensor, "FINAL_CAPTURE",
+                    CONFIG_SMART_DOORBELL_CAMERA_CONVERGENCE_FRAMES + 1,
+                    capture_started_us);
 
     result->data = heap_caps_malloc(frame->len,
                                     MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);

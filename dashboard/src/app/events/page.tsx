@@ -23,19 +23,43 @@ export default function EventLog() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/sessions?size=1000`)
-      .then((response) => {
+    let cancelled = false;
+    let historyLoadInFlight = false;
+    const loadSessions = async () => {
+      if (historyLoadInFlight) return;
+      historyLoadInFlight = true;
+      try {
+        const response = await fetch(`${API_BASE_URL}/sessions?size=1000`, {
+          cache: 'no-store',
+        });
         if (!response.ok) throw new Error(`Session history returned ${response.status}`);
-        return response.json();
-      })
-      .then((data: VisitorSession[]) => setSessions(data))
-      .catch((error) => console.error('Failed to fetch session log', error))
-      .finally(() => setIsLoading(false));
+        const data: VisitorSession[] = await response.json();
+        if (!cancelled) {
+          setSessions((current) => current.reduce(
+            (merged, session) => upsertSession(merged, session),
+            data,
+          ));
+        }
+      } catch (error) {
+        console.error('Failed to fetch session log', error);
+      } finally {
+        historyLoadInFlight = false;
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    void loadSessions();
 
     const eventSource = new EventSource('/stream');
     eventSource.onopen = () => setConnectionStatus('connected');
-    eventSource.onerror = () => setConnectionStatus('connecting');
-    eventSource.addEventListener('init', () => setConnectionStatus('connected'));
+    eventSource.onerror = () => {
+      setConnectionStatus('connecting');
+      void loadSessions();
+    };
+    eventSource.addEventListener('init', () => {
+      setConnectionStatus('connected');
+      void loadSessions();
+    });
     eventSource.addEventListener('session-update', (event) => {
       setConnectionStatus('connected');
       try {
@@ -47,7 +71,17 @@ export default function EventLog() {
         console.error('Failed to parse session update', error);
       }
     });
-    return () => eventSource.close();
+    const reconcileWhenVisible = () => {
+      if (document.visibilityState === 'visible') void loadSessions();
+    };
+    window.addEventListener('focus', reconcileWhenVisible);
+    document.addEventListener('visibilitychange', reconcileWhenVisible);
+    return () => {
+      cancelled = true;
+      eventSource.close();
+      window.removeEventListener('focus', reconcileWhenVisible);
+      document.removeEventListener('visibilitychange', reconcileWhenVisible);
+    };
   }, []);
 
   const filteredSessions = useMemo(() => sessions.filter((session) => {

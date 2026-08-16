@@ -37,13 +37,17 @@ but whole-home chime requests during its playback cooldown are suppressed.
 ## First press
 
 1. GPIO2 must remain stable for 20 ms.
-2. Start the ring LED and play the local chime once, from start to finish.
+2. Start the ring LED and the complete local chime on the camera-safe 12 dB
+   profile.
 3. Start the authenticated early gateway trigger while the chime plays.
-4. If the visitor is still holding when the complete chime releases I2S, start
+4. Quiesce RF and start the initial QXGA snapshot without waiting for the
+   camera-safe chime to finish. Capture the first complete frame; do not spend
+   several QXGA frame periods on unrequested convergence discards.
+5. If the visitor is still holding when the complete chime releases I2S, start
    the microphone immediately and record until release or the 15-second cap.
-5. Quiesce RF, capture the initial QXGA snapshot, return the camera frame,
-   disable U9, reconnect RF, and upload available media.
-6. Open the bounded homeowner reply window.
+6. Return the camera frame, disable U9, reconnect RF, and upload available
+   media.
+7. Open the bounded homeowner reply window.
 
 A visitor recording is retained only when it contains at least 1.0 second of
 microphone audio. Releasing during the first chime, or before one second of
@@ -111,15 +115,21 @@ dispatches immediately, requests during the cooldown are dropped, and the first
 request after expiry dispatches immediately. No trailing webhook is retained,
 so rapid presses cannot become a delayed playback burst.
 
-Before camera startup, firmware allows the initial 6 dB chime to finish, then
-arms the bounded camera-overlap profile. From RF shutdown through U9 rail
-startup and camera capture, represses may play or restart the complete normal
-chime waveform at 12 dB attenuation. If that low-power chime already owns AMP_EN,
-camera rail enable waits for its 25 ms ramp plus a 5 ms guard before adding the
-camera load. Camera startup still refuses overlap with any unverified speaker
-owner. Visitor microphone and homeowner playback retain I2S priority and cause
-the acknowledgement to be skipped. Exhausting the session deadline while
-draining the initial full chime still aborts capture.
+The first press claims the bounded 12 dB camera-overlap profile before playback
+starts, so RF shutdown and camera startup no longer wait for the complete
+waveform. Represses during the boundary restart the same complete quiet
+waveform. If that low-power chime already owns AMP_EN, camera rail enable waits
+for its 25 ms ramp plus a 5 ms guard before adding the camera load. Camera
+startup still refuses overlap with any unverified speaker owner. Visitor
+microphone and homeowner playback retain I2S priority. Transient I2S DMA
+backpressure during QXGA work is retried in place and is not treated as the end
+of the chime.
+
+Normal session expiry stops button monitoring first, then allows an already
+audible local chime to drain before entering sleep. Firmware force-stops that
+playback only when it remains active past the bounded four-second shutdown
+deadline, which indicates a wedged audio path rather than an ordinary session
+transition.
 
 ## Persisted and UI model
 
@@ -153,6 +163,7 @@ Legacy event rows remain readable during rollout; rows with the historical
 | Production speaker attenuation | 6 dB |
 | Speaker fade-in/fade-out | 25 ms |
 | Camera-overlap chime | Full waveform at 12 dB attenuation |
+| Discarded first-snapshot convergence frames | 0 |
 | Whole-home chime cooldown | 1,000 ms, leading edge, no queue |
 | Stale-snapshot threshold | 15,000 ms |
 | Session idle limit | 60,000 ms |
