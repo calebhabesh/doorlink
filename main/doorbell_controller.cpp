@@ -32,6 +32,35 @@ constexpr std::uint32_t kVisitorRecordingMaxMs =
     DoorbellPolicy::kVisitorRecordingMaxMs;
 constexpr std::uint32_t kVisitorHoldMinimumMs =
     DoorbellPolicy::kVisitorHoldMinimumMs;
+constexpr std::uint32_t kRepressChimeHoldHandoffMs =
+    DoorbellPolicy::kRepressChimeHoldHandoffMs;
+
+class CameraSpeakerPowerBoundary final {
+public:
+    CameraSpeakerPowerBoundary()
+    {
+        chime_player_set_camera_power_blocked(true);
+    }
+
+    ~CameraSpeakerPowerBoundary()
+    {
+        release();
+    }
+
+    void release()
+    {
+        if (active_) {
+            chime_player_set_camera_power_blocked(false);
+            active_ = false;
+        }
+    }
+
+    CameraSpeakerPowerBoundary(const CameraSpeakerPowerBoundary &) = delete;
+    CameraSpeakerPowerBoundary &operator=(const CameraSpeakerPowerBoundary &) = delete;
+
+private:
+    bool active_{true};
+};
 
 #ifdef CONFIG_SMART_DOORBELL_ENABLE_PIR_EVENTS
 constexpr bool kPirEventsEnabled = true;
@@ -166,11 +195,48 @@ void record_followup_turn_task(void *arg)
         turn->result = ESP_OK;
         turn->capture_window_active->store(false);
     } else {
-        (void)ring_animation_start(100, turn->max_duration_ms, 150);
-        turn->result = turn->audio_service->record_button_hold(
-            turn->recording, turn->max_duration_ms, kVisitorHoldMinimumMs,
-            turn->recorded_duration_ms);
-        ring_fade_stop();
+        // A repress gets immediate local acknowledgement when I2S is idle. A
+        // sustained hold may stop only this interruptible repress chime; the
+        // non-interruptible first chime always completes.
+        const std::int64_t handoff_us =
+            turn->press_started_us +
+            static_cast<std::int64_t>(kRepressChimeHoldHandoffMs) * 1000LL;
+        while (chime_player_is_playing() &&
+               esp_timer_get_time() < handoff_us &&
+               !turn->shutting_down->load()) {
+            vTaskDelay(pdMS_TO_TICKS(10));
+        }
+        bool button_still_held = gpio_get_level(DOORBELL_BUTTON_PIN) == 0;
+        if (!button_still_held) {
+            // Match the product's 20 ms release debounce before classifying a
+            // repress as a tap and abandoning its possible visitor turn.
+            vTaskDelay(pdMS_TO_TICKS(20));
+            button_still_held = gpio_get_level(DOORBELL_BUTTON_PIN) == 0;
+        }
+        if (chime_player_is_interruptible() && button_still_held) {
+            ESP_LOGI(kTag,
+                     "Repress hold crossed %u ms; yielding local chime to visitor microphone",
+                     static_cast<unsigned>(kRepressChimeHoldHandoffMs));
+            chime_player_request_stop();
+        }
+        if (!button_still_held) {
+            // The tap's chime may finish, but it no longer reserves a visitor
+            // turn. An arriving homeowner WAV can now interrupt that chime.
+            turn->result = ESP_OK;
+        } else {
+            while (chime_player_is_playing() &&
+                   !turn->shutting_down->load()) {
+                vTaskDelay(pdMS_TO_TICKS(10));
+            }
+
+            // record_button_hold() performs a final level check so a release
+            // during I2S handoff remains a normal tap without an empty WAV.
+            (void)ring_animation_start(100, turn->max_duration_ms, 150);
+            turn->result = turn->audio_service->record_button_hold(
+                turn->recording, turn->max_duration_ms, kVisitorHoldMinimumMs,
+                turn->recorded_duration_ms);
+            ring_fade_stop();
+        }
         turn->capture_window_active->store(false);
     }
     SystemEvent ready{EventType::VisitorRecordingReady,
@@ -473,8 +539,17 @@ void DoorbellController::start_button_monitor()
                     ESP_LOGI(kTag, "⚡ Button repress detected by ButtonMonitor!");
 
                     // Every new down-edge is one press/possible visitor turn.
-                    // Only the first press of a session plays the local chime.
+                    // Repress audio is opportunistic and never queues behind
+                    // an active microphone or homeowner reply. If the local
+                    // chime already owns I2S, retrigger it in place so rapid
+                    // presses remain individually perceptible.
                     (void)ring_animation_start(150, 1000, 300);
+                    const esp_err_t chime_err =
+                        chime_player_play_repress_async();
+                    if (chime_err != ESP_OK) {
+                        ESP_LOGW(kTag, "Could not start repress chime: %s",
+                                 esp_err_to_name(chime_err));
+                    }
                     const std::uint32_t press_number =
                         self->next_press_number_.fetch_add(1) + 1;
                     self->start_followup_capture(press_number, now_us);
@@ -597,7 +672,41 @@ void DoorbellController::execute_alert_cycle(const char *event_type,
         return;
     }
 
-    // 2. RF Quiescence (PWR-01 Boundary: Ensure Wi-Fi RF is off before camera power-up)
+    // 2. Close the speaker/camera power boundary. New chime requests are
+    // suppressed first, then any already-active chime drains and mutes U4.
+    // This preserves the complete initial chime without overlapping its 4-ohm
+    // load with U9/camera startup.
+    CameraSpeakerPowerBoundary speaker_boundary;
+    ESP_LOGI(kTag, "Waiting for local chime to finish before camera power-up");
+    const esp_err_t chime_idle_err = chime_player_wait_until_idle(
+        pdMS_TO_TICKS(static_cast<std::uint32_t>(remaining_ms)));
+    if (chime_idle_err != ESP_OK) {
+        ESP_LOGE(kTag,
+                 "session=%s cycle=%" PRIu32 " ALERT_FAILED reason=speaker_camera_boundary_timeout",
+                 session_.session_id, session_.alert_cycle_count);
+        finish_greeting_task();
+        visitor_capture_window_active_.store(false);
+        alert_cycles_finished_++;
+        return;
+    }
+    ESP_LOGI(kTag,
+             "[MONOTONIC_TIMING] t=%.1f ms | STAGE_COMPLETE: Speaker idle (amplifier muted before camera)",
+             static_cast<double>(esp_timer_get_time() - session_.session_start_us) /
+                 1000.0);
+
+    now_us = esp_timer_get_time();
+    remaining_ms = static_cast<int>(session_.remaining_us(now_us) / 1000LL);
+    if (remaining_ms <= 0) {
+        ESP_LOGW(kTag,
+                 "session=%s cycle=%" PRIu32 " ALERT_ABORTED stage=speaker_drain reason=session_deadline_reached",
+                 session_.session_id, session_.alert_cycle_count);
+        finish_greeting_task();
+        visitor_capture_window_active_.store(false);
+        alert_cycles_finished_++;
+        return;
+    }
+
+    // 3. RF Quiescence (PWR-01 Boundary: Ensure Wi-Fi RF is off before camera power-up)
     const esp_err_t shutdown_err = handle_rf_quiesce();
     if (shutdown_err != ESP_OK) {
         ESP_LOGE(kTag, "session=%s cycle=%" PRIu32 " ALERT_FAILED reason=rf_quiesce_failed",
@@ -610,9 +719,10 @@ void DoorbellController::execute_alert_cycle(const char *event_type,
     ESP_LOGI(kTag, "[MONOTONIC_TIMING] t=%.1f ms | STAGE_COMPLETE: RF Quiesced (Wi-Fi disabled for camera capture)",
              static_cast<double>(esp_timer_get_time() - session_.session_start_us) / 1000.0);
 
-    // 3. Capture the photo while the visitor greeting continues in parallel.
+    // 4. Capture the photo while the visitor greeting continues in parallel.
     CapturedImage image;
     const esp_err_t capture_err = handle_camera_capture(image, remaining_ms);
+    speaker_boundary.release();
     if (capture_err == ESP_OK) last_snapshot_capture_us_ = esp_timer_get_time();
 
     finish_greeting_task();
@@ -694,7 +804,7 @@ void DoorbellController::process_button_press_event(int64_t event_time_us,
         event_time_us - last_snapshot_capture_us_ >= DoorbellPolicy::kSnapshotRefreshUs;
     if (snapshot_stale) {
         ESP_LOGI(kTag,
-                 "session=%s press=%" PRIu32 " followup=snapshot_refresh chime=not_replayed",
+                 "session=%s press=%" PRIu32 " followup=snapshot_refresh chime=local_ack_requested",
                  session_.session_id, press_number);
         intercom_.stop();
         execute_alert_cycle("DOORBELL_REPRESS", firmware_version, press_number);
@@ -706,7 +816,7 @@ void DoorbellController::process_button_press_event(int64_t event_time_us,
         const int remaining_ms = static_cast<int>(
             session_.remaining_us(esp_timer_get_time()) / 1000LL);
         ESP_LOGI(kTag,
-                 "session=%s press=%" PRIu32 " followup=register_only snapshot=fresh chime=not_replayed",
+                 "session=%s press=%" PRIu32 " followup=register_only snapshot=fresh chime=local_ack_requested",
                  session_.session_id, press_number);
         (void)handle_early_notify(press_id, "DOORBELL_REPRESS",
                                   firmware_version, remaining_ms);
@@ -809,6 +919,20 @@ void DoorbellController::handle_ptt_session()
                     ESP_LOGI(kTag,
                              "Homeowner playback queued behind visitor recording");
                 } else {
+                    // Homeowner speech outranks a repress acknowledgement.
+                    // The first chime cannot overlap this state because the
+                    // reply window opens only after its completion.
+                    if (chime_player_is_interruptible()) {
+                        ESP_LOGI(kTag,
+                                 "Homeowner reply interrupting local repress chime");
+                        chime_player_request_stop();
+                        const std::int64_t chime_stop_deadline =
+                            esp_timer_get_time() + 500000LL;
+                        while (chime_player_is_playing() &&
+                               esp_timer_get_time() < chime_stop_deadline) {
+                            vTaskDelay(pdMS_TO_TICKS(10));
+                        }
+                    }
                     audio_.stop();
                     session_.ptt_active = true;
                     set_state(DeviceState::PlayingReply);
@@ -859,6 +983,12 @@ void DoorbellController::handle_ptt_session()
     set_state(DeviceState::PreparingSleep);
     shutting_down_.store(true);
     stop_button_monitor();
+    chime_player_request_stop();
+    const std::int64_t chime_stop_deadline = esp_timer_get_time() + 500000LL;
+    while (chime_player_is_playing() &&
+           esp_timer_get_time() < chime_stop_deadline) {
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
     audio_.request_capture_stop();
     const std::int64_t capture_stop_deadline = esp_timer_get_time() + 500000LL;
     while ((audio_.capture_active() || visitor_capture_window_active_.load()) &&

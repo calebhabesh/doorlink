@@ -30,8 +30,9 @@ build option and in its isolated diagnostic, but cannot generate normal
 doorbell events accidentally. GPIO48 fades in, holds, and fades out after a
 button press while D3 provides immediate wake acknowledgement.
 The production controller now implements release-driven hold-to-message capture,
-session-grouped presses, a complete first local chime, and stored browser PTT
-replies in a bounded MQTT-controlled window. The earlier fixed five-second WAV
+session-grouped presses, a complete first local chime, interruptible local
+repress acknowledgement, and stored browser PTT replies in a bounded
+MQTT-controlled window. The earlier fixed five-second WAV
 and stored reply path were exercised end to end on the assembled board; the new
 hold thresholds, full-chime handoff, multi-press behavior, and latency still need
 an instrumented hardware retest. Battery life has not been measured.
@@ -74,7 +75,7 @@ carries control messages while HTTP carries WAV media.
 1. **Trigger:** GPIO2 wakes on an active-low button press through EXT0. GPIO3 PIR wake is disabled in the normal production build and is opt-in for future motion events.
 2. **First chime and hold:** The first local chime plays once to completion while the authenticated early trigger proceeds. A visitor still holding after the chime gets microphone capture until release or 15 seconds; clips shorter than one second of microphone audio are discarded.
 3. **Capture:** After the early alert and RF shutdown, firmware enables U9 and captures the initial QXGA JPEG. Later presses refresh it only after it is 15 seconds old.
-4. **Later presses:** Every valid down-edge becomes another ordered press in the same session, starts hold capture immediately, and restarts LED feedback. The local chime is not replayed.
+4. **Later presses:** Every valid down-edge becomes another ordered press in the same session and restarts LED feedback. When I2S is idle, an onboard chime starts immediately; when a local chime is already audible, it rewinds in place so rapid presses remain perceptible. A hold continuing past 400 ms or arriving homeowner audio stops interruptible repress audio cleanly and takes priority. Repress chimes never queue behind active dialogue.
 5. **Upload:** Image and visitor recordings have stable per-press identifiers. The gateway groups them into one session, deduplicates notification delivery at session scope, and publishes lifecycle updates over SSE.
 6. **Reply window:** Dashboard PTT replies are stored WAV turns. A reply that arrives during visitor capture waits until the visitor releases; the microphone stays off during speaker playback.
 7. **Shutdown:** At the 60-second idle or 90-second absolute deadline, firmware closes the gateway session, releases network/media resources, holds camera/audio controls safe, and enters deep sleep.

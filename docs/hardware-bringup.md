@@ -1136,10 +1136,30 @@ open another speaker-suppression window.
 
 The two paragraphs above record the intermediate firmware tested on 2026-08-10.
 They were superseded later that day by the locked session behavior: the first
-chime plays completely, continuing to hold records after it, and every later
-hold can record immediately without replaying a chime. The new one-second
-minimum, 15-second cap, and multi-press arbitration build successfully but have
-not yet been validated on the assembled board.
+chime plays completely and continuing to hold records after it. The subsequent
+interaction update preserves that non-interruptible first chime while restoring
+immediate onboard acknowledgement for represses whenever I2S is idle. A repress
+while a local chime is already audible rewinds the live PCM stream without
+tearing down I2S. A repress held for 400 ms yields interruptible repress audio
+to the visitor microphone; an arriving homeowner WAV may also interrupt it,
+and repress chimes are skipped rather than queued during active dialogue. The
+one-second minimum, 15-second cap, and this multi-press arbitration require
+validation on the assembled board.
+
+On 2026-08-15, integrated real-world testing found that the enclosure-target
+4-ohm/3-watt speaker caused the local chime to stop partway through the alert
+workflow and the board indication to go dark. Reinstalling the previously
+tested 8-ohm speaker restored the expected workflow. This A/B result implicates
+the increased speaker current and its overlap with camera startup, but does not
+by itself distinguish supply droop, an ESP32 reset, or MAX98357A protection.
+Firmware now defaults all production speaker output to 6 dB digital
+attenuation, applies a 25 ms start/end ramp, and prevents camera power-up until
+the active chime has fully drained and the amplifier is muted. The early remote
+notification is still sent before this wait. Reset-reason logging was also
+added. These mitigations do not modify the immutable PCB releases and require a
+flashed-board A/B retest with the 4-ohm speaker before that speaker is accepted
+for production.
+
 The same run reported a FreeRTOS stack overflow in task `main` at the start of multipart
 upload. The production controller was still using the configured 3,584-byte
 ESP-IDF main-task stack. It now runs in a dedicated 16 KiB `doorbell_ctrl` task,

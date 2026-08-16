@@ -51,9 +51,15 @@ post-chime microphone audio, is a normal short press and creates no empty WAV.
 ## Later presses
 
 - Restart LED acknowledgement on every valid down-edge.
-- Never replay or rewind the local chime within the same session.
-- Start microphone capture on the down-edge, retaining it only after the
-  one-second threshold is crossed. Release creates one logical recording.
+- Start an onboard acknowledgement chime when I2S is idle. Never queue a
+  delayed chime behind visitor microphone or homeowner playback. If a local
+  chime is already audible, rewind its live stream at the next PCM chunk
+  boundary so every valid physical down-edge gets prompt audible feedback.
+- Treat repress chimes as interruptible: a visitor still holding after 400 ms
+  stops the repress chime cleanly and receives the microphone. A tap may let
+  its acknowledgement chime finish.
+- Retain visitor microphone audio only after the one-second recording threshold
+  is crossed. Release creates one logical recording.
 - A release followed by another hold creates another ordered press/recording.
 - Refresh the snapshot only when the previous capture is at least 15 seconds
   old. Otherwise register the press and upload only its visitor recording.
@@ -65,21 +71,42 @@ write visitor audio to flash.
 
 ## Half-duplex arbitration
 
-Audio turns are never intentionally cut short except at the 90-second hard
-deadline:
+The first chime and established visitor/homeowner turns are never intentionally
+cut short except at the 90-second hard deadline. Repress acknowledgement is the
+deliberately interruptible exception:
 
 1. The first local chime completes.
-2. An active visitor recording completes on release or at 15 seconds.
-3. A homeowner reply received during visitor capture is queued.
-4. The microphone is off while the queued homeowner WAV plays through the
+2. A repress acknowledgement may play only while I2S is otherwise idle; a
+   sustained visitor hold or arriving homeowner WAV interrupts it cleanly.
+3. An active visitor recording completes on release or at 15 seconds.
+4. A homeowner reply received during visitor capture is queued.
+5. The microphone is off while the queued homeowner WAV plays through the
    speaker.
-5. An already-playing homeowner reply completes; a new visitor hold waits for
+6. An already-playing homeowner reply completes; a new visitor hold waits for
    I2S and records afterward if the visitor is still holding.
-6. Session cleanup overrides queued work at the hard deadline.
+7. Session cleanup overrides queued work at the hard deadline.
 
 Dashboard PTT records a stored 16 kHz mono PCM WAV; it is not a live phone call.
 The gateway reports `ARMING` when it publishes the device command and reports
 reply delivery only after the ESP32 playback acknowledgement.
+
+## Speaker and camera power arbitration
+
+The production speaker paths apply 6 dB of digital attenuation by default to
+support the 4-ohm enclosure speaker without demanding the full-scale current
+used during the failed integrated test. Local chimes and homeowner replies both
+use the same setting and a 25 ms linear fade-in/fade-out envelope. These values
+are build-time configurable through
+`CONFIG_SMART_DOORBELL_SPEAKER_ATTENUATION_DB` and
+`CONFIG_SMART_DOORBELL_SPEAKER_RAMP_MS`.
+
+The early remote notification remains ahead of camera capture. After it is
+sent, firmware atomically suppresses new chime starts/retriggers, allows an
+already-playing first chime to finish, and verifies that the amplifier is muted
+before enabling the camera power domain. Speaker playback stays blocked until
+capture has returned and the camera rails are off. Exhausting the session
+deadline while draining the speaker aborts capture instead of overlapping the
+two loads.
 
 ## Persisted and UI model
 
@@ -109,6 +136,9 @@ Legacy event rows remain readable during rollout; rows with the historical
 | GPIO2 stable debounce | 20 ms |
 | Minimum retained visitor audio | 1,000 ms |
 | Maximum visitor recording | 15,000 ms |
+| Repress chime-to-microphone handoff | 400 ms |
+| Production speaker attenuation | 6 dB |
+| Speaker fade-in/fade-out | 25 ms |
 | Stale-snapshot threshold | 15,000 ms |
 | Session idle limit | 60,000 ms |
 | Session absolute limit | 90,000 ms |
@@ -116,7 +146,13 @@ Legacy event rows remain readable during rollout; rows with the historical
 
 ## Failure behavior
 
-- Wi-Fi failure never prevents the complete local chime or LED acknowledgement.
+- Wi-Fi failure never prevents the complete first local chime or LED
+  acknowledgement.
+- The first chime is not stopped on a timer. A physical repress may restart its
+  live stream from sample zero; after the final quick press, the restarted
+  chime is allowed to complete.
+- The complete-chime guarantee applies to the first press. Repress chimes may
+  yield to a sustained visitor hold, homeowner WAV, or safe shutdown.
 - Camera failure leaves the early session/press alert intact and cuts camera
   power; the dashboard may show snapshot pending.
 - A lost trigger or media response is retried with stable identifiers, so it

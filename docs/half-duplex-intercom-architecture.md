@@ -33,8 +33,8 @@ sequenceDiagram
     GW-->>UI: session-updated SSE
 
     Visitor->>ESP: Later press / hold
-    ESP->>ESP: LED acknowledgement; no second chime
-    ESP->>ESP: Record immediately until release (1-15 s retained)
+    ESP->>ESP: LED + interruptible local chime if I2S idle
+    ESP->>ESP: If held 400 ms, stop repress chime and record
     ESP->>GW: Register press and upload WAV
 
     Homeowner->>UI: Hold PTT, then release
@@ -47,20 +47,27 @@ sequenceDiagram
 ```
 
 The initial microphone can start only after the complete local chime. A visitor
-who releases during that chime leaves no recording. Later presses have no chime,
-so microphone capture begins on their down-edge. A release followed by another
-hold is another ordered press and recording in the same 60/90-second session.
+who releases during that chime leaves no recording. Later presses request an
+immediate local acknowledgement only when I2S is idle. A tap may let that chime
+finish; a new valid down-edge while a local chime is audible rewinds the live
+stream at its next PCM chunk boundary. A hold continuing for 400 ms interrupts
+interruptible repress audio and hands I2S to the microphone. Repress chimes are
+skipped, not delayed, while visitor or homeowner audio owns the bus. A release
+followed by another hold is another ordered press and recording in the same
+60/90-second session.
 
 ## Arbitration
 
 Priority is:
 
 1. Finish the first local chime.
-2. Finish an active visitor turn on release or at 15 seconds.
-3. Play a queued homeowner reply completely.
-4. If a visitor presses during that playback, finish the active reply and give
+2. Yield an interruptible repress chime to a sustained visitor hold or an
+   arriving homeowner WAV.
+3. Finish an active visitor turn on release or at 15 seconds.
+4. Play a queued homeowner reply completely.
+5. If a visitor presses during that playback, finish the active reply and give
    the microphone to a visitor who is still holding.
-5. Enforce the 90-second hard session deadline and safe shutdown.
+6. Enforce the 90-second hard session deadline and safe shutdown.
 
 No voice-activity detector discards quiet speech. Recordings shorter than one
 second are discarded solely to avoid empty tap/accidental-hold files.

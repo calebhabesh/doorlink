@@ -1,4 +1,4 @@
-idf_component_register(SRCS "app_main.cpp" "doorbell_controller.cpp" "audio_bus.c"
+idf_component_register(SRCS "app_main.cpp" "doorbell_controller.cpp" "audio_bus.c" "speaker_output.c"
                     "services/audio_service.cpp" "services/camera_service.cpp" "services/connectivity_manager.cpp" "services/intercom_service.cpp" "services/power_manager.cpp"
                     "wake_sleep_bringup.cpp" "wake_stub.c" "ring_fade.c"
                     "core_bringup.c" "battery_bringup.c" "battery_camera_upload_bringup.c"

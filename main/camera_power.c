@@ -111,6 +111,18 @@ esp_err_t camera_power_enable(void)
         return err;
     }
 
+    /*
+     * Last-line power-safety defense: controller arbitration should already have
+     * drained and muted U4, but never energize the camera domain if any future
+     * caller reaches this driver while the speaker amplifier is still on.
+     */
+    if (gpio_get_level(AMP_EN_PIN) != 0) {
+        ESP_LOGE(TAG,
+                 "Refusing camera power-up while speaker amplifier GPIO%d is enabled",
+                 AMP_EN_PIN);
+        return ESP_ERR_INVALID_STATE;
+    }
+
     err = gpio_set_level(CAM_PWR_EN_PIN, 1);
     if (err != ESP_OK) {
         return err;

@@ -14,6 +14,7 @@
 #include <cstdlib>
 
 #include "esp_log.h"
+#include "esp_system.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -88,6 +89,21 @@ constexpr const char *kTag = "app_main";
 constexpr uint32_t kProductionControllerStackBytes = 16 * 1024;
 constexpr UBaseType_t kProductionControllerPriority = 5;
 
+const char *reset_reason_name(esp_reset_reason_t reason)
+{
+    switch (reason) {
+        case ESP_RST_POWERON: return "power-on";
+        case ESP_RST_SW: return "software";
+        case ESP_RST_PANIC: return "panic";
+        case ESP_RST_INT_WDT: return "interrupt-watchdog";
+        case ESP_RST_TASK_WDT: return "task-watchdog";
+        case ESP_RST_WDT: return "watchdog";
+        case ESP_RST_DEEPSLEEP: return "deep-sleep-wake";
+        case ESP_RST_BROWNOUT: return "brownout";
+        default: return "other";
+    }
+}
+
 void production_controller_task(void *arg)
 {
     auto *controller = static_cast<doorbell::DoorbellController *>(arg);
@@ -113,6 +129,9 @@ void start_production_controller()
 
 extern "C" void app_main(void)
 {
+    const esp_reset_reason_t reset_reason = esp_reset_reason();
+    ESP_LOGI(kTag, "Reset reason=%s (%d)", reset_reason_name(reset_reason),
+             static_cast<int>(reset_reason));
 #if SMART_DOORBELL_WAKE_SLEEP_DIAGNOSTIC
     run_wake_sleep_bringup();
 #elif SMART_DOORBELL_PRODUCTION_APP

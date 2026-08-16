@@ -62,6 +62,7 @@ namespace DoorbellPolicy {
     constexpr int64_t kSnapshotRefreshUs = 15000000LL;
     constexpr std::uint32_t kVisitorHoldMinimumMs = 1000;
     constexpr std::uint32_t kVisitorRecordingMaxMs = 15000;
+    constexpr std::uint32_t kRepressChimeHoldHandoffMs = 400;
 }
 
 /**

@@ -17,6 +17,23 @@ config SMART_DOORBELL_ENABLE_PIR_EVENTS
         Leave this disabled for the normal button-only doorbell flow. The
         isolated wake diagnostic can still exercise PIR independently.
 
+config SMART_DOORBELL_SPEAKER_ATTENUATION_DB
+    int "Digital speaker attenuation (dB)"
+    range 0 24
+    default 6
+    help
+        Attenuate every production speaker stream before it reaches the
+        MAX98357A. Six dB halves sample voltage, keeping the peak current of a
+        4-ohm speaker near that of an 8-ohm speaker at the old setting.
+
+config SMART_DOORBELL_SPEAKER_RAMP_MS
+    int "Speaker fade-in/fade-out duration (ms)"
+    range 0 250
+    default 25
+    help
+        Apply a linear ramp at both ends of local chimes and homeowner replies
+        to reduce clicks and abrupt current transients. Set to zero to disable.
+
 config SMART_DOORBELL_WAKE_SLEEP_DIAGNOSTIC
     bool "Build the button/PIR wake and deep-sleep diagnostic"
     default n

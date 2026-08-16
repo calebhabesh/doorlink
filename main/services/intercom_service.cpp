@@ -9,6 +9,7 @@
 #include "config.h"
 #include "driver/gpio.h"
 #include "driver/i2s_std.h"
+#include "speaker_output.h"
 #include "esp_http_client.h"
 #include "esp_log.h"
 #include "freertos/task.h"
@@ -289,11 +290,17 @@ esp_err_t IntercomService::play_wav(const IntercomCommand &command,
 
     gpio_set_level(AMP_EN_PIN, 1);
     vTaskDelay(pdMS_TO_TICKS(20));
-    ESP_LOGI(kTag, "Playing homeowner reply message=%s", command.message_id);
+    ESP_LOGI(kTag,
+             "Playing homeowner reply message=%s attenuation=-%u dB ramp=%u ms",
+             command.message_id, speaker_output_attenuation_db(),
+             speaker_output_ramp_ms());
     {
         std::uint8_t carry = 0;
         bool have_carry = false;
         std::uint32_t bytes_remaining = data_length;
+        std::size_t frames_played = 0;
+        speaker_envelope_t envelope{};
+        speaker_envelope_init(&envelope, kSampleRateHz, data_length / 2U);
         while (bytes_remaining > 0) {
             const std::size_t requested = (std::min)(
                 sizeof(playback_mono_),
@@ -310,8 +317,10 @@ esp_err_t IntercomService::play_wav(const IntercomCommand &command,
                 const std::int16_t sample = static_cast<std::int16_t>(
                     carry |
                     (static_cast<std::uint16_t>(playback_mono_[0]) << 8));
-                playback_stereo_[0] = sample;
-                playback_stereo_[1] = sample;
+                const std::int16_t scaled =
+                    speaker_envelope_apply(&envelope, sample, frames_played++);
+                playback_stereo_[0] = scaled;
+                playback_stereo_[1] = scaled;
                 frames = 1;
                 byte_offset = 1;
                 have_carry = false;
@@ -322,8 +331,10 @@ esp_err_t IntercomService::play_wav(const IntercomCommand &command,
                     (static_cast<std::uint16_t>(
                          playback_mono_[byte_offset + 1])
                      << 8));
-                playback_stereo_[frames * 2] = sample;
-                playback_stereo_[frames * 2 + 1] = sample;
+                const std::int16_t scaled =
+                    speaker_envelope_apply(&envelope, sample, frames_played++);
+                playback_stereo_[frames * 2] = scaled;
+                playback_stereo_[frames * 2 + 1] = scaled;
                 ++frames;
                 byte_offset += 2;
             }
