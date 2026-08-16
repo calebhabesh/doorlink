@@ -1207,11 +1207,15 @@ tests but requires a flashed-board button-to-frame and rapid-repress test.
 The global-chime reliability follow-up removes that shared repress-alert slot.
 It had stayed closed for the full initial camera/upload cycle and for every
 outstanding 1,200 ms hold classifier, suppressing otherwise valid represses.
-Each repress is now evaluated independently when the controller reaches it:
-edges no more than 500 ms old ask the gateway to apply its leading-edge
-cooldown, while older edges are persisted without a delayed webhook. Validate
-that gateway logs alternate between explicit `accepted` and `skipped during
-cooldown` decisions during paced and rapid repress tests.
+It also removes the 15-second mid-session snapshot refresh from the repress
+path: that synchronous capture shut RF down and blocked every later edge behind
+camera and upload work. Each repress now launches a separate 750 ms gateway
+request directly from its physical edge while RF is available, independently
+of controller lifecycle, visitor recording, homeowner playback, and uploads.
+Only one edge request may be in flight; another edge is dropped rather than
+queued. The gateway then makes the 1.5-second cooldown decision. Validate that
+gateway logs alternate between explicit `accepted` and `skipped during
+cooldown` decisions throughout the full 60/90-second session.
 
 The rapid-repress audio follow-up restores the intended 1,200 ms continuous
 hold gate for the visitor microphone. A repress now remains a tap until that

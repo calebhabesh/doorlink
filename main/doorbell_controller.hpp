@@ -90,6 +90,8 @@ private:
     volatile bool button_monitor_running_{false};
     std::atomic_bool visitor_capture_window_active_{false};
     std::atomic_bool shutting_down_{false};
+    std::atomic_bool repress_alert_request_in_flight_{false};
+    std::atomic_uint32_t repress_alert_tasks_active_{0};
     std::atomic_uint32_t next_press_number_{1};
     std::atomic_uint32_t pending_button_events_{0};
     std::atomic_uint32_t outstanding_followup_turns_{0};
@@ -98,7 +100,6 @@ private:
     std::uint32_t uploads_succeeded_{0};
     bool wifi_rf_active_{false};
     bool cam_pwr_active_{false};
-    std::int64_t last_snapshot_capture_us_{0};
 
     CameraService camera_;
     AudioService audio_;

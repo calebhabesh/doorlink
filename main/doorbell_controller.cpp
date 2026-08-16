@@ -159,17 +159,61 @@ void record_greeting_task(void *arg)
 
 struct FollowupTurn {
     AudioService *audio_service;
+    ConnectivityManager *connectivity;
     DoorbellController *controller;
     std::atomic_bool *capture_window_active;
     std::atomic_bool *shutting_down;
+    std::atomic_bool *alert_request_in_flight;
+    std::atomic_uint32_t *alert_tasks_active;
     std::atomic_uint32_t *latest_press_number;
+    const char *session_id;
+    const char *firmware_version;
     std::uint32_t press_number;
     std::int64_t press_started_us;
+    std::atomic_bool edge_alert_finished{false};
+    esp_err_t edge_alert_result{ESP_FAIL};
     std::uint32_t recorded_duration_ms{0};
     std::uint32_t max_duration_ms{0};
     RecordedAudio recording;
     esp_err_t result{ESP_FAIL};
 };
+
+void repress_edge_alert_task(void *arg)
+{
+    auto *turn = static_cast<FollowupTurn *>(arg);
+    auto *active_tasks = turn->alert_tasks_active;
+    bool owns_request = false;
+    if (turn->shutting_down->load() || !turn->connectivity->connected()) {
+        turn->edge_alert_result = ESP_ERR_INVALID_STATE;
+    } else {
+        bool expected = false;
+        owns_request = turn->alert_request_in_flight->compare_exchange_strong(
+            expected, true);
+        if (!owns_request) {
+            // A physical edge never waits behind another webhook request.
+            turn->edge_alert_result = ESP_ERR_INVALID_STATE;
+            ESP_LOGI(kTag,
+                     "Repress press=%" PRIu32 " remote alert dropped: request already in flight",
+                     turn->press_number);
+        } else {
+            char press_id[40];
+            std::snprintf(press_id, sizeof(press_id), "%s-%" PRIu32,
+                          turn->session_id, turn->press_number);
+            ESP_LOGI(kTag,
+                     "Repress press=%" PRIu32 " requesting immediate case-by-case global chime",
+                     turn->press_number);
+            turn->edge_alert_result = turn->connectivity->trigger(
+                press_id, "DOORBELL_REPRESS", DEVICE_ID,
+                turn->firmware_version, true, 750);
+        }
+    }
+    if (owns_request) {
+        turn->alert_request_in_flight->store(false);
+    }
+    turn->edge_alert_finished.store(true);
+    active_tasks->fetch_sub(1);
+    vTaskDelete(nullptr);
+}
 
 void complete_followup_turn(FollowupTurn *turn)
 {
@@ -529,10 +573,15 @@ void DoorbellController::start_followup_capture(std::uint32_t press_number,
 {
     auto *turn = new (std::nothrow) FollowupTurn{
         .audio_service = &audio_,
+        .connectivity = &connectivity_,
         .controller = this,
         .capture_window_active = &visitor_capture_window_active_,
         .shutting_down = &shutting_down_,
+        .alert_request_in_flight = &repress_alert_request_in_flight_,
+        .alert_tasks_active = &repress_alert_tasks_active_,
         .latest_press_number = &next_press_number_,
+        .session_id = session_.session_id,
+        .firmware_version = esp_app_get_description()->version,
         .press_number = press_number,
         .press_started_us = press_started_us,
         .recorded_duration_ms = 0,
@@ -554,6 +603,13 @@ void DoorbellController::start_followup_capture(std::uint32_t press_number,
                         ESP_OK, turn};
     if (post_event(started) != ESP_OK) {
         pending_button_events_.fetch_sub(1);
+    }
+    repress_alert_tasks_active_.fetch_add(1);
+    if (xTaskCreate(repress_edge_alert_task, "repress_alert", 4096, turn,
+                    configMAX_PRIORITIES - 3, nullptr) != pdPASS) {
+        repress_alert_tasks_active_.fetch_sub(1);
+        turn->edge_alert_result = ESP_ERR_NO_MEM;
+        turn->edge_alert_finished.store(true);
     }
     if (xTaskCreate(record_followup_turn_task, "visitor_hold", 4096, turn,
                     configMAX_PRIORITIES - 4, nullptr) != pdPASS) {
@@ -624,10 +680,10 @@ void DoorbellController::start_button_monitor()
                         ESP_LOGW(kTag, "Could not start repress chime: %s",
                                  esp_err_to_name(chime_err));
                     }
-                    // Publish every physical edge. The controller evaluates
-                    // its age when dequeued: fresh edges ask the gateway to
-                    // apply its leading-edge cooldown, while stale work is
-                    // persisted without manufacturing a delayed chime.
+                    // Publish every physical edge. Its separate alert task
+                    // immediately asks the gateway to make the case-by-case
+                    // cooldown decision; lifecycle/media work may follow but
+                    // can never create a trailing webhook.
                     self->pending_button_events_.fetch_add(1);
                     self->start_followup_capture(press_number, now_us);
                 }
@@ -823,8 +879,6 @@ void DoorbellController::execute_alert_cycle(const char *event_type,
     CapturedImage image;
     const esp_err_t capture_err = handle_camera_capture(image, remaining_ms);
     speaker_boundary.release();
-    if (capture_err == ESP_OK) last_snapshot_capture_us_ = esp_timer_get_time();
-
     if (capture_err == ESP_OK && image.valid()) {
         ESP_LOGI(kTag,
                  "[MONOTONIC_TIMING] t=%.1f ms | STAGE_COMPLETE: Camera Photo Captured & Copied to PSRAM (SHUTTER CLOSE)",
@@ -925,44 +979,30 @@ void DoorbellController::process_button_press_event(int64_t event_time_us,
     }
     const std::uint32_t press_number = turn ? turn->press_number
                                             : next_press_number_.fetch_add(1) + 1;
-    const std::int64_t handled_us = esp_timer_get_time();
-    const std::int64_t alert_delay_us =
-        (std::max)(0LL, handled_us - event_time_us);
-    const bool dispatch_alerts =
-        !turn || alert_delay_us <=
-                     static_cast<std::int64_t>(
-                         DoorbellPolicy::kRepressAlertFreshnessMs) * 1000LL;
     session_.press_count = (std::max)(session_.press_count, press_number);
     session_.last_button_press_us = event_time_us;
     session_.touch_activity(esp_timer_get_time());
 
     const char *firmware_version = esp_app_get_description()->version;
-    const bool snapshot_stale = last_snapshot_capture_us_ == 0 ||
-        event_time_us - last_snapshot_capture_us_ >= DoorbellPolicy::kSnapshotRefreshUs;
-    if (snapshot_stale) {
-        ESP_LOGI(kTag,
-                 "session=%s press=%" PRIu32 " followup=snapshot_refresh global_alert=%s edge_age=%lldms",
-                 session_.session_id, press_number,
-                 dispatch_alerts ? "case_by_case" : "stale_suppressed",
-                 static_cast<long long>(alert_delay_us / 1000LL));
-        intercom_.stop();
-        execute_alert_cycle("DOORBELL_REPRESS", firmware_version,
-                            press_number, dispatch_alerts);
-        if (connectivity_.connected()) (void)intercom_.start(session_.session_id);
-    } else {
-        char press_id[40];
-        std::snprintf(press_id, sizeof(press_id), "%s-%" PRIu32,
-                      session_.session_id, press_number);
+    char press_id[40];
+    std::snprintf(press_id, sizeof(press_id), "%s-%" PRIu32,
+                  session_.session_id, press_number);
+    while (turn && !turn->edge_alert_finished.load() &&
+           !shutting_down_.load()) {
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+    const bool edge_evaluated = turn && turn->edge_alert_result == ESP_OK;
+    ESP_LOGI(kTag,
+             "session=%s press=%" PRIu32 " followup=register_only global_alert=%s",
+             session_.session_id, press_number,
+             edge_evaluated ? "gateway_evaluated" : "edge_unavailable");
+    if (!edge_evaluated) {
+        // Persist lifecycle state, but never turn failed/late edge delivery
+        // into a trailing whole-home chime.
         const int remaining_ms = static_cast<int>(
             session_.remaining_us(esp_timer_get_time()) / 1000LL);
-        ESP_LOGI(kTag,
-                 "session=%s press=%" PRIu32 " followup=register_only snapshot=fresh global_alert=%s edge_age=%lldms",
-                 session_.session_id, press_number,
-                 dispatch_alerts ? "case_by_case" : "stale_suppressed",
-                 static_cast<long long>(alert_delay_us / 1000LL));
         (void)handle_early_notify(press_id, "DOORBELL_REPRESS",
-                                  firmware_version, dispatch_alerts,
-                                  remaining_ms);
+                                  firmware_version, false, remaining_ms);
     }
     set_state(DeviceState::ListeningForReply);
 }
@@ -972,6 +1012,9 @@ void DoorbellController::process_visitor_recording(
 {
     auto *turn = static_cast<FollowupTurn *>(turn_data);
     if (!turn) return;
+    while (!turn->edge_alert_finished.load() && !shutting_down_.load()) {
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
     session_.touch_activity(esp_timer_get_time());
     char press_id[40];
     std::snprintf(press_id, sizeof(press_id), "%s-%" PRIu32,
@@ -1124,6 +1167,12 @@ void DoorbellController::handle_ptt_session()
     set_state(DeviceState::PreparingSleep);
     shutting_down_.store(true);
     stop_button_monitor();
+    const std::int64_t alert_stop_deadline_us =
+        esp_timer_get_time() + 1000000LL;
+    while (repress_alert_tasks_active_.load() != 0 &&
+           esp_timer_get_time() < alert_stop_deadline_us) {
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
     if (chime_player_is_playing()) {
         ESP_LOGI(kTag,
                  "Session ended with a local chime active; draining it before sleep");

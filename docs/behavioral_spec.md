@@ -75,13 +75,14 @@ post-chime microphone audio, is a normal short press and creates no empty WAV.
 - Retain visitor microphone audio only after the one-second recording threshold
   is crossed. Release creates one logical recording.
 - A release followed by another hold creates another ordered press/recording.
-- Refresh the snapshot only when the previous capture is at least 15 seconds
-  old. Otherwise register the press and upload only its visitor recording.
-- Each repress reached by the live controller loop within 500 ms of its
-  physical edge carries `dispatchAlerts=true`; its request is evaluated
-  independently by the gateway cooldown. A repress that sat behind blocking
-  work for longer than 500 ms is still persisted with `dispatchAlerts=false`;
-  later lifecycle or media work cannot turn it into a delayed whole-home chime.
+- Keep the initial snapshot for the active session. Do not repower the camera
+  for a repress: its RF-off capture boundary would make the global chime and
+  intercom unavailable during the refresh. The next session takes a new image.
+- Each repress launches a separate immediate gateway request from its physical
+  edge while RF is available, independently of camera/media lifecycle work.
+  A request already in flight causes the new edge to be dropped rather than
+  queued. Later lifecycle or media work persists the press with
+  `dispatchAlerts=false` and cannot manufacture a delayed whole-home chime.
 - There is no three-press product limit. The 60/90-second session bounds and
   memory/queue limits are the safety boundary.
 
@@ -183,9 +184,8 @@ Legacy event rows remain readable during rollout; rows with the historical
 | Speaker fade-in/fade-out | 25 ms |
 | Camera-overlap chime | Full waveform at 12 dB attenuation |
 | Discarded first-snapshot convergence frames | 0 |
-| Repress remote-alert freshness | 500 ms from physical edge |
+| Repress edge-request timeout | 750 ms, no waiting queue |
 | Whole-home chime cooldown | 1,500 ms, leading edge, no queue |
-| Stale-snapshot threshold | 15,000 ms |
 | Session idle limit | 60,000 ms |
 | Session absolute limit | 90,000 ms |
 | Browser homeowner reply limit | 20,000 ms |

@@ -15,13 +15,13 @@ ConnectivityManager::~ConnectivityManager()
 
 esp_err_t ConnectivityManager::connect(int timeout_ms)
 {
-    if (connected_) {
+    if (connected_.load()) {
         return ESP_OK;
     }
 
     const esp_err_t err = wifi_bringup_connect_bounded_timeout(timeout_ms);
-    connected_ = err == ESP_OK;
-    if (!connected_) {
+    connected_.store(err == ESP_OK);
+    if (!connected_.load()) {
         ESP_LOGE(kTag, "Wi-Fi connection failed: %s", esp_err_to_name(err));
     }
     return err;
@@ -34,7 +34,7 @@ esp_err_t ConnectivityManager::trigger(const char *event_id,
                                        bool dispatch_alerts,
                                        int timeout_ms) const
 {
-    if (!connected_) {
+    if (!connected_.load()) {
         return ESP_ERR_INVALID_STATE;
     }
     return wifi_bringup_trigger_event_timeout(event_id, event_type, device_id,
@@ -50,7 +50,7 @@ esp_err_t ConnectivityManager::upload(const CapturedImage *image,
                                       const char *firmware_version,
                                       int timeout_ms) const
 {
-    if (!connected_ || !event_type ||
+    if (!connected_.load() || !event_type ||
         ((!image || !image->valid()) && (!audio || !audio->valid()))) {
         return ESP_ERR_INVALID_STATE;
     }
@@ -64,18 +64,18 @@ esp_err_t ConnectivityManager::upload(const CapturedImage *image,
 
 esp_err_t ConnectivityManager::shutdown()
 {
-    if (!connected_) {
+    if (!connected_.load()) {
         return ESP_OK;
     }
     const esp_err_t err = wifi_bringup_stop_bounded();
-    connected_ = false;
+    connected_.store(false);
     return err;
 }
 
 esp_err_t ConnectivityManager::close_session(const char *session_id,
                                               int timeout_ms) const
 {
-    if (!connected_) return ESP_ERR_INVALID_STATE;
+    if (!connected_.load()) return ESP_ERR_INVALID_STATE;
     return wifi_bringup_close_session(session_id, timeout_ms);
 }
 
@@ -83,7 +83,7 @@ esp_err_t ConnectivityManager::complete_press(const char *press_id,
                                                std::uint32_t duration_ms,
                                                int timeout_ms) const
 {
-    if (!connected_) return ESP_ERR_INVALID_STATE;
+    if (!connected_.load()) return ESP_ERR_INVALID_STATE;
     return wifi_bringup_complete_press(press_id, duration_ms, timeout_ms);
 }
 

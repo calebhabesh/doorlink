@@ -1,5 +1,7 @@
 #pragma once
 
+#include <atomic>
+
 #include "esp_err.h"
 #include "services/camera_service.hpp"
 #include "services/audio_service.hpp"
@@ -29,10 +31,10 @@ public:
     esp_err_t close_session(const char *session_id, int timeout_ms = 5000) const;
     esp_err_t complete_press(const char *press_id, std::uint32_t duration_ms,
                              int timeout_ms = 5000) const;
-    bool connected() const { return connected_; }
+    bool connected() const { return connected_.load(); }
 
 private:
-    bool connected_{false};
+    std::atomic_bool connected_{false};
 };
 
 }  // namespace doorbell
