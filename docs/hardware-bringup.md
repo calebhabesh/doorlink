@@ -1161,11 +1161,16 @@ flashed-board A/B retest with the 4-ohm speaker before that speaker is accepted
 for production.
 
 The 2026-08-16 experimental follow-up keeps the full 6 dB chime ahead of camera
-startup, then permits the 18 dB/250 ms acknowledgement throughout RF shutdown,
-U9 rail startup, and camera capture. Repeated presses may restart that prefix.
+startup, then permits the complete normal waveform at 18 dB attenuation
+throughout RF shutdown, U9 rail startup, and camera capture. The earlier 250 ms
+crop sounded muddy and unlike a normal press in physical testing. Repeated
+presses may restart the quiet full waveform.
 When AMP_EN is already active, camera power-up verifies that the chime player
 owns it in the bounded overlap profile and waits for the 25 ms ramp plus a 5 ms
 guard before enabling U9. Any other AMP_EN owner still aborts camera startup.
+Stopping the intercom MQTT control plane no longer drives AMP_EN low because it
+does not own local-chime playback; this fixes later-session snapshot refreshes
+muting a chime that had already started.
 This is a software power-limiting experiment, not evidence that full chime and
 camera loads are safe together. Validate `SYS`, reset reason, amplifier
 temperature, camera completion, and image integrity with the 4-ohm speaker.

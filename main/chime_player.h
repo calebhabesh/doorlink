@@ -51,10 +51,11 @@ bool chime_player_is_interruptible(void);
 bool chime_player_camera_overlap_active(void);
 
 /**
- * @brief Select the bounded low-power acknowledgement profile around camera use.
+ * @brief Select the bounded low-power chime profile around camera use.
  *
  * An already-active full chime may finish before startup. New requests use the
- * configured overlap attenuation/duration and may continue while U9 starts.
+ * normal doorbell waveform at the configured low overlap gain and may continue
+ * while U9 starts.
  */
 void chime_player_set_camera_overlap_mode(bool enabled);
 

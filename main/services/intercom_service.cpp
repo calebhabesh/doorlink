@@ -410,7 +410,9 @@ void IntercomService::stop()
     }
     mqtt_payload_size_ = 0;
     visitor_session_id_[0] = '\0';
-    gpio_set_level(AMP_EN_PIN, 0);
+    // play_wav() mutes AMP_EN in its own cleanup path while it owns the audio
+    // bus. stop() only tears down the MQTT control plane and must not mute an
+    // independently running local doorbell chime.
 }
 
 }  // namespace doorbell

@@ -672,9 +672,10 @@ void DoorbellController::execute_alert_cycle(const char *event_type,
         return;
     }
 
-    // 2. Enter camera-overlap mode. The existing full chime drains first; new
-    // presses use only the short -18 dB profile. That bounded profile remains
-    // available through RF shutdown, U9 rail startup, and camera capture.
+    // 2. Enter camera-overlap mode. The existing full-volume chime drains
+    // first; new presses retain the normal waveform at -18 dB. That bounded
+    // low-power profile remains available through RF shutdown, U9 rail
+    // startup, and camera capture.
     CameraSpeakerPowerBoundary speaker_boundary;
     ESP_LOGI(kTag, "Waiting for local chime to finish before camera power-up");
     const esp_err_t chime_idle_err = chime_player_wait_until_idle(

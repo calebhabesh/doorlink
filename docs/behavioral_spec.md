@@ -113,8 +113,8 @@ so rapid presses cannot become a delayed playback burst.
 
 Before camera startup, firmware allows the initial 6 dB chime to finish, then
 arms the bounded camera-overlap profile. From RF shutdown through U9 rail
-startup and camera capture, represses may play or restart a 250 ms chime prefix
-at 18 dB attenuation. If that low-power acknowledgement already owns AMP_EN,
+startup and camera capture, represses may play or restart the complete normal
+chime waveform at 18 dB attenuation. If that low-power chime already owns AMP_EN,
 camera rail enable waits for its 25 ms ramp plus a 5 ms guard before adding the
 camera load. Camera startup still refuses overlap with any unverified speaker
 owner. Visitor microphone and homeowner playback retain I2S priority and cause
@@ -152,7 +152,7 @@ Legacy event rows remain readable during rollout; rows with the historical
 | Repress chime-to-microphone handoff | 1,200 ms |
 | Production speaker attenuation | 6 dB |
 | Speaker fade-in/fade-out | 25 ms |
-| Camera-overlap acknowledgement | 250 ms at 18 dB attenuation |
+| Camera-overlap chime | Full waveform at 18 dB attenuation |
 | Whole-home chime cooldown | 2,600 ms, leading edge, no queue |
 | Stale-snapshot threshold | 15,000 ms |
 | Session idle limit | 60,000 ms |

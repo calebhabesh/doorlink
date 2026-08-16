@@ -29,7 +29,7 @@
 #define CONFIG_SMART_DOORBELL_CAMERA_OVERLAP_ACK_ATTENUATION_DB 18
 #endif
 #ifndef CONFIG_SMART_DOORBELL_CAMERA_OVERLAP_ACK_DURATION_MS
-#define CONFIG_SMART_DOORBELL_CAMERA_OVERLAP_ACK_DURATION_MS 250
+#define CONFIG_SMART_DOORBELL_CAMERA_OVERLAP_ACK_DURATION_MS 3000
 #endif
 
 static const char *TAG = "chime_player";
@@ -396,7 +396,7 @@ static void camera_overlap_ack_task(void *pvParameters)
         0, playback_len,
         CONFIG_SMART_DOORBELL_CAMERA_OVERLAP_ACK_ATTENUATION_DB,
         speaker_output_ramp_ms(), true,
-        "camera-overlap acknowledgement");
+        "quiet camera-overlap doorbell chime");
     vTaskDelete(NULL);
 }
 

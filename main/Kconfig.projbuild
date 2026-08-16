@@ -40,22 +40,27 @@ config SMART_DOORBELL_CAMERA_OVERLAP_ACK
     default y
     help
         Permit represses from the camera-startup boundary through capture to
-        play a short, strongly attenuated prefix of the chime. The initial full
-        chime still drains before startup. Represses may restart the bounded
-        prefix while the camera is active. This mode requires validation with
-        the 4-ohm speaker and must never bypass the configured limits below.
+        play the normal chime waveform at a strongly attenuated level. The
+        initial full-volume chime still drains before startup. Represses may
+        restart the quiet waveform while the camera is active. This mode
+        requires validation with the 4-ohm speaker and must never bypass the
+        configured limits below.
 
 config SMART_DOORBELL_CAMERA_OVERLAP_ACK_ATTENUATION_DB
-    int "Camera-overlap acknowledgement attenuation (dB)"
+    int "Camera-overlap chime attenuation (dB)"
     depends on SMART_DOORBELL_CAMERA_OVERLAP_ACK
     range 12 24
     default 18
 
 config SMART_DOORBELL_CAMERA_OVERLAP_ACK_DURATION_MS
-    int "Camera-overlap acknowledgement duration (ms)"
+    int "Camera-overlap chime duration (ms)"
     depends on SMART_DOORBELL_CAMERA_OVERLAP_ACK
-    range 50 500
-    default 250
+    range 250 4000
+    default 3000
+    help
+        Use 3000 ms to retain the complete embedded doorbell waveform. The
+        player clamps longer settings to the actual clip length. Short values
+        crop the waveform and can sound unlike the normal doorbell.
 
 config SMART_DOORBELL_REPRESS_HOLD_TO_TALK_MS
     int "Repress hold duration before visitor microphone handoff (ms)"
