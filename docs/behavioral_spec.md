@@ -32,8 +32,10 @@ limits if that close request is lost.
 
 Every press is persisted with its own idempotency key. The first press dispatches
 the indoor/Home Assistant chime immediately after the initial shutter closes.
-Rapid represses remain persisted, but whole-home chime requests during its
-playback cooldown are suppressed.
+Each fresh repress independently requests the whole-home chime; the gateway
+drops requests during its playback cooldown instead of retaining a trailing
+request. Represses that cannot be handled promptly remain persisted but are
+ineligible for a delayed chime.
 
 ## First press
 
@@ -75,10 +77,11 @@ post-chime microphone audio, is a normal short press and creates no empty WAV.
 - A release followed by another hold creates another ordered press/recording.
 - Refresh the snapshot only when the previous capture is at least 15 seconds
   old. Otherwise register the press and upload only its visitor recording.
-- Only a repress accepted by the live controller loop may request the remote
-  alert. Represses received while another capture/alert cycle owns that slot
-  are still persisted, but carry `dispatchAlerts=false`; later lifecycle or
-  media work cannot turn them into delayed whole-home chimes.
+- Each repress reached by the live controller loop within 500 ms of its
+  physical edge carries `dispatchAlerts=true`; its request is evaluated
+  independently by the gateway cooldown. A repress that sat behind blocking
+  work for longer than 500 ms is still persisted with `dispatchAlerts=false`;
+  later lifecycle or media work cannot turn it into a delayed whole-home chime.
 - There is no three-press product limit. The 60/90-second session bounds and
   memory/queue limits are the safety boundary.
 
@@ -124,7 +127,7 @@ The initial camera capture runs before Wi-Fi startup so network latency cannot
 move the shutter toward button release. Its owned JPEG is also uploaded before
 joining a held-button recording. Gateway triggers remain idempotent per physical
 `pressId`, and the gateway acknowledges and persists each press without waiting
-for Home Assistant. Whole-home webhook delivery uses a 1-second leading-edge
+for Home Assistant. Whole-home webhook delivery uses a 1.5-second leading-edge
 cooldown: the first request
 dispatches immediately, requests during the cooldown are dropped, and the first
 request after expiry dispatches immediately. No trailing webhook is retained,
@@ -180,7 +183,8 @@ Legacy event rows remain readable during rollout; rows with the historical
 | Speaker fade-in/fade-out | 25 ms |
 | Camera-overlap chime | Full waveform at 12 dB attenuation |
 | Discarded first-snapshot convergence frames | 0 |
-| Whole-home chime cooldown | 1,000 ms, leading edge, no queue |
+| Repress remote-alert freshness | 500 ms from physical edge |
+| Whole-home chime cooldown | 1,500 ms, leading edge, no queue |
 | Stale-snapshot threshold | 15,000 ms |
 | Session idle limit | 60,000 ms |
 | Session absolute limit | 90,000 ms |

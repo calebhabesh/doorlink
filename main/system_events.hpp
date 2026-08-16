@@ -68,6 +68,10 @@ namespace DoorbellPolicy {
     constexpr std::uint32_t kVisitorRecordingMaxMs = 15000;
     constexpr std::uint32_t kRepressChimeHoldHandoffMs =
         CONFIG_SMART_DOORBELL_REPRESS_HOLD_TO_TALK_MS;
+    // Remote alerts are edge acknowledgements, not queued lifecycle work. If
+    // the controller cannot begin handling a repress within this window, it
+    // still persists the press but must not manufacture a delayed chime.
+    constexpr std::uint32_t kRepressAlertFreshnessMs = 500;
 }
 
 /**

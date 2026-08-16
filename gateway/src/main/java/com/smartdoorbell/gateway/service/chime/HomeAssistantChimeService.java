@@ -34,7 +34,7 @@ public class HomeAssistantChimeService implements ChimeService {
     @Value("${chime.homeassistant.webhook-url}")
     private String webhookUrl;
 
-    @Value("${chime.homeassistant.min-interval-ms:1000}")
+    @Value("${chime.homeassistant.min-interval-ms:1500}")
     private long minIntervalMs;
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -63,18 +63,25 @@ public class HomeAssistantChimeService implements ChimeService {
         final long now = nanoTime.getAsLong();
         synchronized (deliveryLock) {
             if (now < nextDeliveryNanos) {
-                logger.info("Whole-home chime request skipped during cooldown ({} ms remaining)",
+                logger.info(
+                        "Whole-home chime request for {} skipped during cooldown ({} ms remaining)",
+                        eventType,
                         TimeUnit.NANOSECONDS.toMillis(nextDeliveryNanos - now));
                 return;
             }
 
             if (deliveryInFlight) {
-                logger.info("Whole-home chime request skipped while webhook delivery is in flight");
+                logger.info(
+                        "Whole-home chime request for {} skipped while webhook delivery is in flight",
+                        eventType);
                 return;
             }
 
             nextDeliveryNanos = saturatedAdd(now, intervalNanos);
             deliveryInFlight = true;
+            logger.info(
+                    "Whole-home chime request for {} accepted (cooldown={} ms)",
+                    eventType, Math.max(0, minIntervalMs));
             try {
                 webhookExecutor.execute(() -> {
                     try {

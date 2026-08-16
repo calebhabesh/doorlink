@@ -1191,8 +1191,10 @@ local chime before sleep. A forced cutoff is reserved for playback that remains
 wedged past the four-second shutdown deadline; confirm that ordinary expiry no
 longer clips the waveform during the long-session test.
 Whole-home alert receipts are keyed per physical press, while Home Assistant
-calls use a 1-second leading-edge cooldown with no trailing queue; retries
-remain idempotent for each `pressId`.
+calls use a 1.5-second leading-edge cooldown with no trailing queue; retries
+remain idempotent for each `pressId`. The extra margin keeps the supplied
+`mode: single` automation, including its 850 ms restore delay and service-call
+time, from silently rejecting the first request after cooldown.
 
 The subsequent processing-flow revision moves the first QXGA shutter ahead of
 Wi-Fi startup and uploads the owned JPEG before waiting for button release or a
@@ -1201,6 +1203,15 @@ physical edge: lifecycle work accepted while another repress/capture is busy is
 persisted with alerts suppressed, and a later upload cannot generate a fallback
 repress chime. This revision passes the production ESP-IDF build and gateway
 tests but requires a flashed-board button-to-frame and rapid-repress test.
+
+The global-chime reliability follow-up removes that shared repress-alert slot.
+It had stayed closed for the full initial camera/upload cycle and for every
+outstanding 1,200 ms hold classifier, suppressing otherwise valid represses.
+Each repress is now evaluated independently when the controller reaches it:
+edges no more than 500 ms old ask the gateway to apply its leading-edge
+cooldown, while older edges are persisted without a delayed webhook. Validate
+that gateway logs alternate between explicit `accepted` and `skipped during
+cooldown` decisions during paced and rapid repress tests.
 
 The rapid-repress audio follow-up restores the intended 1,200 ms continuous
 hold gate for the visitor microphone. A repress now remains a tap until that

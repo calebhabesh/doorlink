@@ -60,8 +60,7 @@ private:
     void process_button_press_event(int64_t event_time_us, void *turn_data = nullptr);
     void process_visitor_recording(void *turn_data, const char *firmware_version);
     void start_followup_capture(std::uint32_t press_number,
-                                std::int64_t press_started_us,
-                                bool dispatch_alerts);
+                                std::int64_t press_started_us);
     void handle_ptt_session();
 
     void start_button_monitor();
@@ -92,10 +91,6 @@ private:
     std::atomic_bool visitor_capture_window_active_{false};
     std::atomic_bool shutting_down_{false};
     std::atomic_uint32_t next_press_number_{1};
-    // A true value means the controller event loop can handle one repress now.
-    // The button monitor atomically reserves it; all other represses retain
-    // their lifecycle data but are forbidden from dispatching delayed alerts.
-    std::atomic_bool repress_alert_slot_available_{false};
     std::atomic_uint32_t pending_button_events_{0};
     std::atomic_uint32_t outstanding_followup_turns_{0};
     std::uint32_t alert_cycles_started_{0};

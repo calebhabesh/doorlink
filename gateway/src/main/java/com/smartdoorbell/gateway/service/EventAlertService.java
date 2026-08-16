@@ -43,13 +43,13 @@ public class EventAlertService {
         EventTriggerReceipt receipt =
                 new EventTriggerReceipt(eventId, eventType, triggeredAt);
 
-        // A delayed firmware lifecycle event is persisted with a receipt but
+        // A stale firmware lifecycle event is persisted with a receipt but
         // can never turn into a trailing chime after the cooldown has elapsed.
         if (dispatchAlerts) {
             dispatch(eventType);
         } else {
             logger.info(
-                    "Persisting delayed {} trigger without dispatching alerts", eventType);
+                    "Persisting stale {} trigger without dispatching alerts", eventType);
         }
         receiptRepository.saveAndFlush(receipt);
         return new TriggerOutcome(eventId, true, triggeredAt);

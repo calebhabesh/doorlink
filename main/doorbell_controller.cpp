@@ -165,7 +165,6 @@ struct FollowupTurn {
     std::atomic_uint32_t *latest_press_number;
     std::uint32_t press_number;
     std::int64_t press_started_us;
-    bool dispatch_alerts;
     std::uint32_t recorded_duration_ms{0};
     std::uint32_t max_duration_ms{0};
     RecordedAudio recording;
@@ -526,8 +525,7 @@ esp_err_t DoorbellController::handle_upload(const CapturedImage *image,
 }
 
 void DoorbellController::start_followup_capture(std::uint32_t press_number,
-                                                std::int64_t press_started_us,
-                                                bool dispatch_alerts)
+                                                std::int64_t press_started_us)
 {
     auto *turn = new (std::nothrow) FollowupTurn{
         .audio_service = &audio_,
@@ -537,7 +535,6 @@ void DoorbellController::start_followup_capture(std::uint32_t press_number,
         .latest_press_number = &next_press_number_,
         .press_number = press_number,
         .press_started_us = press_started_us,
-        .dispatch_alerts = dispatch_alerts,
         .recorded_duration_ms = 0,
         .max_duration_ms = static_cast<std::uint32_t>((std::min)(
             static_cast<std::int64_t>(kVisitorRecordingMaxMs),
@@ -548,9 +545,6 @@ void DoorbellController::start_followup_capture(std::uint32_t press_number,
     if (!turn) {
         ESP_LOGE(kTag, "Could not allocate visitor turn metadata");
         pending_button_events_.fetch_sub(1);
-        if (dispatch_alerts) {
-            repress_alert_slot_available_.store(true);
-        }
         return;
     }
     outstanding_followup_turns_.fetch_add(1);
@@ -560,7 +554,6 @@ void DoorbellController::start_followup_capture(std::uint32_t press_number,
                         ESP_OK, turn};
     if (post_event(started) != ESP_OK) {
         pending_button_events_.fetch_sub(1);
-        turn->dispatch_alerts = false;
     }
     if (xTaskCreate(record_followup_turn_task, "visitor_hold", 4096, turn,
                     configMAX_PRIORITIES - 4, nullptr) != pdPASS) {
@@ -631,17 +624,12 @@ void DoorbellController::start_button_monitor()
                         ESP_LOGW(kTag, "Could not start repress chime: %s",
                                  esp_err_to_name(chime_err));
                     }
-                    // Publish the pending edge before attempting to reserve
-                    // the immediate-alert slot. This ordering prevents the
-                    // controller from reopening the slot between reservation
-                    // and FIFO insertion.
+                    // Publish every physical edge. The controller evaluates
+                    // its age when dequeued: fresh edges ask the gateway to
+                    // apply its leading-edge cooldown, while stale work is
+                    // persisted without manufacturing a delayed chime.
                     self->pending_button_events_.fetch_add(1);
-                    bool expected = true;
-                    const bool dispatch_alerts =
-                        self->repress_alert_slot_available_
-                            .compare_exchange_strong(expected, false);
-                    self->start_followup_capture(
-                        press_number, now_us, dispatch_alerts);
+                    self->start_followup_capture(press_number, now_us);
                 }
             }
 
@@ -937,7 +925,13 @@ void DoorbellController::process_button_press_event(int64_t event_time_us,
     }
     const std::uint32_t press_number = turn ? turn->press_number
                                             : next_press_number_.fetch_add(1) + 1;
-    const bool dispatch_alerts = !turn || turn->dispatch_alerts;
+    const std::int64_t handled_us = esp_timer_get_time();
+    const std::int64_t alert_delay_us =
+        (std::max)(0LL, handled_us - event_time_us);
+    const bool dispatch_alerts =
+        !turn || alert_delay_us <=
+                     static_cast<std::int64_t>(
+                         DoorbellPolicy::kRepressAlertFreshnessMs) * 1000LL;
     session_.press_count = (std::max)(session_.press_count, press_number);
     session_.last_button_press_us = event_time_us;
     session_.touch_activity(esp_timer_get_time());
@@ -947,9 +941,10 @@ void DoorbellController::process_button_press_event(int64_t event_time_us,
         event_time_us - last_snapshot_capture_us_ >= DoorbellPolicy::kSnapshotRefreshUs;
     if (snapshot_stale) {
         ESP_LOGI(kTag,
-                 "session=%s press=%" PRIu32 " followup=snapshot_refresh global_alert=%s",
+                 "session=%s press=%" PRIu32 " followup=snapshot_refresh global_alert=%s edge_age=%lldms",
                  session_.session_id, press_number,
-                 dispatch_alerts ? "immediate" : "suppressed");
+                 dispatch_alerts ? "case_by_case" : "stale_suppressed",
+                 static_cast<long long>(alert_delay_us / 1000LL));
         intercom_.stop();
         execute_alert_cycle("DOORBELL_REPRESS", firmware_version,
                             press_number, dispatch_alerts);
@@ -961,9 +956,10 @@ void DoorbellController::process_button_press_event(int64_t event_time_us,
         const int remaining_ms = static_cast<int>(
             session_.remaining_us(esp_timer_get_time()) / 1000LL);
         ESP_LOGI(kTag,
-                 "session=%s press=%" PRIu32 " followup=register_only snapshot=fresh global_alert=%s",
+                 "session=%s press=%" PRIu32 " followup=register_only snapshot=fresh global_alert=%s edge_age=%lldms",
                  session_.session_id, press_number,
-                 dispatch_alerts ? "immediate" : "suppressed");
+                 dispatch_alerts ? "case_by_case" : "stale_suppressed",
+                 static_cast<long long>(alert_delay_us / 1000LL));
         (void)handle_early_notify(press_id, "DOORBELL_REPRESS",
                                   firmware_version, dispatch_alerts,
                                   remaining_ms);
@@ -1043,7 +1039,6 @@ void DoorbellController::handle_ptt_session()
             has_command = intercom_.receive(command, 0);
         }
         if (has_command) {
-            repress_alert_slot_available_.store(false);
             const int64_t command_time_us = esp_timer_get_time();
             session_.touch_activity(command_time_us);
             if (command.type == IntercomCommandType::StartReply) {
@@ -1101,9 +1096,9 @@ void DoorbellController::handle_ptt_session()
             }
         }
 
-        // Process lifecycle data in order. FollowupTurn::dispatch_alerts was
-        // fixed at the physical edge, so this FIFO can never manufacture a
-        // delayed whole-home ring from an old press.
+        // Process lifecycle data in order. Alert eligibility is based on how
+        // promptly this loop reaches the physical edge, so FIFO work cannot
+        // manufacture a delayed whole-home ring from an old press.
         SystemEvent event;
         if (xQueueReceive(event_queue_, &event, pdMS_TO_TICKS(50)) == pdTRUE) {
             if (event.type == EventType::ButtonPress) {
@@ -1112,20 +1107,6 @@ void DoorbellController::handle_ptt_session()
                     event.extra_data);
             } else if (event.type == EventType::VisitorRecordingReady) {
                 process_visitor_recording(event.extra_data, firmware_version);
-            }
-        }
-
-        // Open the one-shot edge slot only when there is no earlier controller
-        // work for a repress to sit behind. Recheck after publishing the slot
-        // so a racing physical edge always closes it before enqueueing.
-        if (pending_button_events_.load() == 0 &&
-            outstanding_followup_turns_.load() == 0 &&
-            uxQueueMessagesWaiting(event_queue_) == 0) {
-            repress_alert_slot_available_.store(true);
-            if (pending_button_events_.load() != 0 ||
-                outstanding_followup_turns_.load() != 0 ||
-                uxQueueMessagesWaiting(event_queue_) != 0) {
-                repress_alert_slot_available_.store(false);
             }
         }
     }
@@ -1256,17 +1237,8 @@ void DoorbellController::handle_ptt_session()
     execute_alert_cycle(event_type, firmware_version, 1);
     log_elapsed("initial alert cycle finished", started_us);
 
-    // Enter PTT session / event loop
-    if (pending_button_events_.load() == 0 &&
-        outstanding_followup_turns_.load() == 0 &&
-        uxQueueMessagesWaiting(event_queue_) == 0) {
-        repress_alert_slot_available_.store(true);
-        if (pending_button_events_.load() != 0 ||
-            outstanding_followup_turns_.load() != 0 ||
-            uxQueueMessagesWaiting(event_queue_) != 0) {
-            repress_alert_slot_available_.store(false);
-        }
-    }
+    // Enter PTT session / event loop. Repress alert eligibility is evaluated
+    // per physical edge rather than through a shared queue/slot state.
     handle_ptt_session();
 
     sleep();
