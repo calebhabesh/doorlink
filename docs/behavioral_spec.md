@@ -31,8 +31,8 @@ reachable. The gateway and dashboard infer closure from the same 60/90-second
 limits if that close request is lost.
 
 Every press is persisted with its own idempotency key. The first press dispatches
-the indoor/Home Assistant chime immediately; rapid represses are delivered
-through the bounded whole-home coalescing policy described below.
+the indoor/Home Assistant chime immediately. Rapid represses remain persisted,
+but whole-home chime requests during its playback cooldown are suppressed.
 
 ## First press
 
@@ -106,10 +106,10 @@ are build-time configurable through
 The early remote notification remains ahead of camera capture and is
 idempotent per physical `pressId`. The gateway acknowledges and persists each
 press without waiting for Home Assistant. Whole-home webhook delivery uses a
-750 ms leading/trailing coalescing window: the first request is queued
-immediately, one trailing request is retained, and additional requests in the
-same burst merge into that pending delivery. This prevents overlapping Home
-Assistant calls without restoring the old multi-second dead period.
+2.6-second leading-edge cooldown matching the global clip: the first request
+dispatches immediately, requests during the cooldown are dropped, and the first
+request after expiry dispatches immediately. No trailing webhook is retained,
+so rapid presses cannot become a delayed playback burst.
 
 Before camera startup, firmware allows the initial 6 dB chime to finish, then
 arms the bounded camera-overlap profile. From RF shutdown through U9 rail
@@ -153,7 +153,7 @@ Legacy event rows remain readable during rollout; rows with the historical
 | Production speaker attenuation | 6 dB |
 | Speaker fade-in/fade-out | 25 ms |
 | Camera-overlap acknowledgement | 250 ms at 18 dB attenuation |
-| Whole-home webhook coalescing interval | 750 ms |
+| Whole-home chime cooldown | 2,600 ms, leading edge, no queue |
 | Stale-snapshot threshold | 15,000 ms |
 | Session idle limit | 60,000 ms |
 | Session absolute limit | 90,000 ms |

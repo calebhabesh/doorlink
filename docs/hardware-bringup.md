@@ -1169,9 +1169,9 @@ guard before enabling U9. Any other AMP_EN owner still aborts camera startup.
 This is a software power-limiting experiment, not evidence that full chime and
 camera loads are safe together. Validate `SYS`, reset reason, amplifier
 temperature, camera completion, and image integrity with the 4-ohm speaker.
-Whole-home alert receipts are keyed per physical press, while the Home
-Assistant calls use a 750 ms leading/trailing coalescing window; retries remain
-idempotent for each `pressId`.
+Whole-home alert receipts are keyed per physical press, while Home Assistant
+calls use a 2.6-second leading-edge cooldown with no trailing queue; retries
+remain idempotent for each `pressId`.
 
 The same run reported a FreeRTOS stack overflow in task `main` at the start of multipart
 upload. The production controller was still using the configured 3,584-byte

@@ -11,8 +11,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import jakarta.annotation.PreDestroy;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
@@ -24,26 +25,26 @@ public class HomeAssistantChimeService implements ChimeService {
     private static final Logger logger = LoggerFactory.getLogger(HomeAssistantChimeService.class);
 
     private final RestTemplate restTemplate;
-    private final ScheduledExecutorService webhookExecutor;
+    private final ExecutorService webhookExecutor;
     private final LongSupplier nanoTime;
     private final Object deliveryLock = new Object();
     private long nextDeliveryNanos = Long.MIN_VALUE;
-    private boolean trailingDeliveryQueued;
+    private boolean deliveryInFlight;
 
     @Value("${chime.homeassistant.webhook-url}")
     private String webhookUrl;
 
-    @Value("${chime.homeassistant.min-interval-ms:750}")
+    @Value("${chime.homeassistant.min-interval-ms:2600}")
     private long minIntervalMs;
 
     @org.springframework.beans.factory.annotation.Autowired
     public HomeAssistantChimeService(RestTemplate restTemplate) {
-        this(restTemplate, Executors.newSingleThreadScheduledExecutor(
+        this(restTemplate, Executors.newSingleThreadExecutor(
                 daemonThreadFactory()), System::nanoTime);
     }
 
     HomeAssistantChimeService(RestTemplate restTemplate,
-                              ScheduledExecutorService webhookExecutor,
+                              ExecutorService webhookExecutor,
                               LongSupplier nanoTime) {
         this.restTemplate = restTemplate;
         this.webhookExecutor = webhookExecutor;
@@ -61,29 +62,36 @@ public class HomeAssistantChimeService implements ChimeService {
                 Math.max(0, minIntervalMs));
         final long now = nanoTime.getAsLong();
         synchronized (deliveryLock) {
-            if (!trailingDeliveryQueued && now >= nextDeliveryNanos) {
-                nextDeliveryNanos = saturatedAdd(now, intervalNanos);
-                webhookExecutor.execute(() -> dispatch(eventType));
+            if (now < nextDeliveryNanos) {
+                logger.info("Whole-home chime request skipped during cooldown ({} ms remaining)",
+                        TimeUnit.NANOSECONDS.toMillis(nextDeliveryNanos - now));
                 return;
             }
 
-            if (trailingDeliveryQueued) {
-                logger.info("Whole-home chime request coalesced into pending delivery");
+            if (deliveryInFlight) {
+                logger.info("Whole-home chime request skipped while webhook delivery is in flight");
                 return;
             }
 
-            final long scheduledAt = Math.max(now, nextDeliveryNanos);
-            final long delayNanos = Math.max(0, scheduledAt - now);
-            nextDeliveryNanos = saturatedAdd(scheduledAt, intervalNanos);
-            trailingDeliveryQueued = true;
-            webhookExecutor.schedule(() -> {
-                synchronized (deliveryLock) {
-                    trailingDeliveryQueued = false;
+            nextDeliveryNanos = saturatedAdd(now, intervalNanos);
+            deliveryInFlight = true;
+            try {
+                webhookExecutor.execute(() -> {
+                    try {
+                        dispatch(eventType);
+                    } finally {
+                        synchronized (deliveryLock) {
+                            deliveryInFlight = false;
+                        }
+                    }
+                });
+            } catch (RejectedExecutionException e) {
+                deliveryInFlight = false;
+                nextDeliveryNanos = now;
+                if (!webhookExecutor.isShutdown()) {
+                    logger.error("Failed to submit Home Assistant chime webhook: {}", e.getMessage());
                 }
-                dispatch(eventType);
-            }, delayNanos, TimeUnit.NANOSECONDS);
-            logger.info("Whole-home chime queued in {} ms; rapid presses will coalesce",
-                    TimeUnit.NANOSECONDS.toMillis(delayNanos));
+            }
         }
     }
 
@@ -93,7 +101,7 @@ public class HomeAssistantChimeService implements ChimeService {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.set("Content-Type", "application/json");
-            
+
             // Send empty JSON or event payload based on preference
             String payload = "{}";
             HttpEntity<String> entity = new HttpEntity<>(payload, headers);
