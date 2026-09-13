@@ -10,4 +10,5 @@ public interface HouseholdMemberRepository extends JpaRepository<HouseholdMember
     boolean existsByRoleAndDisabledAtIsNull(HouseholdMember.Role role);
     Optional<HouseholdMember> findByEmailIgnoreCaseAndDisabledAtIsNull(String email);
     List<HouseholdMember> findAllByOrderByCreatedAtAsc();
+    List<HouseholdMember> findAllByDisabledAtIsNullOrderByCreatedAtAsc();
 }

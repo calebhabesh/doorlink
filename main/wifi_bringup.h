@@ -21,6 +21,7 @@ esp_err_t wifi_bringup_trigger_event_timeout(const char *event_id,
                                              const char *event_type,
                                              const char *device_id,
                                              const char *firmware_version,
+                                             uint32_t battery_millivolts,
                                              bool dispatch_alerts,
                                              int timeout_ms);
 esp_err_t wifi_bringup_upload_jpeg(const uint8_t *jpeg,
@@ -44,6 +45,7 @@ esp_err_t wifi_bringup_upload_event_timeout(const uint8_t *jpeg,
                                             const char *event_id,
                                             const char *device_id,
                                             const char *firmware_version,
+                                            uint32_t battery_millivolts,
                                             int timeout_ms);
 esp_err_t wifi_bringup_close_session(const char *session_id, int timeout_ms);
 esp_err_t wifi_bringup_complete_press(const char *press_id,

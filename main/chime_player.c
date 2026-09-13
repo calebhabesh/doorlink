@@ -22,6 +22,9 @@
 #define CHIME_SAMPLE_RATE_HZ 44100
 #define CHIME_WRITE_CHUNK_BYTES 1024
 #define CHIME_WRITE_TIMEOUT_MS 100
+#define CHIME_BUS_ACQUIRE_TIMEOUT_MS 2000
+#define CHIME_STALL_TIMEOUT_MS 1500
+#define CHIME_PLAYBACK_HARD_LIMIT_MS 15000
 
 #ifndef CONFIG_SMART_DOORBELL_CAMERA_OVERLAP_ACK
 #define CONFIG_SMART_DOORBELL_CAMERA_OVERLAP_ACK 0
@@ -116,7 +119,15 @@ static esp_err_t play_claimed_chime(TickType_t bus_timeout_ticks,
                                     bool allow_retrigger,
                                     const char *description)
 {
+    const int64_t playback_deadline_us =
+        esp_timer_get_time() + CHIME_PLAYBACK_HARD_LIMIT_MS * 1000LL;
+
 restart_playback:
+    if (esp_timer_get_time() >= playback_deadline_us) {
+        ESP_LOGE(TAG, "Local chime hard deadline reached before playback restart");
+        release_playback_claim();
+        return ESP_ERR_TIMEOUT;
+    }
     if (!audio_bus_acquire(bus_timeout_ticks)) {
         if (bus_timeout_ticks == 0) {
             ESP_LOGI(TAG,
@@ -132,6 +143,11 @@ restart_playback:
         audio_bus_release();
         release_playback_claim();
         return ESP_OK;
+    }
+    if (esp_timer_get_time() >= playback_deadline_us) {
+        audio_bus_release();
+        release_playback_claim();
+        return ESP_ERR_TIMEOUT;
     }
 
     // Configure AMP_EN_PIN as output and enable MAX98357A amp
@@ -167,6 +183,12 @@ restart_playback:
 
 stream_live_channel:
     while (offset < playback_len) {
+        if (esp_timer_get_time() >= playback_deadline_us) {
+            err = ESP_ERR_TIMEOUT;
+            ESP_LOGE(TAG, "Local chime reached its %u ms hard deadline",
+                     CHIME_PLAYBACK_HARD_LIMIT_MS);
+            break;
+        }
         if (atomic_load(&s_stop_requested)) {
             ESP_LOGI(TAG, "Local chime yielded to higher-priority audio");
             break;
@@ -201,6 +223,7 @@ stream_live_channel:
 
         size_t chunk_written = 0;
         unsigned stalled_writes = 0;
+        int64_t last_progress_us = esp_timer_get_time();
         while (chunk_written < chunk_len &&
                !atomic_load(&s_stop_requested)) {
             bytes_written = 0;
@@ -209,13 +232,28 @@ stream_live_channel:
                 (const uint8_t *)scaled_samples + chunk_written,
                 chunk_len - chunk_written, &bytes_written,
                 pdMS_TO_TICKS(CHIME_WRITE_TIMEOUT_MS));
+            if (bytes_written > chunk_len - chunk_written) {
+                err = ESP_FAIL;
+                ESP_LOGE(TAG, "I2S reported an invalid write length");
+                break;
+            }
             chunk_written += bytes_written;
+            const int64_t now_us = esp_timer_get_time();
+            if (bytes_written > 0U) {
+                last_progress_us = now_us;
+            }
 
             if (chunk_written == chunk_len) {
                 // Some driver versions report a timeout even when the final
                 // partial write completed. Completion of this exact buffer is
                 // authoritative; do not truncate the following chunks.
                 err = ESP_OK;
+                break;
+            }
+
+            if (now_us >= playback_deadline_us) {
+                err = ESP_ERR_TIMEOUT;
+                ESP_LOGE(TAG, "I2S playback exceeded the chime hard deadline");
                 break;
             }
 
@@ -229,6 +267,14 @@ stream_live_channel:
                         ESP_LOGW(TAG,
                                  "I2S backpressure at offset %u; playback retained",
                                  (unsigned)(offset + chunk_written));
+                    }
+                    if (now_us - last_progress_us >=
+                        CHIME_STALL_TIMEOUT_MS * 1000LL) {
+                        err = ESP_ERR_TIMEOUT;
+                        ESP_LOGE(TAG,
+                                 "I2S made no progress for %u ms; aborting chime",
+                                 CHIME_STALL_TIMEOUT_MS);
+                        break;
                     }
                 } else {
                     stalled_writes = 0;
@@ -255,11 +301,15 @@ stream_live_channel:
         }
     }
 
-    // Flush with silence and wait for DMA to drain to avoid click/pop or repeating buffer noise
-    int16_t silence[256 * 2] = {0};
-    i2s_channel_write(tx_chan, silence, sizeof(silence), &bytes_written,
-                      pdMS_TO_TICKS(100));
-    vTaskDelay(pdMS_TO_TICKS(50)); // Allow hardware DMA buffer to complete playback
+    // Flush normally completed playback with silence to avoid click/pop or
+    // repeating buffer noise. Fault and stop paths mute without another wait.
+    if (err == ESP_OK && !atomic_load(&s_stop_requested) &&
+        esp_timer_get_time() < playback_deadline_us) {
+        int16_t silence[256 * 2] = {0};
+        (void)i2s_channel_write(tx_chan, silence, sizeof(silence),
+                                &bytes_written, pdMS_TO_TICKS(100));
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
 
     // A down-edge may arrive after the stream's final chunk but before the
     // amplifier/I2S teardown completes. Consume that edge while the live
@@ -269,6 +319,7 @@ stream_live_channel:
     portENTER_CRITICAL(&s_claim_lock);
     if (allow_retrigger && err == ESP_OK &&
         !atomic_load(&s_stop_requested) &&
+        esp_timer_get_time() < playback_deadline_us &&
         atomic_exchange(&s_retrigger_requested, false)) {
         rewind_before_teardown = true;
     } else {
@@ -288,13 +339,19 @@ stream_live_channel:
     i2s_channel_disable(tx_chan);
     i2s_del_channel(tx_chan);
 
-    ESP_LOGI(TAG, "Local doorbell chime playback completed cleanly");
+    if (err == ESP_OK) {
+        ESP_LOGI(TAG, "Local doorbell chime playback completed cleanly");
+    } else {
+        ESP_LOGE(TAG, "Local doorbell chime stopped on fault: %s",
+                 esp_err_to_name(err));
+    }
     audio_bus_release();
 
     bool restart_after_teardown = false;
     portENTER_CRITICAL(&s_claim_lock);
     if (allow_retrigger && err == ESP_OK &&
         !atomic_load(&s_stop_requested) &&
+        esp_timer_get_time() < playback_deadline_us &&
         atomic_exchange(&s_restart_after_teardown, false)) {
         atomic_store(&s_tearing_down, false);
         atomic_store(&s_interruptible, true);
@@ -312,7 +369,7 @@ stream_live_channel:
         goto restart_playback;
     }
 
-    return ESP_OK;
+    return err;
 }
 
 typedef enum {
@@ -407,7 +464,8 @@ esp_err_t chime_player_play_sync(void)
     if (claim_chime_playback(false, false) != CHIME_CLAIM_NORMAL) {
         return ESP_OK;
     }
-    return play_claimed_chime(portMAX_DELAY, g_doorbell_chime_pcm_len,
+    return play_claimed_chime(pdMS_TO_TICKS(CHIME_BUS_ACQUIRE_TIMEOUT_MS),
+                              g_doorbell_chime_pcm_len,
                               speaker_output_attenuation_db(),
                               speaker_output_ramp_ms(), true,
                               "local doorbell chime");
@@ -416,10 +474,11 @@ esp_err_t chime_player_play_sync(void)
 static void first_chime_play_task(void *pvParameters)
 {
     (void)pvParameters;
-    play_claimed_chime(portMAX_DELAY, g_doorbell_chime_pcm_len,
-                       speaker_output_attenuation_db(),
-                       speaker_output_ramp_ms(), true,
-                       "local doorbell chime");
+    (void)play_claimed_chime(pdMS_TO_TICKS(CHIME_BUS_ACQUIRE_TIMEOUT_MS),
+                             g_doorbell_chime_pcm_len,
+                             speaker_output_attenuation_db(),
+                             speaker_output_ramp_ms(), true,
+                             "local doorbell chime");
     vTaskDelete(NULL);
 }
 

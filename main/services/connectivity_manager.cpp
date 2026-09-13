@@ -38,8 +38,9 @@ esp_err_t ConnectivityManager::trigger(const char *event_id,
         return ESP_ERR_INVALID_STATE;
     }
     return wifi_bringup_trigger_event_timeout(event_id, event_type, device_id,
-                                      firmware_version, dispatch_alerts,
-                                      timeout_ms);
+                                      firmware_version,
+                                      battery_millivolts_.load(),
+                                      dispatch_alerts, timeout_ms);
 }
 
 esp_err_t ConnectivityManager::upload(const CapturedImage *image,
@@ -59,7 +60,7 @@ esp_err_t ConnectivityManager::upload(const CapturedImage *image,
         image && image->valid() ? image->size() : 0,
         audio && audio->valid() ? audio->data() : nullptr,
         audio && audio->valid() ? audio->size() : 0, event_type, event_id,
-        device_id, firmware_version, timeout_ms);
+        device_id, firmware_version, battery_millivolts_.load(), timeout_ms);
 }
 
 esp_err_t ConnectivityManager::shutdown()

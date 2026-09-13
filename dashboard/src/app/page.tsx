@@ -34,6 +34,7 @@ export default function Home() {
   const [latestLiveSessionId, setLatestLiveSessionId] = useState<string | null>(null);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const [batteryPercentage, setBatteryPercentage] = useState<number | undefined>();
 
   const activeSession = sessions.find((session) => session.sessionId === activeSessionId)
     ?? sessions[0] ?? null;
@@ -45,6 +46,33 @@ export default function Home() {
   }, []);
 
   useEffect(() => setIsImageLoaded(false), [activeCoverImageKey]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadBattery = async () => {
+      try {
+        const response = await fetch('/api/system/health', { cache: 'no-store' });
+        if (!response.ok) return;
+        const data = await response.json() as {
+          device?: { batteryPercentageEstimate?: number | null };
+        };
+        if (!cancelled) {
+          setBatteryPercentage(data.device?.batteryPercentageEstimate ?? undefined);
+        }
+      } catch {
+        // The main SSE status remains the source for connection state. A
+        // failed health refresh only hides the optional battery indicator.
+        if (!cancelled) setBatteryPercentage(undefined);
+      }
+    };
+
+    void loadBattery();
+    const timer = window.setInterval(loadBattery, 30000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -123,7 +151,7 @@ export default function Home() {
   const latestPressId = activeSession?.presses.at(-1)?.id ?? null;
 
   return (
-    <MainLayout status={connectionStatus} breadcrumbs={[{ label: 'Dashboard' }, { label: 'Active Event', active: true }]}>
+    <MainLayout status={connectionStatus} batteryPercentage={batteryPercentage} breadcrumbs={[{ label: 'Dashboard' }, { label: 'Active Event', active: true }]}>
       <div className="mx-auto grid w-full max-w-[1450px] grid-cols-1 items-start gap-6 lg:grid-cols-12">
         <div className="block lg:hidden"><ClockGlobeCard /></div>
 

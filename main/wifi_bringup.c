@@ -1,4 +1,5 @@
 #include <inttypes.h>
+#include <limits.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
@@ -11,6 +12,7 @@
 #include "esp_log.h"
 #include "esp_netif.h"
 #include "esp_system.h"
+#include "esp_timer.h"
 #include "esp_wifi.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
@@ -273,11 +275,34 @@ static void log_wifi_status(void)
     }
 }
 
-static esp_err_t write_http_part(esp_http_client_handle_t client, const char *label, const char *data, size_t len)
+static int http_deadline_remaining_ms(int64_t deadline_us)
+{
+    int64_t remaining_us = deadline_us - esp_timer_get_time();
+    if (remaining_us <= 0) return 0;
+    int64_t remaining_ms = (remaining_us + 999LL) / 1000LL;
+    return remaining_ms > INT_MAX ? INT_MAX : (int)remaining_ms;
+}
+
+static esp_err_t apply_http_deadline(esp_http_client_handle_t client,
+                                     int64_t deadline_us)
+{
+    int timeout_ms = http_deadline_remaining_ms(deadline_us);
+    return timeout_ms > 0
+               ? esp_http_client_set_timeout_ms(client, timeout_ms)
+               : ESP_ERR_TIMEOUT;
+}
+
+static esp_err_t write_http_part(esp_http_client_handle_t client,
+                                 const char *label, const char *data,
+                                 size_t len, int64_t deadline_us)
 {
     size_t offset = 0;
     while (offset < len) {
-        int written = esp_http_client_write(client, data + offset, len - offset);
+        esp_err_t deadline_err = apply_http_deadline(client, deadline_us);
+        if (deadline_err != ESP_OK) return deadline_err;
+        size_t remaining = len - offset;
+        int chunk_len = remaining > INT_MAX ? INT_MAX : (int)remaining;
+        int written = esp_http_client_write(client, data + offset, chunk_len);
         if (written <= 0) {
             ESP_LOGE(TAG, "HTTP write failed for %s at %u/%u",
                      label, (unsigned)offset, (unsigned)len);
@@ -287,6 +312,33 @@ static esp_err_t write_http_part(esp_http_client_handle_t client, const char *la
     }
 
     return ESP_OK;
+}
+
+static esp_err_t perform_bounded_post(esp_http_client_handle_t client,
+                                      const char *body, size_t body_len,
+                                      int64_t deadline_us, int *status_code)
+{
+    if (body_len > INT_MAX) return ESP_ERR_INVALID_SIZE;
+    esp_err_t err = apply_http_deadline(client, deadline_us);
+    if (err == ESP_OK) {
+        err = esp_http_client_open(client, (int)body_len);
+    }
+    if (err == ESP_OK && body_len > 0) {
+        err = write_http_part(client, "JSON body", body, body_len,
+                              deadline_us);
+    }
+    if (err == ESP_OK) {
+        err = apply_http_deadline(client, deadline_us);
+    }
+    if (err == ESP_OK && esp_http_client_fetch_headers(client) < 0) {
+        err = ESP_FAIL;
+    }
+    if (status_code) {
+        *status_code = err == ESP_OK
+                           ? esp_http_client_get_status_code(client)
+                           : 0;
+    }
+    return err;
 }
 
 esp_err_t wifi_bringup_get_rssi(int *rssi_dbm)
@@ -306,6 +358,7 @@ esp_err_t wifi_bringup_trigger_event_timeout(const char *event_id,
                                              const char *event_type,
                                              const char *device_id,
                                              const char *firmware_version,
+                                             uint32_t battery_millivolts,
                                              bool dispatch_alerts,
                                              int timeout_ms)
 {
@@ -316,28 +369,38 @@ esp_err_t wifi_bringup_trigger_event_timeout(const char *event_id,
 
     int rssi_dbm = 0;
     bool has_rssi = wifi_bringup_get_rssi(&rssi_dbm) == ESP_OK;
-    char body[384];
+    char battery_text[16];
+    if (battery_millivolts > 0) {
+        snprintf(battery_text, sizeof(battery_text), "%" PRIu32,
+                 battery_millivolts);
+    } else {
+        snprintf(battery_text, sizeof(battery_text), "null");
+    }
+    char body[448];
     int body_len;
     if (has_rssi) {
         body_len = snprintf(body, sizeof(body),
                             "{\"eventId\":\"%s\",\"eventType\":\"%s\","
                             "\"deviceId\":\"%s\",\"firmwareVersion\":\"%s\","
                             "\"dispatchAlerts\":%s,"
-                            "\"wifiRssiDbm\":%d}",
+                            "\"wifiRssiDbm\":%d,"
+                            "\"batteryMillivolts\":%s}",
                             event_id, event_type,
                             device_id ? device_id : "",
                             firmware_version ? firmware_version : "",
                             dispatch_alerts ? "true" : "false",
-                            rssi_dbm);
+                            rssi_dbm, battery_text);
     } else {
         body_len = snprintf(body, sizeof(body),
                             "{\"eventId\":\"%s\",\"eventType\":\"%s\","
                             "\"deviceId\":\"%s\",\"firmwareVersion\":\"%s\","
-                            "\"dispatchAlerts\":%s}",
+                            "\"dispatchAlerts\":%s,"
+                            "\"batteryMillivolts\":%s}",
                             event_id, event_type,
                             device_id ? device_id : "",
                             firmware_version ? firmware_version : "",
-                            dispatch_alerts ? "true" : "false");
+                            dispatch_alerts ? "true" : "false",
+                            battery_text);
     }
     if (body_len < 0 || (size_t)body_len >= sizeof(body)) {
         return ESP_ERR_INVALID_SIZE;
@@ -347,7 +410,10 @@ esp_err_t wifi_bringup_trigger_event_timeout(const char *event_id,
         .url = GATEWAY_TRIGGER_URL,
         .method = HTTP_METHOD_POST,
         .timeout_ms = timeout_ms > 0 ? timeout_ms : 5000,
+        .disable_auto_redirect = true,
     };
+    const int64_t deadline_us =
+        esp_timer_get_time() + (int64_t)config.timeout_ms * 1000LL;
     esp_http_client_handle_t client = esp_http_client_init(&config);
     if (!client) {
         return ESP_ERR_NO_MEM;
@@ -357,12 +423,11 @@ esp_err_t wifi_bringup_trigger_event_timeout(const char *event_id,
 #ifdef GATEWAY_API_KEY
     esp_http_client_set_header(client, "X-API-Key", GATEWAY_API_KEY);
 #endif
-    esp_http_client_set_post_field(client, body, body_len);
-
     ESP_LOGI(TAG, "Sending early %s trigger id=%s (timeout=%d ms)", event_type, event_id, config.timeout_ms);
-    esp_err_t err = esp_http_client_perform(client);
+    int status_code = 0;
+    esp_err_t err = perform_bounded_post(
+        client, body, (size_t)body_len, deadline_us, &status_code);
     if (err == ESP_OK) {
-        int status_code = esp_http_client_get_status_code(client);
         ESP_LOGI(TAG, "Early trigger HTTP status=%d", status_code);
         if (status_code < 200 || status_code >= 300) {
             err = ESP_FAIL;
@@ -372,6 +437,7 @@ esp_err_t wifi_bringup_trigger_event_timeout(const char *event_id,
                  esp_err_to_name(err));
     }
 
+    esp_http_client_close(client);
     esp_http_client_cleanup(client);
     return err;
 }
@@ -384,6 +450,7 @@ esp_err_t wifi_bringup_trigger_event(const char *event_id,
 {
     return wifi_bringup_trigger_event_timeout(event_id, event_type, device_id,
                                                firmware_version,
+                                               0,
                                                dispatch_alerts, 5000);
 }
 
@@ -399,17 +466,22 @@ esp_err_t wifi_bringup_close_session(const char *session_id, int timeout_ms)
         .url = url,
         .method = HTTP_METHOD_POST,
         .timeout_ms = timeout_ms > 0 ? timeout_ms : 5000,
+        .disable_auto_redirect = true,
     };
+    const int64_t deadline_us =
+        esp_timer_get_time() + (int64_t)config.timeout_ms * 1000LL;
     esp_http_client_handle_t client = esp_http_client_init(&config);
     if (!client) return ESP_ERR_NO_MEM;
 #ifdef GATEWAY_API_KEY
     esp_http_client_set_header(client, "X-API-Key", GATEWAY_API_KEY);
 #endif
-    esp_err_t err = esp_http_client_perform(client);
+    int status = 0;
+    esp_err_t err = perform_bounded_post(
+        client, NULL, 0, deadline_us, &status);
     if (err == ESP_OK) {
-        const int status = esp_http_client_get_status_code(client);
         if (status < 200 || status >= 300) err = ESP_FAIL;
     }
+    esp_http_client_close(client);
     esp_http_client_cleanup(client);
     return err;
 }
@@ -437,19 +509,23 @@ esp_err_t wifi_bringup_complete_press(const char *press_id,
         .url = url,
         .method = HTTP_METHOD_POST,
         .timeout_ms = timeout_ms > 0 ? timeout_ms : 5000,
+        .disable_auto_redirect = true,
     };
+    const int64_t deadline_us =
+        esp_timer_get_time() + (int64_t)config.timeout_ms * 1000LL;
     esp_http_client_handle_t client = esp_http_client_init(&config);
     if (!client) return ESP_ERR_NO_MEM;
     esp_http_client_set_header(client, "Content-Type", "application/json");
 #ifdef GATEWAY_API_KEY
     esp_http_client_set_header(client, "X-API-Key", GATEWAY_API_KEY);
 #endif
-    esp_http_client_set_post_field(client, body, body_length);
-    esp_err_t err = esp_http_client_perform(client);
+    int status = 0;
+    esp_err_t err = perform_bounded_post(
+        client, body, (size_t)body_length, deadline_us, &status);
     if (err == ESP_OK) {
-        const int status = esp_http_client_get_status_code(client);
         if (status < 200 || status >= 300) err = ESP_FAIL;
     }
+    esp_http_client_close(client);
     esp_http_client_cleanup(client);
     return err;
 }
@@ -464,7 +540,7 @@ esp_err_t wifi_bringup_upload_jpeg_timeout(const uint8_t *jpeg,
 {
     return wifi_bringup_upload_event_timeout(
         jpeg, jpeg_len, NULL, 0, event_type, event_id, device_id,
-        firmware_version, timeout_ms);
+        firmware_version, 0, timeout_ms);
 }
 
 esp_err_t wifi_bringup_upload_event_timeout(const uint8_t *jpeg,
@@ -475,6 +551,7 @@ esp_err_t wifi_bringup_upload_event_timeout(const uint8_t *jpeg,
                                             const char *event_id,
                                             const char *device_id,
                                             const char *firmware_version,
+                                            uint32_t battery_millivolts,
                                             int timeout_ms)
 {
     const bool has_image = jpeg && jpeg_len >= 4;
@@ -495,6 +572,11 @@ esp_err_t wifi_bringup_upload_event_timeout(const uint8_t *jpeg,
     if (has_rssi) {
         snprintf(rssi_text, sizeof(rssi_text), "%d", rssi_dbm);
     }
+    char battery_text[16] = "";
+    if (battery_millivolts > 0) {
+        snprintf(battery_text, sizeof(battery_text), "%" PRIu32,
+                 battery_millivolts);
+    }
     int event_head_len = snprintf(
         event_head, sizeof(event_head),
         "--%s\r\n"
@@ -511,12 +593,16 @@ esp_err_t wifi_bringup_upload_event_timeout(const uint8_t *jpeg,
         "%s\r\n"
         "--%s\r\n"
         "Content-Disposition: form-data; name=\"wifiRssiDbm\"\r\n\r\n"
+        "%s\r\n"
+        "--%s\r\n"
+        "Content-Disposition: form-data; name=\"batteryMillivolts\"\r\n\r\n"
         "%s\r\n",
         boundary, event_type,
         boundary, event_id ? event_id : "",
         boundary, device_id ? device_id : "",
         boundary, firmware_version ? firmware_version : "",
-        boundary, rssi_text);
+        boundary, rssi_text,
+        boundary, battery_text);
     int image_head_len = snprintf(
         image_head, sizeof(image_head),
         "--%s\r\n"
@@ -543,11 +629,15 @@ esp_err_t wifi_bringup_upload_event_timeout(const uint8_t *jpeg,
         total_len += (size_t)audio_head_len + audio_len;
         if (has_image) total_len += 2;
     }
+    if (total_len > INT_MAX) return ESP_ERR_INVALID_SIZE;
     esp_http_client_config_t config = {
         .url = GATEWAY_API_URL,
         .method = HTTP_METHOD_POST,
         .timeout_ms = timeout_ms > 0 ? timeout_ms : 30000,
+        .disable_auto_redirect = true,
     };
+    const int64_t deadline_us =
+        esp_timer_get_time() + (int64_t)config.timeout_ms * 1000LL;
 
     ESP_LOGI(TAG, "Uploading event (%u-byte JPEG, %u-byte WAV, %u-byte body, timeout=%d ms)",
              (unsigned)jpeg_len, (unsigned)audio_len, (unsigned)total_len,
@@ -566,37 +656,47 @@ esp_err_t wifi_bringup_upload_event_timeout(const uint8_t *jpeg,
     esp_http_client_set_header(client, "X-API-Key", GATEWAY_API_KEY);
 #endif
 
-    esp_err_t err = esp_http_client_open(client, (int)total_len);
+    esp_err_t err = apply_http_deadline(client, deadline_us);
+    if (err == ESP_OK) {
+        err = esp_http_client_open(client, (int)total_len);
+    }
     if (err == ESP_OK) {
         err = write_http_part(client, "event head", event_head,
-                              (size_t)event_head_len);
+                              (size_t)event_head_len, deadline_us);
     }
     if (err == ESP_OK && has_image) {
         err = write_http_part(client, "image head", image_head,
-                              (size_t)image_head_len);
+                              (size_t)image_head_len, deadline_us);
     }
     if (err == ESP_OK && has_image) {
-        err = write_http_part(client, "JPEG", (const char *)jpeg, jpeg_len);
+        err = write_http_part(client, "JPEG", (const char *)jpeg, jpeg_len,
+                              deadline_us);
     }
     if (err == ESP_OK && has_image && has_audio) {
-        err = write_http_part(client, "media separator", "\r\n", 2);
+        err = write_http_part(client, "media separator", "\r\n", 2,
+                              deadline_us);
     }
     if (err == ESP_OK && has_audio) {
         err = write_http_part(client, "audio head", audio_head,
-                              (size_t)audio_head_len);
+                              (size_t)audio_head_len, deadline_us);
     }
     if (err == ESP_OK && has_audio) {
         err = write_http_part(client, "visitor WAV", (const char *)audio,
-                              audio_len);
+                              audio_len, deadline_us);
     }
     if (err == ESP_OK) {
         err = write_http_part(client, "terminator", terminator,
-                              strlen(terminator));
+                              strlen(terminator), deadline_us);
     }
 
     int status_code = 0;
     if (err == ESP_OK) {
-        (void)esp_http_client_fetch_headers(client);
+        err = apply_http_deadline(client, deadline_us);
+    }
+    if (err == ESP_OK) {
+        if (esp_http_client_fetch_headers(client) < 0) err = ESP_FAIL;
+    }
+    if (err == ESP_OK) {
         status_code = esp_http_client_get_status_code(client);
         ESP_LOGI(TAG, "QXGA upload HTTP status=%d", status_code);
         if (status_code < 200 || status_code >= 300) {
@@ -630,7 +730,10 @@ static esp_err_t upload_diagnostic_event(void)
         .url = GATEWAY_API_URL,
         .method = HTTP_METHOD_POST,
         .timeout_ms = 15000,
+        .disable_auto_redirect = true,
     };
+    const int64_t deadline_us =
+        esp_timer_get_time() + (int64_t)config.timeout_ms * 1000LL;
 
     ESP_LOGI(TAG, "Uploading diagnostic event to %s (%u bytes)", GATEWAY_API_URL, (unsigned)total_len);
 
@@ -647,22 +750,29 @@ static esp_err_t upload_diagnostic_event(void)
     esp_http_client_set_header(client, "X-API-Key", GATEWAY_API_KEY);
 #endif
 
-    esp_err_t err = esp_http_client_open(client, total_len);
+    esp_err_t err = apply_http_deadline(client, deadline_us);
+    if (err == ESP_OK) {
+        err = esp_http_client_open(client, total_len);
+    }
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "HTTP open failed: %s", esp_err_to_name(err));
         esp_http_client_cleanup(client);
         return err;
     }
 
-    err = write_http_part(client, "event head", event_head, strlen(event_head));
+    err = write_http_part(client, "event head", event_head, strlen(event_head),
+                          deadline_us);
     if (err == ESP_OK) {
-        err = write_http_part(client, "image head", image_head, strlen(image_head));
+        err = write_http_part(client, "image head", image_head,
+                              strlen(image_head), deadline_us);
     }
     if (err == ESP_OK) {
-        err = write_http_part(client, "diagnostic image", diagnostic_image, image_len);
+        err = write_http_part(client, "diagnostic image", diagnostic_image,
+                              image_len, deadline_us);
     }
     if (err == ESP_OK) {
-        err = write_http_part(client, "terminator", terminator, strlen(terminator));
+        err = write_http_part(client, "terminator", terminator,
+                              strlen(terminator), deadline_us);
     }
     if (err != ESP_OK) {
         esp_http_client_close(client);
@@ -670,12 +780,24 @@ static esp_err_t upload_diagnostic_event(void)
         return err;
     }
 
-    int content_length = esp_http_client_fetch_headers(client);
+    err = apply_http_deadline(client, deadline_us);
+    int content_length = err == ESP_OK ? esp_http_client_fetch_headers(client) : -1;
+    if (content_length < 0) {
+        ESP_LOGE(TAG, "Diagnostic upload response headers failed: %s",
+                 esp_err_to_name(err == ESP_OK ? ESP_FAIL : err));
+        esp_http_client_close(client);
+        esp_http_client_cleanup(client);
+        return err == ESP_OK ? ESP_FAIL : err;
+    }
     int status_code = esp_http_client_get_status_code(client);
     ESP_LOGI(TAG, "Diagnostic upload HTTP status=%d content_length=%d", status_code, content_length);
 
     char response[160];
-    int response_len = esp_http_client_read_response(client, response, sizeof(response) - 1);
+    err = apply_http_deadline(client, deadline_us);
+    int response_len = err == ESP_OK
+                           ? esp_http_client_read_response(
+                                 client, response, sizeof(response) - 1)
+                           : -1;
     if (response_len >= 0) {
         response[response_len] = '\0';
         ESP_LOGI(TAG, "Diagnostic upload response: %s", response);

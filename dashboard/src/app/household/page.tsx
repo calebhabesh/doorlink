@@ -32,8 +32,13 @@ type Invitation = {
   expiresAt: string;
 };
 
+type Session = {
+  role: 'OWNER' | 'MEMBER';
+};
+
 export default function HouseholdPage() {
   const [members, setMembers] = useState<Member[]>([]);
+  const [isOwner, setIsOwner] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [invitation, setInvitation] = useState<Invitation | null>(null);
@@ -43,12 +48,21 @@ export default function HouseholdPage() {
   const [savingDeviceId, setSavingDeviceId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
-    const response = await fetch('/api/household/members', { cache: 'no-store' });
-    if (!response.ok) {
-      const body = await response.json().catch(() => ({ error: 'Could not load household' }));
+    const [membersResponse, sessionResponse] = await Promise.all([
+      fetch('/api/household/members', { cache: 'no-store' }),
+      fetch('/api/household/session', { cache: 'no-store' }),
+    ]);
+    if (!membersResponse.ok || !sessionResponse.ok) {
+      const failedResponse = !membersResponse.ok ? membersResponse : sessionResponse;
+      const body = await failedResponse.json().catch(() => ({ error: 'Could not load household' }));
       throw new Error(body.error ?? 'Could not load household');
     }
-    setMembers(await response.json());
+    const [loadedMembers, session]: [Member[], Session] = await Promise.all([
+      membersResponse.json(),
+      sessionResponse.json(),
+    ]);
+    setMembers(loadedMembers);
+    setIsOwner(session.role === 'OWNER');
   }, []);
 
   useEffect(() => {
@@ -150,16 +164,16 @@ export default function HouseholdPage() {
       <div className="mx-auto w-full max-w-5xl space-y-6">
         <header className="flex items-start gap-4">
           <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-3 text-emerald-400"><Users className="h-6 w-6" /></div>
-          <div><h1 className="text-2xl font-black text-white">Household Access</h1><p className="mt-1 text-sm text-zinc-400">Enroll browsers once, then revoke individual devices whenever needed.</p></div>
+          <div><h1 className="text-2xl font-black text-white">Household Access</h1><p className="mt-1 text-sm text-zinc-400">{isOwner ? 'Enroll browsers once, then revoke individual devices whenever needed.' : 'People who have access to this doorbell.'}</p></div>
         </header>
 
         {error && <div className="flex items-center justify-between rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-300"><span>{error}</span><button onClick={() => setError(null)}><X className="h-4 w-4" /></button></div>}
 
-        <form onSubmit={addMember} className="grid gap-4 rounded-3xl border border-zinc-800 bg-zinc-950/60 p-6 sm:grid-cols-[1fr_1.4fr_auto] sm:items-end">
+        {isOwner && <form onSubmit={addMember} className="grid gap-4 rounded-3xl border border-zinc-800 bg-zinc-950/60 p-6 sm:grid-cols-[1fr_1.4fr_auto] sm:items-end">
           <label className="text-sm font-bold text-zinc-300">Name<input name="name" required maxLength={100} className="mt-2 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 outline-none focus:border-emerald-500" /></label>
           <label className="text-sm font-bold text-zinc-300">Email<input name="email" type="email" required className="mt-2 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 outline-none focus:border-emerald-500" /></label>
           <button className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 font-black text-zinc-950 hover:bg-emerald-400"><UserPlus className="h-4 w-4" /> Add member</button>
-        </form>
+        </form>}
 
         {loading ? <p className="py-12 text-center font-mono text-xs uppercase tracking-widest text-zinc-500">Loading household…</p> : (
           <div className="space-y-4">
@@ -169,13 +183,13 @@ export default function HouseholdPage() {
                   <div className="flex items-center gap-2"><h2 className="text-lg font-black text-white">{member.name}</h2>{member.role === 'OWNER' && <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-blue-300"><ShieldCheck className="h-3 w-3" /> Owner</span>}</div>
                   <p className="mt-1 text-sm text-zinc-500">{member.email}</p>
                 </div>
-                {!member.disabledAt && <div className="flex flex-wrap gap-2">
+                {isOwner && !member.disabledAt && <div className="flex flex-wrap gap-2">
                   <button onClick={() => newDeviceLink(member.id)} className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-xs font-bold text-zinc-200 hover:border-blue-500"><Link2 className="h-4 w-4" /> New device link</button>
                   {member.role !== 'OWNER' && <button onClick={() => disableMember(member)} className="rounded-xl border border-rose-500/30 px-4 py-2.5 text-xs font-bold text-rose-300 hover:bg-rose-500/10">Remove member</button>}
                 </div>}
               </div>
 
-              <div className="mt-5 space-y-2 border-t border-zinc-800 pt-4">
+              {isOwner && <div className="mt-5 space-y-2 border-t border-zinc-800 pt-4">
                 {member.devices.length === 0 && <p className="text-sm text-zinc-600">No enrolled devices yet.</p>}
                 {member.devices.map(device => (
                   <div key={device.id} className="flex flex-col justify-between gap-3 rounded-2xl bg-zinc-900/70 p-4 sm:flex-row sm:items-center">
@@ -246,13 +260,13 @@ export default function HouseholdPage() {
                     )}
                   </div>
                 ))}
-              </div>
+              </div>}
             </article>)}
           </div>
         )}
       </div>
 
-      {invitation && <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 px-5 backdrop-blur-sm">
+      {isOwner && invitation && <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 px-5 backdrop-blur-sm">
         <section className="w-full max-w-lg rounded-3xl border border-zinc-700 bg-zinc-900 p-7 shadow-2xl">
           <div className="flex items-start justify-between"><div><p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-400">Single-use enrollment link</p><h2 className="mt-2 text-xl font-black">Send this to {invitation.name}</h2></div><button onClick={() => setInvitation(null)} className="text-zinc-500 hover:text-white"><X /></button></div>
           <p className="mt-3 text-sm leading-6 text-zinc-400">They must open it on the phone and browser they want to authorize. The link expires {new Date(invitation.expiresAt).toLocaleString()}.</p>

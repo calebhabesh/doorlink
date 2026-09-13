@@ -13,6 +13,7 @@
 #include "esp_system.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "soc/soc_caps.h"
 
 static const char *TAG = "core_bringup";
 
@@ -30,6 +31,18 @@ static const gpio_num_t s_camera_input_pins[] = {
     CAM_PIN_SIOD,
     CAM_PIN_SIOC,
     CAM_PIN_VSYNC,
+};
+
+// These pads can otherwise revert to high-impedance while the GPIO power
+// domain is down. The two high-load enables already have external pulldowns,
+// but holding them as well provides a second independent shutdown mechanism.
+static const gpio_num_t s_deep_sleep_hold_pins[] = {
+    CAM_PWR_EN_PIN,
+    AMP_EN_PIN,
+    I2S_AUDIO_WS,
+    I2S_AUDIO_SCK,
+    I2S_SPK_SD,
+    I2S_MIC_SD,
 };
 
 static void set_output_low(gpio_num_t pin)
@@ -75,6 +88,40 @@ void core_bringup_configure_safe_gpio_state(bool camera_attached)
     }
 }
 
+esp_err_t core_bringup_hold_safe_gpio_state(void)
+{
+    esp_err_t first_err = ESP_OK;
+    for (size_t i = 0;
+         i < sizeof(s_deep_sleep_hold_pins) /
+                 sizeof(s_deep_sleep_hold_pins[0]);
+         ++i) {
+        const esp_err_t err = gpio_hold_en(s_deep_sleep_hold_pins[i]);
+        if (first_err == ESP_OK && err != ESP_OK) first_err = err;
+    }
+#if !SOC_GPIO_SUPPORT_HOLD_SINGLE_IO_IN_DSLP
+    // ESP32-S3 digital pads need the global deep-sleep latch in addition to
+    // per-pad hold. RTC-capable GPIO4-7 retain their individual pad holds.
+    gpio_deep_sleep_hold_en();
+#endif
+    return first_err;
+}
+
+esp_err_t core_bringup_release_safe_gpio_holds(void)
+{
+#if !SOC_GPIO_SUPPORT_HOLD_SINGLE_IO_IN_DSLP
+    gpio_deep_sleep_hold_dis();
+#endif
+    esp_err_t first_err = ESP_OK;
+    for (size_t i = 0;
+         i < sizeof(s_deep_sleep_hold_pins) /
+                 sizeof(s_deep_sleep_hold_pins[0]);
+         ++i) {
+        const esp_err_t err = gpio_hold_dis(s_deep_sleep_hold_pins[i]);
+        if (first_err == ESP_OK && err != ESP_OK) first_err = err;
+    }
+    return first_err;
+}
+
 static void log_memory_configuration(void)
 {
     esp_chip_info_t chip_info;
@@ -113,6 +160,11 @@ static void log_memory_configuration(void)
 void run_core_bringup(bool camera_attached)
 {
     core_bringup_configure_safe_gpio_state(camera_attached);
+    const esp_err_t hold_err = core_bringup_release_safe_gpio_holds();
+    if (hold_err != ESP_OK) {
+        ESP_LOGE(TAG, "Could not release retained safe GPIO state: %s",
+                 esp_err_to_name(hold_err));
+    }
 
     /*
      * Native USB disconnects briefly across reset. Keep the safe GPIO state

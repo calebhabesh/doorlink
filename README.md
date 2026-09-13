@@ -36,6 +36,10 @@ MQTT-controlled window. The earlier fixed five-second WAV
 and stored reply path were exercised end to end on the assembled board; the new
 hold thresholds, full-chime handoff, multi-press behavior, and latency still need
 an instrumented hardware retest. Battery life has not been measured.
+The pre-enclosure hardening revision adds signed/replay-resistant MQTT commands,
+strict gateway URL policy, absolute audio/session deadlines, and retained safe
+GPIO states through deep sleep. It is compiler- and regression-test-verified,
+but has not yet completed the final flashed battery acceptance run.
 The earlier MK1 heating fault was resolved by reworking its ungrounded center
 pad; see `docs/hardware-bringup.md` for the measured bring-up record.
 
@@ -72,17 +76,23 @@ The firmware model is a bounded visitor session followed by a short, turn-based
 reply window. Full-duplex phone-call behavior is intentionally excluded; MQTT
 carries control messages while HTTP carries WAV media.
 
-1. **Trigger:** GPIO2 wakes on an active-low button press through EXT0. GPIO3 PIR wake is disabled in the normal production build and is opt-in for future motion events.
-2. **First chime and hold:** The first local chime plays once to completion while the authenticated early trigger proceeds. A visitor still holding after the chime gets microphone capture until release or 15 seconds; clips shorter than one second of microphone audio are discarded.
-3. **Capture:** After the early alert and RF shutdown, firmware enables U9 and captures the initial QXGA JPEG. Later presses refresh it only after it is 15 seconds old.
+1. **Trigger:** GPIO2 wakes on an active-low button press through EXT0. Before enabling the speaker, camera, or Wi-Fi, production firmware samples +BATT through the populated GPIO1 100k/100k divider and includes calibrated millivolts in event telemetry. GPIO3 PIR wake is disabled in the normal production build and is opt-in for future motion events.
+2. **First chime and hold:** The first local chime uses the camera-safe profile and may continue through the shutter. Retriggers share one 15-second wall limit, and an I2S stream that makes no progress for 1.5 seconds is torn down. A visitor still holding after the chime gets microphone capture until release or 15 seconds; clips shorter than one second of microphone audio are discarded.
+3. **Capture:** With RF off, firmware enables U9 and captures the initial QXGA JPEG before connecting Wi-Fi. Later presses refresh it only after it is 15 seconds old.
 4. **Later presses:** Every valid down-edge becomes another ordered press in the same session and restarts LED feedback. When I2S is idle, an onboard chime starts immediately; when a local chime is already audible, it rewinds in place so rapid presses remain perceptible. A deliberate hold continuing past 1,200 ms or arriving homeowner audio stops interruptible repress audio cleanly and takes priority. Repress chimes never queue behind active dialogue.
 5. **Upload:** Image and visitor recordings have stable per-press identifiers. The gateway groups them into one session, deduplicates retries per press, applies a 1-second leading-edge whole-home chime cooldown without queueing suppressed presses, and publishes lifecycle updates over SSE.
-6. **Reply window:** Dashboard PTT replies are stored WAV turns. A reply that arrives during visitor capture waits until the visitor releases; the microphone stays off during speaker playback.
-7. **Shutdown:** At the 60-second idle or 90-second absolute deadline, firmware closes the gateway session, releases network/media resources, holds camera/audio controls safe, and enters deep sleep.
+6. **Reply window:** Dashboard PTT replies are stored WAV turns. Gateway commands are HMAC-signed with unique replay IDs; firmware accepts reply and acknowledgement URLs only from the configured gateway. A reply that arrives during visitor capture waits until the visitor releases; the microphone stays off during speaker playback.
+7. **Shutdown:** At the 60-second idle or 90-second absolute deadline, firmware closes the gateway session, releases network/media resources, latches camera, amplifier, and I2S controls safe, and enters deep sleep.
 
 The dashboard Active Event, Event Log, and Calendar show one expandable visitor
 session with all presses, visitor messages, and homeowner replies. See
 `docs/behavioral_spec.md` for the locked interaction contract.
+
+The System Health response and dashboard show the last reported battery voltage
+and a clearly marked, approximate single-cell Li-ion percentage. This is
+event-driven telemetry, not a continuously updated fuel gauge. The board does
+not expose charger state or the optional battery thermistor to the MCU, and
+battery life remains unqualified until current measurements are complete.
 
 ## Hardware
 
@@ -184,7 +194,10 @@ npm run lint
 
 ```bash
 cp main/config.example.h main/config.h
-# Set Wi-Fi credentials and GATEWAY_API_URL for the Raspberry Pi gateway.
+# Set Wi-Fi, GATEWAY_API_URL, and the same GATEWAY_API_KEY used by the gateway.
+
+# Host regression tests for MQTT assembly and gateway URL policy
+./scripts/test-firmware-guards.sh
 
 # Hardware-safe core-only build (default)
 idf.py build
@@ -194,8 +207,9 @@ idf.py -B build-production -D SDKCONFIG=sdkconfig.production \
   -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.production.defaults' build
 ```
 
-The production build is intentionally separate from the safe build. Do not
-flash it as a substitute for the remaining wake/deep-sleep hardware test.
+The production build is intentionally separate from the safe build. Deploy the
+matching signed-command gateway before flashing it, then complete
+`docs/firmware-release-checklist.md` before sealing the enclosure.
 
 ## Project Structure
 

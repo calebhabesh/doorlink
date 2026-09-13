@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { LayoutDashboard, Database, CalendarDays, Activity, Settings, Users, LogOut } from 'lucide-react';
@@ -13,14 +12,6 @@ interface SidebarProps {
 export default function Sidebar({ onNavigate }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [isOwner, setIsOwner] = useState(false);
-
-  useEffect(() => {
-    fetch('/api/household/session', { cache: 'no-store' })
-      .then(response => response.ok ? response.json() : null)
-      .then(session => setIsOwner(session?.role === 'OWNER'))
-      .catch(() => setIsOwner(false));
-  }, []);
 
   const menuItems = [
     { label: 'Dashboard', icon: LayoutDashboard, href: '/' },
@@ -28,7 +19,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
     { label: 'Calendar View', icon: CalendarDays, href: '/calendar' },
     { label: 'System Health', icon: Activity, href: '/health' },
     { label: 'Settings', icon: Settings, href: '/settings' },
-    ...(isOwner ? [{ label: 'Household', icon: Users, href: '/household' }] : []),
+    { label: 'Household', icon: Users, href: '/household' },
   ];
 
   async function logout() {

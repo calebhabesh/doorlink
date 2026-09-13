@@ -108,6 +108,7 @@ public class EventControllerTest {
                 .param("deviceId", "front-door")
                 .param("firmwareVersion", "1.0.0")
                 .param("wifiRssiDbm", "-54")
+                .param("batteryMillivolts", "4028")
                 .header("X-API-Key", "test-api-key"))
                 .andExpect(status().isOk());
 
@@ -119,7 +120,8 @@ public class EventControllerTest {
         verify(eventAlertService).completeUpload(
                 "0123456789abcdef0123456789abcdef", "DOORBELL_PRESS");
         verify(deviceTelemetryService).record("front-door", "1.0.0",
-                "DOORBELL_PRESS", "0123456789abcdef0123456789abcdef", -54);
+                "DOORBELL_PRESS", "0123456789abcdef0123456789abcdef",
+                -54, 4028);
     }
 
     private static byte[] wav(int durationMs) {
@@ -145,14 +147,16 @@ public class EventControllerTest {
                 .content("""
                         {"eventId":"0123456789abcdef0123456789abcdef",
                          "eventType":"DOORBELL_PRESS","deviceId":"front-door",
-                         "firmwareVersion":"1.0.0","wifiRssiDbm":-52}
+                         "firmwareVersion":"1.0.0","wifiRssiDbm":-52,
+                         "batteryMillivolts":3980}
                         """)
                 .header("X-API-Key", "test-api-key"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.created").value(true));
 
         verify(deviceTelemetryService).record("front-door", "1.0.0",
-                "DOORBELL_PRESS", "0123456789abcdef0123456789abcdef", -52);
+                "DOORBELL_PRESS", "0123456789abcdef0123456789abcdef",
+                -52, 3980);
     }
 
     @Test

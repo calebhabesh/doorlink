@@ -6,6 +6,7 @@
 #include <new>
 
 #include "board_pins.h"
+#include "battery_monitor.h"
 #include "driver/gpio.h"
 #include "esp_app_desc.h"
 #include "esp_log.h"
@@ -35,6 +36,8 @@ constexpr std::uint32_t kVisitorHoldMinimumMs =
 constexpr std::uint32_t kRepressChimeHoldHandoffMs =
     DoorbellPolicy::kRepressChimeHoldHandoffMs;
 constexpr std::uint32_t kChimeDrainBeforeSleepMs = 4000;
+constexpr std::int64_t kGreetingTaskHardLimitUs = 35000000LL;
+constexpr std::uint32_t kGreetingStopGraceMs = 750;
 portMUX_TYPE s_button_turn_lock = portMUX_INITIALIZER_UNLOCKED;
 
 class CameraSpeakerPowerBoundary final {
@@ -122,6 +125,23 @@ void log_elapsed(const char *stage, std::int64_t started_us)
              static_cast<double>(esp_timer_get_time() - started_us) / 1000.0);
 }
 
+int remaining_deadline_ms(std::int64_t deadline_us)
+{
+    const std::int64_t remaining_us = deadline_us - esp_timer_get_time();
+    if (remaining_us <= 0) return 0;
+    return static_cast<int>((remaining_us + 999LL) / 1000LL);
+}
+
+bool delay_with_deadline(std::uint32_t delay_ms, std::int64_t deadline_us)
+{
+    if (remaining_deadline_ms(deadline_us) <=
+        static_cast<int>(delay_ms)) {
+        return false;
+    }
+    vTaskDelay(pdMS_TO_TICKS(delay_ms));
+    return esp_timer_get_time() < deadline_us;
+}
+
 struct GreetingCaptureTaskContext {
     AudioService *audio_service;
     RecordedAudio *greeting;
@@ -129,6 +149,7 @@ struct GreetingCaptureTaskContext {
     std::uint32_t duration_ms;
     std::uint32_t recorded_duration_ms;
     std::int64_t session_start_us;
+    std::int64_t absolute_deadline_us;
     std::atomic_bool *capture_window_active;
     esp_err_t result{ESP_FAIL};
 };
@@ -139,18 +160,34 @@ void record_greeting_task(void *arg)
 
     // The first chime owns I2S until its final sample. A visitor who wants to
     // leave a message keeps holding; the microphone starts immediately after.
-    while (chime_player_is_playing()) {
+    while (chime_player_is_playing() &&
+           esp_timer_get_time() < context->absolute_deadline_us) {
         vTaskDelay(pdMS_TO_TICKS(20));
     }
+
+    const std::int64_t remaining_us =
+        context->absolute_deadline_us - esp_timer_get_time();
+    if (remaining_us <=
+        static_cast<std::int64_t>(kVisitorHoldMinimumMs) * 1000LL) {
+        context->result = ESP_ERR_TIMEOUT;
+        context->capture_window_active->store(false);
+        xSemaphoreGive(context->completion);
+        vTaskDelete(nullptr);
+        return;
+    }
+    const std::uint32_t capture_duration_ms =
+        static_cast<std::uint32_t>((std::min)(
+            static_cast<std::int64_t>(context->duration_ms),
+            remaining_us / 1000LL));
 
     ESP_LOGI(kTag,
              "[MONOTONIC_TIMING] t=%.1f ms | STAGE_START: Visitor microphone recording",
              static_cast<double>(esp_timer_get_time() - context->session_start_us) /
                  1000.0);
-    (void)ring_animation_start(100, context->duration_ms, 150);
+    (void)ring_animation_start(100, capture_duration_ms, 150);
     context->result = context->audio_service->record_button_hold(
-        *context->greeting, context->duration_ms, kVisitorHoldMinimumMs,
-        context->recorded_duration_ms);
+        *context->greeting, capture_duration_ms, kVisitorHoldMinimumMs,
+        context->recorded_duration_ms, context->absolute_deadline_us);
     ring_fade_stop();
     context->capture_window_active->store(false);
     xSemaphoreGive(context->completion);
@@ -350,7 +387,7 @@ void record_followup_turn_task(void *arg)
     (void)ring_animation_start(100, turn->max_duration_ms, 150);
     turn->result = turn->audio_service->record_button_hold(
         turn->recording, turn->max_duration_ms, kVisitorHoldMinimumMs,
-        turn->recorded_duration_ms);
+        turn->recorded_duration_ms, turn_deadline_us);
     ring_fade_stop();
     turn->capture_window_active->store(false);
     complete_followup_turn(turn);
@@ -426,15 +463,22 @@ void DoorbellController::set_state(DeviceState state)
 
 esp_err_t DoorbellController::capture_with_retry(CapturedImage &image, int timeout_ms)
 {
+    if (timeout_ms <= 0) return ESP_ERR_TIMEOUT;
+    const std::int64_t deadline_us =
+        esp_timer_get_time() + static_cast<std::int64_t>(timeout_ms) * 1000LL;
     esp_err_t err = ESP_FAIL;
     for (unsigned attempt = 1; attempt <= kCaptureAttempts; ++attempt) {
-        ESP_LOGI(kTag, "Capture attempt %u/%u (timeout=%d ms)", attempt, kCaptureAttempts, timeout_ms);
-        err = camera_.capture(image, timeout_ms);
+        const int attempt_timeout_ms = remaining_deadline_ms(deadline_us);
+        if (attempt_timeout_ms <= 0) return ESP_ERR_TIMEOUT;
+        ESP_LOGI(kTag, "Capture attempt %u/%u (remaining=%d ms)", attempt,
+                 kCaptureAttempts, attempt_timeout_ms);
+        err = camera_.capture(image, attempt_timeout_ms);
         if (err == ESP_OK) {
             return ESP_OK;
         }
-        if (attempt < kCaptureAttempts) {
-            vTaskDelay(pdMS_TO_TICKS(250));
+        if (attempt < kCaptureAttempts &&
+            !delay_with_deadline(250, deadline_us)) {
+            return ESP_ERR_TIMEOUT;
         }
     }
     return err;
@@ -448,17 +492,24 @@ esp_err_t DoorbellController::upload_with_retry(const CapturedImage *image,
                                                 const char *firmware_version,
                                                 int timeout_ms)
 {
+    if (timeout_ms <= 0) return ESP_ERR_TIMEOUT;
+    const std::int64_t deadline_us =
+        esp_timer_get_time() + static_cast<std::int64_t>(timeout_ms) * 1000LL;
     esp_err_t err = ESP_FAIL;
     for (unsigned attempt = 1; attempt <= kUploadAttempts; ++attempt) {
-        ESP_LOGI(kTag, "Upload attempt %u/%u (timeout=%d ms)", attempt, kUploadAttempts, timeout_ms);
+        const int attempt_timeout_ms = remaining_deadline_ms(deadline_us);
+        if (attempt_timeout_ms <= 0) return ESP_ERR_TIMEOUT;
+        ESP_LOGI(kTag, "Upload attempt %u/%u (remaining=%d ms)", attempt,
+                 kUploadAttempts, attempt_timeout_ms);
         err = connectivity_.upload(image, audio, event_type, event_id, device_id,
-                                   firmware_version, timeout_ms);
+                                   firmware_version, attempt_timeout_ms);
         if (err == ESP_OK) {
             return ESP_OK;
         }
         ESP_LOGW(kTag, "Upload attempt failed: %s", esp_err_to_name(err));
-        if (attempt < kUploadAttempts) {
-            vTaskDelay(pdMS_TO_TICKS(500));
+        if (attempt < kUploadAttempts &&
+            !delay_with_deadline(500, deadline_us)) {
+            return ESP_ERR_TIMEOUT;
         }
     }
     return err;
@@ -468,18 +519,24 @@ esp_err_t DoorbellController::trigger_with_retry(
     const char *event_id, const char *event_type, const char *device_id,
     const char *firmware_version, bool dispatch_alerts, int timeout_ms)
 {
+    if (timeout_ms <= 0) return ESP_ERR_TIMEOUT;
+    const std::int64_t deadline_us =
+        esp_timer_get_time() + static_cast<std::int64_t>(timeout_ms) * 1000LL;
     esp_err_t err = ESP_FAIL;
     for (unsigned attempt = 1; attempt <= kTriggerAttempts; ++attempt) {
-        ESP_LOGI(kTag, "Early trigger attempt %u/%u (timeout=%d ms)", attempt,
-                 kTriggerAttempts, timeout_ms);
+        const int attempt_timeout_ms = remaining_deadline_ms(deadline_us);
+        if (attempt_timeout_ms <= 0) return ESP_ERR_TIMEOUT;
+        ESP_LOGI(kTag, "Early trigger attempt %u/%u (remaining=%d ms)", attempt,
+                 kTriggerAttempts, attempt_timeout_ms);
         err = connectivity_.trigger(event_id, event_type, device_id,
                                     firmware_version, dispatch_alerts,
-                                    timeout_ms);
+                                    attempt_timeout_ms);
         if (err == ESP_OK) {
             return ESP_OK;
         }
-        if (attempt < kTriggerAttempts) {
-            vTaskDelay(pdMS_TO_TICKS(200));
+        if (attempt < kTriggerAttempts &&
+            !delay_with_deadline(200, deadline_us)) {
+            return ESP_ERR_TIMEOUT;
         }
     }
     return err;
@@ -489,11 +546,16 @@ esp_err_t DoorbellController::handle_early_notify(
     const char *event_id, const char *event_type, const char *firmware_version,
     bool dispatch_alerts, int remaining_ms)
 {
+    if (remaining_ms <= 0) return ESP_ERR_TIMEOUT;
+    const std::int64_t stage_deadline_us =
+        esp_timer_get_time() + static_cast<std::int64_t>(remaining_ms) * 1000LL;
     set_state(DeviceState::EarlyNotify);
-    int wifi_timeout = (std::min)(10000, remaining_ms);
+    int wifi_timeout = (std::min)(10000, remaining_deadline_ms(stage_deadline_us));
+    if (wifi_timeout <= 0) return ESP_ERR_TIMEOUT;
     esp_err_t err = connectivity_.connect(wifi_timeout);
     if (err == ESP_OK) {
-        int trigger_timeout = (std::min)(5000, remaining_ms);
+        int trigger_timeout =
+            (std::min)(5000, remaining_deadline_ms(stage_deadline_us));
         esp_err_t trigger_err = trigger_with_retry(
             event_id, event_type, DEVICE_ID, firmware_version,
             dispatch_alerts, trigger_timeout);
@@ -521,6 +583,7 @@ esp_err_t DoorbellController::handle_rf_quiesce()
 
 esp_err_t DoorbellController::handle_camera_capture(CapturedImage &image, int remaining_ms)
 {
+    if (remaining_ms <= 0) return ESP_ERR_TIMEOUT;
     set_state(DeviceState::CameraPowerUp);
 
     set_state(DeviceState::Capturing);
@@ -543,8 +606,12 @@ esp_err_t DoorbellController::handle_upload(const CapturedImage *image,
                                              const char *firmware_version,
                                              int remaining_ms)
 {
+    if (remaining_ms <= 0) return ESP_ERR_TIMEOUT;
+    const std::int64_t stage_deadline_us =
+        esp_timer_get_time() + static_cast<std::int64_t>(remaining_ms) * 1000LL;
     set_state(DeviceState::WifiReconnect);
-    int wifi_timeout = (std::min)(10000, remaining_ms);
+    int wifi_timeout = (std::min)(10000, remaining_deadline_ms(stage_deadline_us));
+    if (wifi_timeout <= 0) return ESP_ERR_TIMEOUT;
     esp_err_t err = connectivity_.connect(wifi_timeout);
     if (err != ESP_OK) {
         ESP_LOGE(kTag, "Event upload abandoned: %s", esp_err_to_name(err));
@@ -552,7 +619,8 @@ esp_err_t DoorbellController::handle_upload(const CapturedImage *image,
     }
 
     set_state(DeviceState::Uploading);
-    int upload_timeout = (std::min)(30000, remaining_ms);
+    int upload_timeout =
+        (std::min)(30000, remaining_deadline_ms(stage_deadline_us));
     err = upload_with_retry(image, audio, event_type, event_id, DEVICE_ID,
                             firmware_version, upload_timeout);
     if (err == ESP_OK) {
@@ -751,6 +819,9 @@ void DoorbellController::execute_alert_cycle(const char *event_type,
     SemaphoreHandle_t greeting_completion = nullptr;
     GreetingCaptureTaskContext greeting_context{};
     bool greeting_task_started = false;
+    const std::int64_t greeting_task_deadline_us = (std::min)(
+        session_.hard_deadline_us(),
+        esp_timer_get_time() + kGreetingTaskHardLimitUs);
     if (record_visitor_greeting &&
         greeting_budget_ms >= static_cast<int>(kVisitorHoldMinimumMs)) {
         visitor_capture_window_active_.store(true);
@@ -763,6 +834,7 @@ void DoorbellController::execute_alert_cycle(const char *event_type,
             .duration_ms = static_cast<std::uint32_t>(greeting_budget_ms),
             .recorded_duration_ms = 0,
             .session_start_us = session_.session_start_us,
+            .absolute_deadline_us = greeting_task_deadline_us,
             .capture_window_active = &visitor_capture_window_active_,
             .result = ESP_FAIL,
         };
@@ -780,9 +852,27 @@ void DoorbellController::execute_alert_cycle(const char *event_type,
         if (!greeting_task_started) {
             return;
         }
-        // record_greeting() is bounded by its duration and I2S read timeouts.
-        // Joining also keeps the stack-owned context alive until the task exits.
-        xSemaphoreTake(greeting_completion, portMAX_DELAY);
+        // The context and semaphore live on this stack, so the task must join
+        // before returning. Both the worker and this join use the same absolute
+        // deadline; a missed join enters fail-safe shutdown instead of keeping
+        // the battery-powered unit awake indefinitely.
+        const std::int64_t remaining_us =
+            greeting_task_deadline_us - esp_timer_get_time();
+        const TickType_t join_ticks = remaining_us > 0
+            ? pdMS_TO_TICKS(static_cast<std::uint32_t>(
+                  (remaining_us + 999LL) / 1000LL))
+            : 0;
+        if (xSemaphoreTake(greeting_completion, join_ticks) != pdTRUE) {
+            ESP_LOGE(kTag,
+                     "Visitor audio task missed its hard deadline; forcing safe shutdown");
+            audio_.request_capture_stop();
+            chime_player_request_stop();
+            if (xSemaphoreTake(greeting_completion,
+                               pdMS_TO_TICKS(kGreetingStopGraceMs)) != pdTRUE) {
+                visitor_capture_window_active_.store(false);
+                sleep();
+            }
+        }
         ESP_LOGI(kTag,
                  "[MONOTONIC_TIMING] t=%.1f ms | STAGE_COMPLETE: Visitor microphone recording",
                  static_cast<double>(esp_timer_get_time() -
@@ -932,9 +1022,20 @@ void DoorbellController::execute_alert_cycle(const char *event_type,
         greeting_budget_ms >= static_cast<int>(kVisitorHoldMinimumMs)) {
         set_state(DeviceState::RecordingVisitor);
         std::uint32_t recorded_duration_ms = 0;
-        const esp_err_t audio_err = audio_.record_button_hold(
-            greeting, static_cast<std::uint32_t>(greeting_budget_ms),
-            kVisitorHoldMinimumMs, recorded_duration_ms);
+        const std::int64_t fallback_remaining_us =
+            session_.hard_deadline_us() - esp_timer_get_time();
+        const std::uint32_t fallback_budget_ms =
+            fallback_remaining_us > 0
+                ? static_cast<std::uint32_t>((std::min)(
+                      static_cast<std::int64_t>(greeting_budget_ms),
+                      fallback_remaining_us / 1000LL))
+                : 0;
+        const esp_err_t audio_err =
+            fallback_budget_ms >= kVisitorHoldMinimumMs
+                ? audio_.record_button_hold(
+                      greeting, fallback_budget_ms, kVisitorHoldMinimumMs,
+                      recorded_duration_ms, session_.hard_deadline_us())
+                : ESP_ERR_TIMEOUT;
         visitor_capture_window_active_.store(false);
         if (audio_err != ESP_OK) {
             ESP_LOGW(kTag,
@@ -1230,6 +1331,30 @@ void DoorbellController::handle_ptt_session()
 
     const WakeReason reason = power_.wake_reason();
 
+    set_state(DeviceState::Booting);
+    ESP_LOGI(kTag, "Wake reason: %s", wake_name(reason));
+
+    if (reason == WakeReason::Motion && !kPirEventsEnabled) {
+        ESP_LOGW(kTag, "Ignoring PIR wake because production PIR events are disabled");
+        sleep();
+    }
+
+    if (reason != WakeReason::Button && reason != WakeReason::Motion) {
+        sleep();
+    }
+
+    // Read before Wi-Fi, camera, or speaker load so event-to-event telemetry
+    // is sampled at a consistent point. Failure is non-fatal and simply omits
+    // battery telemetry for this wake cycle.
+    battery_measurement_t battery{};
+    const esp_err_t battery_err = battery_monitor_read(&battery);
+    if (battery_err == ESP_OK) {
+        connectivity_.set_battery_millivolts(battery.millivolts);
+    } else {
+        ESP_LOGW(kTag, "Battery telemetry unavailable: %s",
+                 esp_err_to_name(battery_err));
+    }
+
     if (reason == WakeReason::Button) {
         gpio_set_level(STATUS_LED_PIN, 1);
         const esp_err_t fade_err = ring_animation_start(
@@ -1249,18 +1374,6 @@ void DoorbellController::handle_ptt_session()
         }
     } else if (reason == WakeReason::Motion) {
         gpio_set_level(STATUS_LED_PIN, 1);
-    }
-
-    set_state(DeviceState::Booting);
-    ESP_LOGI(kTag, "Wake reason: %s", wake_name(reason));
-
-    if (reason == WakeReason::Motion && !kPirEventsEnabled) {
-        ESP_LOGW(kTag, "Ignoring PIR wake because production PIR events are disabled");
-        sleep();
-    }
-
-    if (reason != WakeReason::Button && reason != WakeReason::Motion) {
-        sleep();
     }
 
     // Initialize Visitor Session

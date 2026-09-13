@@ -101,7 +101,8 @@ public class EventController {
             @RequestParam(value = "recordingId", required = false) String requestedRecordingId,
             @RequestParam(value = "deviceId", required = false) String deviceId,
             @RequestParam(value = "firmwareVersion", required = false) String firmwareVersion,
-            @RequestParam(value = "wifiRssiDbm", required = false) Integer wifiRssiDbm) {
+            @RequestParam(value = "wifiRssiDbm", required = false) Integer wifiRssiDbm,
+            @RequestParam(value = "batteryMillivolts", required = false) Integer batteryMillivolts) {
         eventId = normalize(eventId);
         String pressId = normalize(requestedPressId);
         if (pressId == null) pressId = eventId;
@@ -207,7 +208,8 @@ public class EventController {
                     eventAlertService.completeUpload(
                             pressId != null ? pressId : eventId, eventType);
             deviceTelemetryService.record(deviceId, firmwareVersion, eventType,
-                    pressId, sanitizeRssi(wifiRssiDbm));
+                    pressId, sanitizeRssi(wifiRssiDbm),
+                    sanitizeBatteryMillivolts(batteryMillivolts));
             
             return ResponseEntity.ok("Event processed successfully with image key: "
                     + imageKey + "; notification="
@@ -252,7 +254,8 @@ public class EventController {
                         request.dispatchAlerts() == null || request.dispatchAlerts());
         deviceTelemetryService.record(request.deviceId(),
                 request.firmwareVersion(), eventType, eventId,
-                sanitizeRssi(request.wifiRssiDbm()));
+                sanitizeRssi(request.wifiRssiDbm()),
+                sanitizeBatteryMillivolts(request.batteryMillivolts()));
         broadcastSession(newPress && pressNumber == 1 ? "session-started" : "press-started",
                 session);
         return ResponseEntity.ok(new TriggerResponse(eventId, sessionId,
@@ -337,10 +340,16 @@ public class EventController {
                 ? wifiRssiDbm : null;
     }
 
+    private static Integer sanitizeBatteryMillivolts(Integer batteryMillivolts) {
+        return batteryMillivolts != null && batteryMillivolts >= 2500 &&
+                batteryMillivolts <= 5000 ? batteryMillivolts : null;
+    }
+
     public record TriggerRequest(String eventId, String sessionId, String pressId,
                                  Integer pressNumber, String eventType,
                                  String deviceId, String firmwareVersion,
-                                 Integer wifiRssiDbm, Boolean dispatchAlerts) {}
+                                 Integer wifiRssiDbm, Integer batteryMillivolts,
+                                 Boolean dispatchAlerts) {}
 
     public record TriggerResponse(String pressId, String sessionId,
                                   boolean pressCreated, boolean created,

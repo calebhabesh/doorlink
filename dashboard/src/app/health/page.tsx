@@ -20,7 +20,10 @@ interface SystemHealthData {
     lastEventType?: string | null;
     lastEventId?: string | null;
     wifiRssiDbm?: number | null;
-    batteryStatus: 'NOT_REPORTED';
+    batteryMillivolts?: number | null;
+    batteryPercentageEstimate?: number | null;
+    batteryReportedAt?: string | null;
+    batteryStatus: 'NOT_REPORTED' | 'REPORTED';
   };
 }
 
@@ -75,7 +78,11 @@ export default function SystemHealth() {
   const gatewayStatus = error ? 'DOWN' : health?.gateway.status;
 
   return (
-    <MainLayout status={gatewayStatus === 'UP' ? 'connected' : gatewayStatus === 'DOWN' ? 'disconnected' : 'connecting'} breadcrumbs={[{ label: 'Dashboard' }, { label: 'System Health', active: true }]}>
+    <MainLayout
+      status={gatewayStatus === 'UP' ? 'connected' : gatewayStatus === 'DOWN' ? 'disconnected' : 'connecting'}
+      batteryPercentage={health?.device.batteryPercentageEstimate ?? undefined}
+      breadcrumbs={[{ label: 'Dashboard' }, { label: 'System Health', active: true }]}
+    >
       <div className="w-full max-w-[1200px] mx-auto flex flex-col h-full">
         <div className="mb-8 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -111,12 +118,14 @@ export default function SystemHealth() {
                 <Metric label="Firmware" value={health.device.firmwareVersion ?? 'Not reported'} />
                 <Metric label="Last event" value={health.device.lastEventType?.replaceAll('_', ' ') ?? 'Not reported'} />
                 <Metric label="Wi-Fi RSSI at contact" value={health.device.wifiRssiDbm !== null && health.device.wifiRssiDbm !== undefined ? `${health.device.wifiRssiDbm} dBm` : 'Not reported'} />
-                <Metric label="Battery" value="Not reported" />
+                <Metric label="Battery voltage" value={health.device.batteryMillivolts !== null && health.device.batteryMillivolts !== undefined ? `${(health.device.batteryMillivolts / 1000).toFixed(3)} V` : 'Not reported'} />
+                <Metric label="Estimated charge" value={health.device.batteryPercentageEstimate !== null && health.device.batteryPercentageEstimate !== undefined ? `~${health.device.batteryPercentageEstimate}%` : 'Not reported'} />
+                <Metric label="Battery sampled" value={health.device.batteryReportedAt ? new Date(health.device.batteryReportedAt).toLocaleString() : 'Not reported'} />
               </div>
             ) : (
               <p className="text-zinc-400">No production firmware telemetry has reached this gateway yet.</p>
             )}
-            <p className="text-xs text-zinc-500 mt-5 font-mono">Device contact is event-driven, not a claim that the sleeping doorbell is continuously online. Battery remains unknown until trustworthy telemetry is available.</p>
+            <p className="text-xs text-zinc-500 mt-5 font-mono">Device contact and battery voltage are reported when an event wakes the doorbell. Charge percentage is an estimate from voltage, not a fuel-gauge measurement; charging state and battery temperature are not available.</p>
           </div>
         </div>
       </div>

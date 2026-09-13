@@ -117,6 +117,44 @@ class HouseholdAuthServiceTest {
     }
 
     @Test
+    void regularMembersReceiveAnActiveDirectoryWithoutDeviceMetadata() {
+        householdAuth.bootstrap("test-bootstrap-token", "Owner",
+                "owner@example.com", "Owner phone", "agent", "127.0.0.1");
+        var memberInvitation = householdAuth.inviteMember(
+                "Housemate", "housemate@example.com");
+        String memberToken = memberInvitation.enrollmentUrl()
+                .substring(memberInvitation.enrollmentUrl().lastIndexOf('/') + 1);
+        var memberSession = householdAuth.enroll(memberToken, "Housemate phone",
+                "agent", "127.0.0.1");
+        var removedInvitation = householdAuth.inviteMember(
+                "Former member", "former@example.com");
+        householdAuth.disableMember(removedInvitation.memberId());
+
+        var directory = householdAuth.membersFor(memberSession.principal());
+
+        assertEquals(2, directory.size());
+        assertEquals("Owner", directory.get(0).name());
+        assertEquals("Housemate", directory.get(1).name());
+        assertTrue(directory.stream().allMatch(member -> member.disabledAt() == null));
+        assertTrue(directory.stream().allMatch(member -> member.devices().isEmpty()));
+    }
+
+    @Test
+    void ownersKeepTheFullHouseholdManagementView() {
+        var ownerSession = householdAuth.bootstrap("test-bootstrap-token", "Owner",
+                "owner@example.com", "Owner phone", "agent", "127.0.0.1");
+        var removedInvitation = householdAuth.inviteMember(
+                "Former member", "former@example.com");
+        householdAuth.disableMember(removedInvitation.memberId());
+
+        var members = householdAuth.membersFor(ownerSession.principal());
+
+        assertEquals(2, members.size());
+        assertEquals(1, members.get(0).devices().size());
+        assertNotNull(members.get(1).disabledAt());
+    }
+
+    @Test
     void cannotRenameRevokedOrInvalidDevice() {
         var issue = householdAuth.bootstrap("test-bootstrap-token", "Caleb",
                 "caleb@example.com", "First Phone", "test-agent", "127.0.0.1");

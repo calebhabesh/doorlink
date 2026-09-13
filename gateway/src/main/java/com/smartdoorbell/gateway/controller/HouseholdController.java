@@ -66,8 +66,7 @@ public class HouseholdController {
 
     @GetMapping("/members")
     public List<HouseholdAuthService.MemberView> members(HttpServletRequest request) {
-        requireOwner(request);
-        return householdAuth.members();
+        return householdAuth.membersFor(principal(request));
     }
 
     @PostMapping("/members")

@@ -12,6 +12,7 @@ import com.smartdoorbell.gateway.repository.SystemSettingsRepository;
 import com.smartdoorbell.gateway.repository.VisitorSessionRepository;
 import com.smartdoorbell.gateway.service.MinioService;
 import com.smartdoorbell.gateway.service.SystemHealthService;
+import com.smartdoorbell.gateway.security.IntercomCommandSigner;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -46,6 +47,9 @@ public class SystemController {
 
     @Value("${intercom.session.idle-timeout-seconds:60}")
     private long sessionIdleTimeoutSeconds;
+
+    @Value("${gateway.api.key}")
+    private String gatewayApiKey;
 
     public SystemController(SystemSettingsRepository settingsRepository,
                             MqttGateway mqttGateway,
@@ -184,7 +188,9 @@ public class SystemController {
 
     private void publishCommand(Map<String, Object> command) {
         try {
-            mqttGateway.sendToMqtt(objectMapper.writeValueAsString(command),
+            Map<String, Object> signedCommand =
+                    IntercomCommandSigner.sign(command, gatewayApiKey);
+            mqttGateway.sendToMqtt(objectMapper.writeValueAsString(signedCommand),
                     mqttConfig.getPttAudioTopic());
         } catch (Exception exception) {
             throw new IllegalStateException("Could not serialize intercom command", exception);

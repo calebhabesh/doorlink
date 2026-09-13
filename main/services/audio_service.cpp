@@ -17,6 +17,7 @@ constexpr std::uint32_t kSampleRateHz = 16000;
 constexpr std::uint16_t kChannels = 1;
 constexpr std::uint16_t kBitsPerSample = 16;
 constexpr std::size_t kWavHeaderSize = 44;
+constexpr std::int64_t kAudioBusAcquireMaxUs = 20000000LL;
 
 void put_u16(std::uint8_t *dst, std::uint16_t value)
 {
@@ -78,7 +79,7 @@ AudioService::~AudioService()
     stop();
 }
 
-esp_err_t AudioService::start_microphone()
+esp_err_t AudioService::start_microphone(std::int64_t absolute_deadline_us)
 {
     if (rx_channel_) {
         return ESP_OK;
@@ -87,15 +88,24 @@ esp_err_t AudioService::start_microphone()
     // An already-playing homeowner turn is allowed to finish. A visitor who
     // keeps holding receives the bus immediately afterward. Polling keeps the
     // hard session shutdown able to cancel this wait.
-    const TickType_t acquire_deadline =
-        xTaskGetTickCount() + pdMS_TO_TICKS(20000);
-    while (!audio_bus_acquire(pdMS_TO_TICKS(100))) {
-        if (stop_requested_.load()) return ESP_ERR_INVALID_STATE;
-        if (static_cast<std::int32_t>(acquire_deadline - xTaskGetTickCount()) <= 0) {
-            return ESP_ERR_TIMEOUT;
+    const std::int64_t now_us = esp_timer_get_time();
+    const std::int64_t local_deadline_us = now_us + kAudioBusAcquireMaxUs;
+    const std::int64_t acquire_deadline_us =
+        absolute_deadline_us > 0
+            ? (std::min)(absolute_deadline_us, local_deadline_us)
+            : local_deadline_us;
+    while (esp_timer_get_time() < acquire_deadline_us) {
+        const std::int64_t remaining_us =
+            acquire_deadline_us - esp_timer_get_time();
+        const std::uint32_t wait_ms = static_cast<std::uint32_t>((std::min)(
+            100LL, (std::max)(1LL, (remaining_us + 999LL) / 1000LL)));
+        if (audio_bus_acquire(pdMS_TO_TICKS(wait_ms))) {
+            owns_audio_bus_ = true;
+            break;
         }
+        if (stop_requested_.load()) return ESP_ERR_INVALID_STATE;
     }
-    owns_audio_bus_ = true;
+    if (!owns_audio_bus_) return ESP_ERR_TIMEOUT;
     gpio_set_level(AMP_EN_PIN, 0);
     i2s_chan_config_t channel_config =
         I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_AUTO, I2S_ROLE_MASTER);
@@ -199,13 +209,18 @@ esp_err_t AudioService::record_greeting(RecordedAudio &audio,
 esp_err_t AudioService::record_button_hold(RecordedAudio &audio,
                                            std::uint32_t max_duration_ms,
                                            std::uint32_t minimum_duration_ms,
-                                           std::uint32_t &recorded_duration_ms)
+                                           std::uint32_t &recorded_duration_ms,
+                                           std::int64_t absolute_deadline_us)
 {
     audio.reset();
     recorded_duration_ms = 0;
     if (max_duration_ms == 0 || max_duration_ms > 15000 ||
         minimum_duration_ms == 0 || minimum_duration_ms > max_duration_ms) {
         return ESP_ERR_INVALID_ARG;
+    }
+    if (absolute_deadline_us > 0 &&
+        esp_timer_get_time() >= absolute_deadline_us) {
+        return ESP_ERR_TIMEOUT;
     }
     if (capture_active_.exchange(true)) {
         return ESP_ERR_INVALID_STATE;
@@ -232,7 +247,7 @@ esp_err_t AudioService::record_button_hold(RecordedAudio &audio,
     }
     if (!wav) return ESP_ERR_NO_MEM;
 
-    esp_err_t err = start_microphone();
+    esp_err_t err = start_microphone(absolute_deadline_us);
     if (err != ESP_OK) {
         heap_caps_free(wav);
         return err;
@@ -242,9 +257,22 @@ esp_err_t AudioService::record_button_hold(RecordedAudio &audio,
     std::size_t samples_written = 0;
     std::int64_t release_candidate_us = 0;
     while (samples_written < target_samples && !stop_requested_.load()) {
+        if (absolute_deadline_us > 0 &&
+            esp_timer_get_time() >= absolute_deadline_us) {
+            err = ESP_ERR_TIMEOUT;
+            break;
+        }
         std::size_t bytes_read = 0;
+        std::uint32_t read_timeout_ms = 100;
+        if (absolute_deadline_us > 0) {
+            const std::int64_t remaining_us =
+                absolute_deadline_us - esp_timer_get_time();
+            read_timeout_ms = static_cast<std::uint32_t>((std::min)(
+                100LL,
+                (std::max)(1LL, (remaining_us + 999LL) / 1000LL)));
+        }
         err = i2s_channel_read(rx_channel_, sample_slots_, sizeof(sample_slots_),
-                               &bytes_read, pdMS_TO_TICKS(100));
+                               &bytes_read, pdMS_TO_TICKS(read_timeout_ms));
         if (err != ESP_OK) {
             ESP_LOGE(kTag, "Visitor microphone read failed: %s",
                      esp_err_to_name(err));

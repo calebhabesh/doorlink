@@ -84,6 +84,8 @@ class SystemControllerTest {
         verify(mqttGateway).sendToMqtt(payload.capture(), eq("doorbell/commands/audio"));
         assertTrue(payload.getValue().contains("\"type\":\"PTT_START\""));
         assertTrue(payload.getValue().contains(EVENT_KEY));
+        assertTrue(payload.getValue().contains("\"protocol\":\"v1\""));
+        assertTrue(payload.getValue().matches(".*\"signature\":\"[0-9a-f]{64}\".*"));
     }
 
     @Test
@@ -116,6 +118,7 @@ class SystemControllerTest {
         ArgumentCaptor<String> payload = ArgumentCaptor.forClass(String.class);
         verify(mqttGateway).sendToMqtt(payload.capture(), eq("doorbell/commands/audio"));
         assertTrue(payload.getValue().contains("\"type\":\"PLAY_AUDIO\""));
+        assertTrue(payload.getValue().contains("\"protocol\":\"v1\""));
         assertTrue(payload.getValue().contains(
                 "http://doorbell-gateway:8080/api/events/media/" + storedKey));
         verify(intercomMessageRepository).save(any());

@@ -448,6 +448,7 @@ static esp_err_t upload_event_to_gateway(const uint8_t *image_data, size_t image
         .url = GATEWAY_API_URL,
         .method = HTTP_METHOD_POST,
         .timeout_ms = 15000, // Increased timeout for dual payload
+        .disable_auto_redirect = true,
     };
 
     esp_http_client_handle_t client = esp_http_client_init(&config);

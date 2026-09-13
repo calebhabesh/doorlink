@@ -17,14 +17,15 @@ public class DeviceTelemetryService {
 
     @Transactional
     public void record(String deviceId, String firmwareVersion, String eventType,
-                       String eventId, Integer wifiRssiDbm) {
+                       String eventId, Integer wifiRssiDbm,
+                       Integer batteryMillivolts) {
         if (deviceId == null || deviceId.isBlank()) {
             return;
         }
         DeviceStatus status = deviceStatusRepository.findById(deviceId)
                 .orElseGet(() -> new DeviceStatus(deviceId));
         status.record(LocalDateTime.now(), firmwareVersion, eventType,
-                eventId, wifiRssiDbm);
+                eventId, wifiRssiDbm, batteryMillivolts);
         deviceStatusRepository.save(status);
     }
 }

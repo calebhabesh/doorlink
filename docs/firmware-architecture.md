@@ -10,24 +10,27 @@ explicit, isolated configuration.
 `app_main.cpp` selects either a diagnostic image or `DoorbellController`.
 Production mode follows this bounded session sequence:
 
-1. `BOOTING`: apply the camera/audio-safe GPIO state and classify the wake.
-2. `LOCAL_CHIME` / `TRIGGERING`: play the first local chime completely while
-   connecting Wi-Fi and posting an authenticated session/press trigger.
-3. `DISCONNECTING`: fully release Wi-Fi and network resources, restoring the
-   proven RF-off camera boundary.
-4. `CAPTURING`: enable GPIO42/U9, initialize the OV5640, capture QXGA, copy the
+1. `BOOTING`: reapply the retained camera/audio-safe GPIO state, release the
+   sleep holds without a pad glitch, and classify the wake.
+2. `LOCAL_CHIME`: start the bounded low-power camera-overlap chime profile. One
+   playback claim, including rapid repress retriggers, has a 15-second wall
+   limit and a 1.5-second zero-progress I2S limit.
+3. `CAPTURING`: with RF off, enable GPIO42/U9, initialize the OV5640, capture QXGA, copy the
    JPEG to owned PSRAM, return the frame, deinitialize the driver, and disable
    U9.
-5. `VISITOR_RECORDING`: if GPIO2 remains held after the first chime, or on any
+4. `CONNECTING` / `TRIGGERING`: connect Wi-Fi after shutter close and post the
+   authenticated session/press trigger.
+5. `UPLOADING`: independently POST available JPEG and visitor WAV media under
+   stable per-press identifiers. All retries share one stage wall deadline.
+6. `VISITOR_RECORDING`: if GPIO2 remains held after the first chime, or on any
    later press, retain 1-15 seconds of release-driven microphone audio.
-6. `CONNECTING`: initialize network resources again and reconnect Wi-Fi with a
-   bounded retry count and timeout.
-7. `UPLOADING`: independently POST available JPEG and visitor WAV media under
-   stable per-press identifiers. Later presses refresh the image only after 15
-   seconds and never replay the local chime.
-8. `PTT_SESSION`: queue homeowner playback behind any active visitor capture.
-9. `SHUTTING_DOWN`: explicitly close the gateway session, release media, stop
-   Wi-Fi, hold camera/I2S pins safe, configure wake sources, and enter sleep.
+7. `PTT_SESSION`: accept only HMAC-authenticated MQTT commands for the active
+   random session, reject replay IDs, and queue homeowner playback behind any
+   active visitor capture. Media and acknowledgement URLs must match the exact
+   configured gateway origin and route; redirects are disabled.
+8. `SHUTTING_DOWN`: explicitly close the gateway session, release media, stop
+   Wi-Fi, drive the load gates and I2S pads safe, latch those states, configure
+   wake sources, and enter deep sleep.
 
 Camera and Wi-Fi are deliberately non-overlapping high-load phases. The camera
 frame never survives camera-driver shutdown; only the owned PSRAM copy does.
@@ -41,6 +44,8 @@ gateway and gives media a stable object key.
 | `DoorbellController` | C++ | State machine, retry policy, event type, shutdown orchestration |
 | `CameraService` / `CapturedImage` | C++ | RAII ownership of the PSRAM JPEG |
 | `ConnectivityManager` | C++ | Bounded Wi-Fi/upload lifecycle and shutdown guard |
+| `IntercomService` / `intercom_protocol` | C++ | Signed command validation, fragment assembly, URL policy, and bounded playback |
+| `AudioService` / `chime_player` | C++ / C | Deadline-bound I2S ownership, capture, playback, and fail-safe teardown |
 | `PowerManager` | C++ | Wake classification, stuck-input handling, and deep-sleep entry |
 | `camera_capture` | C | OV5640 configuration and guaranteed frame/driver/power cleanup |
 | `camera_power`, `ov5640_mode_fix`, bring-up modules | C | Auditable hardware sequencing and diagnostics |
@@ -60,9 +65,12 @@ PSRAM where available. ESP-IDF errors remain `esp_err_t`.
   again.
 - Cold boot, timer-recovery wake, and unknown wake causes enter sleep without
   taking a picture.
-- The isolated wake diagnostic prototypes a non-blocking GPIO48 fade on LEDC
-  timer/channel 1. Camera XCLK remains on timer/channel 0; production does not
-  enable the fade until the diagnostic is validated on hardware.
+- GPIO48 uses a non-blocking LEDC fade on timer/channel 1. Camera XCLK remains
+  on timer/channel 0.
+- Before deep sleep, GPIO42, GPIO44, and GPIO4-7 are individually held in their
+  safe state. ESP32-S3's global digital deep-sleep hold is enabled for the two
+  non-RTC load gates. Wake code programs the same safe state before releasing
+  the latches.
 
 ## Builds
 
@@ -79,9 +87,9 @@ idf.py -B build-production -D SDKCONFIG=sdkconfig.production \
   -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.production.defaults' build
 ```
 
-Both configurations build with ESP-IDF 6.0.1. The safe image is approximately
-205 KiB. The production image is approximately 1004 KiB and leaves about 67% of
-the 3 MiB application partition free.
+Both configurations build with ESP-IDF 6.0.1. The hardened production image is
+approximately 1.56 MiB and leaves about 48% of the 3 MiB application partition
+free.
 
 ## Validation status
 
@@ -109,6 +117,21 @@ Deep-sleep current remains unmeasured. The earlier fixed-duration visitor audio
 and stored PTT playback path passed hardware tests; release-driven capture and
 multi-press arbitration are implemented and build-tested but still require an
 instrumented board validation pass.
+
+The 2026-08-23 pre-enclosure hardening pass added strict fragmented-MQTT
+assembly, HMAC-SHA256 command authentication and replay rejection, gateway-only
+URL policy, redirect suppression, shared wall deadlines for retries, bounded
+I2S stall handling, a bounded greeting-task join with fail-safe sleep, and
+deep-sleep GPIO retention. The host guard tests, all 42 gateway tests, and a
+clean ESP-IDF 6.0.1 production build pass. This revision has not yet been
+flashed or battery-cycle tested; see `firmware-release-checklist.md`.
+
+The production controller also takes a calibrated 16-sample +BATT reading from
+GPIO1 before starting the speaker, camera, or radio. The gateway retains the
+millivolt value and sample time; System Health exposes those authoritative
+fields plus a coarse, explicitly estimated one-cell Li-ion percentage. It does
+not infer charger state, thermistor temperature, remaining runtime, or a
+low-battery cutoff.
 
 The current production flow supersedes the USB-validated trigger-first order:
 the first QXGA frame is captured before Wi-Fi starts, then its owned JPEG is

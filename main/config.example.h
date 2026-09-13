@@ -20,12 +20,18 @@
 // Replace with the IP address of your Raspberry Pi 4 running the Mosquitto broker
 #define MQTT_BROKER_URI "mqtt://192.168.1.10:1883"
 #define MQTT_PTT_TOPIC  "doorbell/commands/audio"
+// Optional broker credentials. Intercom commands are independently HMAC-signed
+// with GATEWAY_API_KEY, but broker authentication remains useful defense in depth.
+// #define MQTT_USERNAME "front-door"
+// #define MQTT_PASSWORD "YOUR_MQTT_PASSWORD"
 
 // ==========================================
 // Gateway Configuration
 // ==========================================
 // Replace with the IP address of your Raspberry Pi running the Spring Boot Gateway
 #define GATEWAY_API_URL "http://192.168.1.10:8080/api/events"
+// Use the exact same high-entropy value as gateway.api.key/GATEWAY_API_KEY on
+// the Raspberry Pi. It authenticates HTTP requests and signed MQTT commands.
 #define GATEWAY_API_KEY "YOUR_HARD_TO_GUESS_API_KEY"
 #define DEVICE_ID       "front-door"
 

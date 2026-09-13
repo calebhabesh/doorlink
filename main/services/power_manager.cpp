@@ -23,9 +23,16 @@ RTC_DATA_ATTR bool s_ext0_wake_on_high_armed = false;
 
 esp_err_t PowerManager::initialize_safe_state() const
 {
+    // Program the same safe levels that were latched before deep sleep, then
+    // release the holds. This ordering prevents wake-up glitches on the camera
+    // gate, amplifier gate, and shared I2S pins.
     core_bringup_configure_safe_gpio_state(true);
 
-    esp_err_t first_err = rtc_gpio_deinit(DOORBELL_BUTTON_PIN);
+    esp_err_t first_err = core_bringup_release_safe_gpio_holds();
+    const esp_err_t button_deinit_err = rtc_gpio_deinit(DOORBELL_BUTTON_PIN);
+    if (first_err == ESP_OK && button_deinit_err != ESP_OK) {
+        first_err = button_deinit_err;
+    }
     const esp_err_t pir_err = rtc_gpio_deinit(PIR_WAKE_PIN);
     if (first_err == ESP_OK && pir_err != ESP_OK) {
         first_err = pir_err;
@@ -201,6 +208,17 @@ esp_err_t PowerManager::configure_rtc_input(int pin)
     if (!wake_source_enabled) {
         ESP_LOGE(kTag, "No wake source could be configured; restarting safely");
         esp_restart();
+    }
+
+    const esp_err_t hold_err = core_bringup_hold_safe_gpio_state();
+    if (hold_err != ESP_OK) {
+        // Both load-enable nets also have external pulldowns. Continue into
+        // deep sleep rather than creating a battery-draining awake fault loop.
+        ESP_LOGE(kTag, "Could not retain every safe GPIO through sleep: %s",
+                 esp_err_to_name(hold_err));
+    } else {
+        ESP_LOGI(kTag,
+                 "Deep-sleep holds armed for camera, amplifier, and I2S safe state");
     }
 
     // App logging remains available after wake. Suppressing only the ROM's

@@ -160,10 +160,25 @@ For the ESP32-S3 firmware to successfully communicate with this Pi, ensure your 
 
 // Gateway API for image/audio HTTP POSTs
 #define GATEWAY_API_URL "http://192.168.1.10:8080/api/events"
+#define GATEWAY_API_KEY "the-same-high-entropy-value-as-the-Pi-environment"
 
 // MQTT Broker for half-duplex interaction
 #define MQTT_BROKER_URI "mqtt://192.168.1.10:1883"
 ```
+
+`GATEWAY_API_KEY` is also the HMAC key for MQTT intercom commands. The firmware
+rejects unsigned commands, changed command fields, and replayed command IDs.
+Deploy the matching gateway build before flashing this firmware:
+
+```bash
+./scripts/build-pi-production.sh --gateway-only --restart
+```
+
+The gateway's `intercom.device-base-url` and firmware `GATEWAY_API_URL` must use
+the same scheme, host, and port. Firmware accepts reply media only from the
+gateway's `/api/events/media/<key>` route and acknowledgements only on the
+matching `/api/system/ptt/messages/<uuid>/delivered` route. Redirects are not
+followed when the hardware API key is attached.
 
 ## External Access (WAN)
 

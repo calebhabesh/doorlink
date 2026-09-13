@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <cstdint>
 
 #include "esp_err.h"
 #include "services/camera_service.hpp"
@@ -31,10 +32,15 @@ public:
     esp_err_t close_session(const char *session_id, int timeout_ms = 5000) const;
     esp_err_t complete_press(const char *press_id, std::uint32_t duration_ms,
                              int timeout_ms = 5000) const;
+    void set_battery_millivolts(std::uint32_t millivolts)
+    {
+        battery_millivolts_.store(millivolts);
+    }
     bool connected() const { return connected_.load(); }
 
 private:
     std::atomic_bool connected_{false};
+    std::atomic_uint32_t battery_millivolts_{0};
 };
 
 }  // namespace doorbell

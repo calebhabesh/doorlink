@@ -63,15 +63,47 @@ public class SystemHealthService {
     }
 
     private DeviceHealth toHealth(DeviceStatus status) {
+        Integer batteryMillivolts = status.getBatteryMillivolts();
         return new DeviceHealth("KNOWN", status.getDeviceId(),
                 status.getLastSeen(), status.getFirmwareVersion(),
                 status.getLastEventType(), status.getLastEventId(),
-                status.getWifiRssiDbm(), "NOT_REPORTED");
+                status.getWifiRssiDbm(), batteryMillivolts,
+                estimateBatteryPercentage(batteryMillivolts),
+                status.getBatteryReportedAt(),
+                batteryMillivolts == null ? "NOT_REPORTED" : "REPORTED");
     }
 
     private DeviceHealth unknownDevice() {
         return new DeviceHealth("UNKNOWN", null, null, null, null, null,
-                null, "NOT_REPORTED");
+                null, null, null, null, "NOT_REPORTED");
+    }
+
+    static Integer estimateBatteryPercentage(Integer millivolts) {
+        if (millivolts == null) return null;
+
+        // Coarse 1-cell Li-ion open-circuit curve. Firmware samples before the
+        // high-current camera/radio work, but cell chemistry, temperature, and
+        // charging still make this an estimate; voltage remains authoritative.
+        int[] voltagePoints = {
+                3300, 3500, 3600, 3700, 3750, 3800,
+                3850, 3900, 3950, 4000, 4100, 4200
+        };
+        int[] percentagePoints = {
+                0, 5, 10, 20, 30, 40,
+                50, 60, 70, 80, 90, 100
+        };
+        if (millivolts <= voltagePoints[0]) return 0;
+        if (millivolts >= voltagePoints[voltagePoints.length - 1]) return 100;
+        for (int i = 1; i < voltagePoints.length; i++) {
+            if (millivolts <= voltagePoints[i]) {
+                int voltageSpan = voltagePoints[i] - voltagePoints[i - 1];
+                int percentageSpan = percentagePoints[i] - percentagePoints[i - 1];
+                int offset = millivolts - voltagePoints[i - 1];
+                return percentagePoints[i - 1] +
+                        (offset * percentageSpan + voltageSpan / 2) / voltageSpan;
+            }
+        }
+        return 100;
     }
 
     public record HealthSnapshot(Instant checkedAt, GatewayHealth gateway,
@@ -85,5 +117,9 @@ public class SystemHealthService {
     public record DeviceHealth(String status, String deviceId,
                                LocalDateTime lastSeen, String firmwareVersion,
                                String lastEventType, String lastEventId,
-                               Integer wifiRssiDbm, String batteryStatus) {}
+                               Integer wifiRssiDbm,
+                               Integer batteryMillivolts,
+                               Integer batteryPercentageEstimate,
+                               LocalDateTime batteryReportedAt,
+                               String batteryStatus) {}
 }

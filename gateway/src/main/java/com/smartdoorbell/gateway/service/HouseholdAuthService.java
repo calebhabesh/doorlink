@@ -175,6 +175,20 @@ public class HouseholdAuthService {
                 .toList();
     }
 
+    /**
+     * Owners receive the access-management view. Other household members receive
+     * only the active member directory, without device/session metadata.
+     */
+    @Transactional(readOnly = true)
+    public List<MemberView> membersFor(Principal principal) {
+        if (principal.isOwner()) return members();
+        return memberRepository.findAllByDisabledAtIsNullOrderByCreatedAtAsc().stream()
+                .map(member -> new MemberView(member.getId(), member.getName(),
+                        member.getEmail(), member.getRole(), member.getCreatedAt(),
+                        null, List.of()))
+                .toList();
+    }
+
     @Transactional
     public DeviceView renameDevice(long deviceId, String newName) {
         HouseholdDeviceSession device = deviceRepository.findById(deviceId)

@@ -40,7 +40,8 @@ public:
     esp_err_t record_button_hold(RecordedAudio &audio,
                                  std::uint32_t max_duration_ms,
                                  std::uint32_t minimum_duration_ms,
-                                 std::uint32_t &recorded_duration_ms);
+                                 std::uint32_t &recorded_duration_ms,
+                                 std::int64_t absolute_deadline_us = 0);
     void stop();
     void request_capture_stop() { stop_requested_.store(true); }
     bool capture_active() const { return capture_active_.load(); }
@@ -48,7 +49,7 @@ public:
 private:
     static constexpr std::size_t kReadFrames = 256;
 
-    esp_err_t start_microphone();
+    esp_err_t start_microphone(std::int64_t absolute_deadline_us = 0);
 
     i2s_chan_handle_t rx_channel_{nullptr};
     bool owns_audio_bus_{false};

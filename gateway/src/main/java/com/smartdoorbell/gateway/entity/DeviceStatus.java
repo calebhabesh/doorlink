@@ -21,6 +21,8 @@ public class DeviceStatus {
     private String lastEventType;
     private String lastEventId;
     private Integer wifiRssiDbm;
+    private Integer batteryMillivolts;
+    private LocalDateTime batteryReportedAt;
 
     protected DeviceStatus() {}
 
@@ -29,12 +31,17 @@ public class DeviceStatus {
     }
 
     public void record(LocalDateTime seenAt, String firmwareVersion,
-                       String eventType, String eventId, Integer wifiRssiDbm) {
+                       String eventType, String eventId, Integer wifiRssiDbm,
+                       Integer batteryMillivolts) {
         this.lastSeen = seenAt;
         this.firmwareVersion = firmwareVersion;
         this.lastEventType = eventType;
         this.lastEventId = eventId;
         this.wifiRssiDbm = wifiRssiDbm;
+        if (batteryMillivolts != null) {
+            this.batteryMillivolts = batteryMillivolts;
+            this.batteryReportedAt = seenAt;
+        }
     }
 
     public String getDeviceId() { return deviceId; }
@@ -43,4 +50,6 @@ public class DeviceStatus {
     public String getLastEventType() { return lastEventType; }
     public String getLastEventId() { return lastEventId; }
     public Integer getWifiRssiDbm() { return wifiRssiDbm; }
+    public Integer getBatteryMillivolts() { return batteryMillivolts; }
+    public LocalDateTime getBatteryReportedAt() { return batteryReportedAt; }
 }
