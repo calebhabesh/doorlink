@@ -85,7 +85,7 @@ export default function SetupPage() {
         <form onSubmit={submit} className="mt-7 space-y-4">
           <Field name="name" label="Your name" autoComplete="name" required />
           <Field name="email" label="Email" type="email" autoComplete="email" required />
-          <Field name="deviceName" label="Device name" placeholder="Caleb’s iPhone" required />
+          <Field name="deviceName" label="Device name" placeholder="Living Room Tablet" required />
           <Field name="setupToken" label="Bootstrap token" type="password" autoComplete="off" required />
           {error && <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-300">{error}</p>}
           <button disabled={submitting} className="w-full rounded-xl bg-emerald-500 px-5 py-3.5 font-black text-zinc-950 hover:bg-emerald-400 disabled:opacity-50">

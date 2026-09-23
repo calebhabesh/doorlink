@@ -16,8 +16,8 @@ export default function ClockGlobeCard() {
 
   if (!time) {
     return (
-      <div className="bg-zinc-950/50 backdrop-blur-md border border-zinc-800 p-6 rounded-3xl flex items-center justify-center h-28 shadow-lg">
-        <span className="text-zinc-500 animate-pulse text-xs font-mono uppercase tracking-widest">Syncing Time...</span>
+      <div className="bg-zinc-950 border border-zinc-800 p-6 rounded-3xl flex items-center justify-center h-28 shadow-lg">
+        <span className="text-zinc-500 animate-pulse font-mono text-xs uppercase tracking-widest">Syncing Time...</span>
       </div>
     );
   }
@@ -37,12 +37,14 @@ export default function ClockGlobeCard() {
     year: 'numeric',
   });
 
-  // Timezone matching
+  // Accurate dynamic timezone formatting without hardcoded fallbacks
   const timeZoneName = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const timeZoneAbbr = time.toLocaleDateString(undefined, { timeZoneName: 'short' }).split(', ')[1] || 'EDT';
+  const timeZoneAbbr = new Intl.DateTimeFormat(undefined, { timeZoneName: 'short' })
+    .formatToParts(time)
+    .find((part) => part.type === 'timeZoneName')?.value || '';
 
   return (
-    <div className="bg-zinc-950/50 backdrop-blur-md border border-zinc-800 p-6 rounded-3xl flex items-center justify-between hover:border-zinc-700 transition-all duration-300 shadow-lg group relative overflow-hidden animate-flash-event">
+    <div className="bg-zinc-950 border border-zinc-800 p-6 rounded-3xl flex items-center justify-between hover:border-zinc-700 transition-all duration-300 shadow-lg group relative overflow-hidden">
       {/* Background radial highlight */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-500/[0.02] via-transparent to-transparent pointer-events-none" />
       
@@ -58,7 +60,7 @@ export default function ClockGlobeCard() {
           {dateString}
         </p>
         <p className="text-[10px] text-zinc-500 font-mono mt-0.5 uppercase tracking-widest">
-          {timeZoneName} ({timeZoneAbbr})
+          {timeZoneName}{timeZoneAbbr ? ` (${timeZoneAbbr})` : ''}
         </p>
       </div>
 
@@ -66,10 +68,9 @@ export default function ClockGlobeCard() {
       <div className="relative w-16 h-16 shrink-0 flex items-center justify-center overflow-hidden rounded-full border border-zinc-800 bg-zinc-950/90 shadow-inner group">
         <div className="absolute inset-0 rounded-full bg-blue-500/5 blur-md group-hover:bg-blue-500/10 transition-all duration-500" />
         
-        {/* Slow rotating SVG globe wireframe */}
+        {/* Slow rotating SVG globe wireframe respecting reduced motion */}
         <svg 
-          className="w-12 h-12 text-zinc-700 group-hover:text-blue-500/40 transition-colors duration-500"
-          style={{ animation: 'spin 25s linear infinite' }}
+          className="w-12 h-12 text-zinc-700 group-hover:text-blue-500/40 transition-colors duration-500 globe-spin"
           viewBox="0 0 100 100" 
           fill="none" 
           stroke="currentColor" 
@@ -88,6 +89,14 @@ export default function ClockGlobeCard() {
           @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
+          }
+          .globe-spin {
+            animation: spin 25s linear infinite;
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .globe-spin {
+              animation: none !important;
+            }
           }
         `}</style>
       </div>

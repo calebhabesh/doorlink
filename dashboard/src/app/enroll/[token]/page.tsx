@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import LogoIcon from '../../../components/LogoIcon';
 import { Smartphone } from 'lucide-react';
 
@@ -9,7 +9,6 @@ type Invitation = { name: string; email: string; expiresAt: string };
 
 export default function EnrollmentPage() {
   const params = useParams<{ token: string }>();
-  const router = useRouter();
   const [invitation, setInvitation] = useState<Invitation | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -29,19 +28,30 @@ export default function EnrollmentPage() {
     setSubmitting(true);
     setError(null);
     const data = new FormData(event.currentTarget);
-    const response = await fetch(`/api/household/enroll/${encodeURIComponent(params.token)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deviceName: data.get('deviceName') }),
-    });
-    if (!response.ok) {
-      const body = await response.json().catch(() => ({ error: 'Enrollment failed' }));
-      setError(body.error ?? 'Enrollment failed');
+    try {
+      const response = await fetch(`/api/household/enroll/${encodeURIComponent(params.token)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceName: data.get('deviceName') }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({ error: 'Enrollment failed' }));
+        setError(body.error ?? 'Enrollment failed');
+        return;
+      }
+
+      const session = await fetch('/api/household/session', { cache: 'no-store' });
+      if (!session.ok) {
+        setError('Enrollment succeeded, but this browser did not keep its session. Use the localhost URL and request a new device link.');
+        return;
+      }
+
+      window.location.replace('/');
+    } catch {
+      setError('Could not complete enrollment. Check the gateway connection and try again.');
+    } finally {
       setSubmitting(false);
-      return;
     }
-    router.replace('/');
-    router.refresh();
   }
 
   return (

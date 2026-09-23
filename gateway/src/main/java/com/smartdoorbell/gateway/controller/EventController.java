@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.integration.annotation.ServiceActivator;
@@ -32,6 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.UUID;
 
@@ -467,6 +469,7 @@ public class EventController {
             org.springframework.core.io.InputStreamResource resource = new org.springframework.core.io.InputStreamResource(s3Object.getObjectContent());
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType(s3Object.getObjectMetadata().getContentType()))
+                    .cacheControl(CacheControl.maxAge(30, TimeUnit.DAYS).cachePublic())
                     .body(resource);
         }
         return ResponseEntity.notFound().build();

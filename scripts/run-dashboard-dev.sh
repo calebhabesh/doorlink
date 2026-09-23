@@ -9,6 +9,10 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 DEV_GATEWAY_URL="${SMART_DOORBELL_DEV_GATEWAY_URL:-http://192.168.1.10:8080}"
 DEV_HOST="${SMART_DOORBELL_DEV_HOST:-127.0.0.1}"
 DEV_PORT_START="${SMART_DOORBELL_DEV_PORT:-3001}"
+DEV_BROWSER_HOST="$DEV_HOST"
+if [[ "$DEV_HOST" == "127.0.0.1" ]]; then
+  DEV_BROWSER_HOST="localhost"
+fi
 
 if ! [[ "$DEV_PORT_START" =~ ^[0-9]+$ ]] \
   || (( DEV_PORT_START < 1 || DEV_PORT_START > 65535 )); then
@@ -29,9 +33,10 @@ while ! port_is_available "$DEV_PORT"; do
   ((DEV_PORT += 1))
 done
 
+# The sessions API requires a household cookie; probe the public status endpoint.
 if ! curl --fail --silent --show-error --max-time 5 \
-  "$DEV_GATEWAY_URL/api/events/sessions?size=1" >/dev/null; then
-  echo "Could not reach the Raspberry Pi gateway at $DEV_GATEWAY_URL." >&2
+  "$DEV_GATEWAY_URL/api/household/bootstrap/status" >/dev/null; then
+  echo "Could not verify the Raspberry Pi gateway at $DEV_GATEWAY_URL." >&2
   echo "Set SMART_DOORBELL_DEV_GATEWAY_URL to the correct gateway URL and retry." >&2
   exit 1
 fi
@@ -40,7 +45,7 @@ export GATEWAY_URL="$DEV_GATEWAY_URL"
 export GATEWAY_READ_ONLY=true
 export NEXT_TELEMETRY_DISABLED=1
 
-echo "Starting the hot-reloading dashboard at http://$DEV_HOST:$DEV_PORT"
+echo "Open the hot-reloading dashboard at http://$DEV_BROWSER_HOST:$DEV_PORT"
 echo "Using live Raspberry Pi data from $DEV_GATEWAY_URL (read-only proxy)"
 if (( DEV_PORT != DEV_PORT_START )); then
   echo "Port $DEV_PORT_START was busy; selected the next available port: $DEV_PORT"

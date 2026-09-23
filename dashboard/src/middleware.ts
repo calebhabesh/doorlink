@@ -66,10 +66,13 @@ export async function middleware(request: NextRequest) {
     const methodIsReadOnly = request.method === 'GET'
       || request.method === 'HEAD'
       || request.method === 'OPTIONS';
+    // A local browser needs one revocable session before it can read Pi data.
+    const isDeviceEnrollment = request.method === 'POST'
+      && /^\/api\/household\/enroll\/[^/]+$/.test(path);
 
-    if (gatewayReadOnly && !methodIsReadOnly) {
+    if (gatewayReadOnly && !methodIsReadOnly && !isDeviceEnrollment) {
       return NextResponse.json(
-        { error: 'The development gateway proxy is read-only.' },
+        { error: 'The development gateway proxy only allows reads and device enrollment.' },
         { status: 405, headers: { Allow: 'GET, HEAD, OPTIONS' } },
       );
     }
@@ -138,4 +141,3 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: ['/((?!_next/static|_next/image|icon.svg|favicon.ico).*)'],
 };
-

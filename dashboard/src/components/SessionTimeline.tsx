@@ -125,7 +125,7 @@ export default function SessionTimeline({ session }: { session: VisitorSession }
               </div>
               <span className="flex items-center gap-1.5 rounded-full bg-sky-500/10 px-3 py-1 text-[10px] font-bold text-sky-300">
                 {item.reply.deliveredAt ? <Check className="h-3 w-3" /> : <Clock3 className="h-3 w-3" />}
-                {item.reply.deliveredAt ? 'Played At Door' : 'Playback Queued'}
+                {item.reply.deliveredAt ? 'Delivered to Doorbell' : 'Playback Queued'}
               </span>
             </div>
             <AudioPlayer src={`${MEDIA_BASE_URL}/${item.reply.audioKey}`} durationMs={item.reply.durationMs} label="homeowner reply" tone="homeowner" />

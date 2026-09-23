@@ -3,7 +3,12 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { X } from 'lucide-react';
-import { getSessionCoverImageKey, VisitorSession } from '../lib/visitorSessions';
+import {
+  getSessionCoverImageKey,
+  isImageKeyCached,
+  markImageKeyCached,
+  VisitorSession,
+} from '../lib/visitorSessions';
 import SessionTimeline from './SessionTimeline';
 
 interface EventPreviewDrawerProps {
@@ -14,10 +19,12 @@ interface EventPreviewDrawerProps {
 const MEDIA_BASE_URL = '/api/events/media';
 
 export default function EventPreviewDrawer({ session, onClose }: EventPreviewDrawerProps) {
-  const [isImageLoaded, setIsImageLoaded] = useState(false);
   const coverImageKey = session ? getSessionCoverImageKey(session) : null;
+  const [isImageLoaded, setIsImageLoaded] = useState(() => isImageKeyCached(coverImageKey));
 
-  useEffect(() => setIsImageLoaded(false), [coverImageKey]);
+  useEffect(() => {
+    setIsImageLoaded(isImageKeyCached(coverImageKey));
+  }, [coverImageKey]);
   useEffect(() => {
     if (!session) return;
     const handleEscape = (event: KeyboardEvent) => event.key === 'Escape' && onClose();
@@ -45,7 +52,18 @@ export default function EventPreviewDrawer({ session, onClose }: EventPreviewDra
 
         {coverImageKey && (
           <div className="relative mb-6 aspect-[4/3] overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900">
-            <Image src={`${MEDIA_BASE_URL}/${coverImageKey}`} alt="First visitor session snapshot" fill unoptimized onLoad={() => setIsImageLoaded(true)} className={`object-cover transition ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`} />
+            <Image
+              src={`${MEDIA_BASE_URL}/${coverImageKey}`}
+              alt="First visitor session snapshot"
+              fill
+              unoptimized
+              priority
+              onLoad={() => {
+                markImageKeyCached(coverImageKey);
+                setIsImageLoaded(true);
+              }}
+              className={`object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            />
           </div>
         )}
 
