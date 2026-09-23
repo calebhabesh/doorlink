@@ -39,8 +39,8 @@ export default function EventPreviewDrawer({ session, onClose }: EventPreviewDra
   if (!session) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/70 backdrop-blur-sm" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <aside className="h-full w-full max-w-xl overflow-y-auto border-l border-zinc-800 bg-zinc-950 p-6 shadow-2xl sm:p-8">
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/70 backdrop-blur-sm animate-fade-in" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <aside className="h-full w-full max-w-xl overflow-y-auto border-l border-zinc-800 bg-zinc-950 p-6 shadow-2xl sm:p-8 animate-slide-in-right">
         <div className="mb-7 flex items-start justify-between gap-4">
           <div>
             <p className="text-[10px] font-black tracking-[0.22em] text-emerald-400">Visitor Session</p>

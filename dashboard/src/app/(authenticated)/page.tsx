@@ -232,10 +232,10 @@ export default function Home() {
                     key={session.sessionId}
                     type="button"
                     onClick={() => setActiveSessionId(session.sessionId)}
-                    className={`group relative w-full overflow-hidden rounded-2xl border p-3 text-left transition focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none ${
+                    className={`group relative w-full overflow-hidden rounded-2xl border p-3 text-left transition-all duration-200 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none ${
                       isSelected
-                        ? 'border-emerald-500/50 bg-gradient-to-r from-emerald-500/[0.09] to-zinc-950 shadow-[0_0_24px_rgba(16,185,129,0.07)]'
-                        : 'border-zinc-800 bg-zinc-950 hover:border-zinc-700 hover:bg-zinc-900/70'
+                        ? 'border-emerald-500/50 bg-gradient-to-r from-emerald-500/[0.09] to-zinc-950 shadow-[0_0_24px_rgba(16,185,129,0.07)] translate-x-0.5'
+                        : 'border-zinc-800 bg-zinc-950 hover:border-zinc-700 hover:bg-zinc-900/70 hover:translate-x-1'
                     }`}
                   >
                     {isSelected && (

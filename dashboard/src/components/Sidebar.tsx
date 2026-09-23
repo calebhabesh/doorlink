@@ -57,10 +57,10 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
               key={item.label}
               href={item.href}
               onClick={onNavigate}
-              className={`flex items-center px-6 py-4 transition-all border-l-4 rounded-r-lg focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none ${
+              className={`flex items-center px-6 py-4 transition-all duration-200 border-l-4 rounded-r-lg focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none ${
                 isActive
-                  ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400 font-bold'
-                  : 'text-zinc-400 border-transparent hover:text-zinc-100 hover:bg-zinc-900/60'
+                  ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400 font-bold translate-x-0.5'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-100 hover:bg-zinc-900/60 hover:translate-x-1'
               }`}
             >
               <Icon className="w-5 h-5 mr-4 shrink-0" />

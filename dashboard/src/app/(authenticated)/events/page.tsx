@@ -142,7 +142,7 @@ export default function EventLog() {
                         tabIndex={0}
                         role="button"
                         aria-label={`View visitor session from ${new Date(session.startedAt).toLocaleString()}`}
-                        className="group cursor-pointer hover:bg-zinc-900/60 transition-colors focus-visible:outline-none focus-visible:bg-zinc-900/80"
+                        className="group cursor-pointer hover:bg-zinc-900/60 transition-all duration-200 hover:translate-x-0.5 focus-visible:outline-none focus-visible:bg-zinc-900/80"
                       >
                         {/* Event Thumbnail Snapshot */}
                         <td className="whitespace-nowrap px-6 py-3">
@@ -242,7 +242,7 @@ export default function EventLog() {
                       key={session.sessionId}
                       type="button"
                       onClick={() => setSelectedSession(session)}
-                      className="w-full rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 text-left transition-colors hover:border-zinc-700 hover:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none flex items-center gap-4"
+                      className="w-full rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 text-left transition-all duration-200 hover:border-zinc-700 hover:bg-zinc-900 hover:translate-x-0.5 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none flex items-center gap-4"
                     >
                       <div className="relative h-14 w-16 shrink-0 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
                         {coverImageKey ? (

@@ -117,10 +117,10 @@ export default function AuthenticatedShell({
       {isMobileMenuOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
             onClick={() => setIsMobileMenuOpen(false)}
           />
-          <div className="relative w-64 h-full bg-zinc-950 border-r border-zinc-800 shadow-2xl flex flex-col">
+          <div className="relative w-64 h-full bg-zinc-950 border-r border-zinc-800 shadow-2xl flex flex-col animate-slide-in-left">
             <div className="h-16 flex items-center justify-between px-4 border-b border-zinc-800 shrink-0">
               <span className="font-bold text-lg tracking-tight text-zinc-100 pl-2">Menu</span>
               <button

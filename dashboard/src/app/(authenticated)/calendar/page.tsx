@@ -198,7 +198,7 @@ export default function CalendarView() {
 
       {/* Selected Day Side Panel */}
       {selectedDay && (
-        <div className="w-80 bg-zinc-950 border border-zinc-800 rounded-3xl p-6 flex flex-col h-full shrink-0 shadow-2xl">
+        <div className="w-80 bg-zinc-950 border border-zinc-800 rounded-3xl p-6 flex flex-col h-full shrink-0 shadow-2xl animate-slide-in-right">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-black text-white uppercase tracking-tight">
               {viewDate.toLocaleString('default', { month: 'short' })} {selectedDay}

@@ -354,8 +354,8 @@ export default function HouseholdPage() {
       )}
 
       {isOwner && invitation && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 px-5 backdrop-blur-sm">
-          <section className="w-full max-w-lg rounded-3xl border border-zinc-700 bg-zinc-900 p-7 shadow-2xl">
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 px-5 backdrop-blur-sm animate-fade-in">
+          <section className="w-full max-w-lg rounded-3xl border border-zinc-700 bg-zinc-900 p-7 shadow-2xl animate-modal-enter">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-400">Single-use enrollment link</p>
