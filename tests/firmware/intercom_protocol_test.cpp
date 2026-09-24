@@ -81,15 +81,15 @@ void test_fragment_assembly()
 void test_gateway_url_policy()
 {
     using doorbell::GatewayCommandUrlKind;
-    constexpr const char *gateway = "http://192.168.1.10:8080/api/events";
+    constexpr const char *gateway = "http://192.0.2.10:8080/api/events";
     constexpr const char *uuid = "123e4567-e89b-12d3-a456-426614174000";
 
     expect(doorbell::gateway_command_url_allowed(
-               "http://192.168.1.10:8080/api/events/media/42-reply.wav",
+               "http://192.0.2.10:8080/api/events/media/42-reply.wav",
                gateway, GatewayCommandUrlKind::Audio),
            "gateway audio route is accepted");
     expect(doorbell::gateway_command_url_allowed(
-               "http://192.168.1.10:8080/api/system/ptt/messages/"
+               "http://192.0.2.10:8080/api/system/ptt/messages/"
                "123e4567-e89b-12d3-a456-426614174000/delivered",
                gateway, GatewayCommandUrlKind::Acknowledgement),
            "gateway acknowledgement route is accepted");
@@ -100,31 +100,31 @@ void test_gateway_url_policy()
                GatewayCommandUrlKind::Audio),
            "foreign origin is rejected");
     expect(!doorbell::gateway_command_url_allowed(
-               "http://192.168.1.10:8080.attacker.invalid/api/events/media/a.wav",
+               "http://192.0.2.10:8080.attacker.invalid/api/events/media/a.wav",
                gateway, GatewayCommandUrlKind::Audio),
            "trusted-host prefix confusion is rejected");
     expect(!doorbell::gateway_command_url_allowed(
-               "http://192.168.1.10:8080@attacker.invalid/api/events/media/a.wav",
+               "http://192.0.2.10:8080@attacker.invalid/api/events/media/a.wav",
                gateway, GatewayCommandUrlKind::Audio),
            "URL user-info confusion is rejected");
     expect(!doorbell::gateway_command_url_allowed(
-               "http://192.168.1.10:8080/api/events/media/../admin",
+               "http://192.0.2.10:8080/api/events/media/../admin",
                gateway, GatewayCommandUrlKind::Audio),
            "path traversal is rejected");
     expect(!doorbell::gateway_command_url_allowed(
-               "http://192.168.1.10:8080/api/events/media/%2e%2e/admin",
+               "http://192.0.2.10:8080/api/events/media/%2e%2e/admin",
                gateway, GatewayCommandUrlKind::Audio),
            "encoded path traversal is rejected");
     expect(!doorbell::gateway_command_url_allowed(
-               "http://192.168.1.10:8080/api/events/media/a.wav#https://attacker.invalid",
+               "http://192.0.2.10:8080/api/events/media/a.wav#https://attacker.invalid",
                gateway, GatewayCommandUrlKind::Audio),
            "fragment is rejected");
     expect(!doorbell::gateway_command_url_allowed(
-               "http://192.168.1.10:8080/api/events/media/a.wav?redirect=1",
+               "http://192.0.2.10:8080/api/events/media/a.wav?redirect=1",
                gateway, GatewayCommandUrlKind::Audio),
            "query string is rejected");
     expect(!doorbell::gateway_command_url_allowed(
-               "http://192.168.1.10:8080/api/system/ptt/messages/not-a-uuid/delivered",
+               "http://192.0.2.10:8080/api/system/ptt/messages/not-a-uuid/delivered",
                gateway, GatewayCommandUrlKind::Acknowledgement),
            "malformed acknowledgement identifier is rejected");
     expect(!doorbell::intercom_uuid_allowed(

@@ -1,235 +1,59 @@
 # Doorlink
 
-## About The Project
+Doorlink is a self-hosted smart doorbell built around a custom ESP32-S3 board and a Raspberry Pi. A button press wakes the board, captures a still image, and sends the event to a local gateway. The gateway stores the media, updates the web dashboard, and sends a notification. Visitor recordings and stored, turn-based voice replies are also supported.
 
-- Living in an apartment without a concierge, you're often left guessing who's at the door, and asking questions like "did my package arrive?". Providing an interface for visitors to communicate in real-time to notify me of package deliveries and general presence would be really convenient.
+<p align="center">
+  <img src="docs/media/finished-enclosure.jpg" alt="Assembled Doorlink prototype in its black enclosure" width="420">
+</p>
 
-- Doorlink is a self-hosted IoT smart doorbell built around a custom ESP32-S3-WROOM-1-N16R8 PCB, a Raspberry Pi gateway, local media storage, and real-time mobile notifications. The validated hardware path captures and uploads doorbell still images and visitor audio without a proprietary subscription cloud. Stored half-duplex replies have also passed an end-to-end dashboard-to-doorbell speaker test.
+## Prototype status
 
-## Demo
+The assembled Rev C board has completed battery-powered button wake, QXGA image capture, Wi-Fi upload, dashboard display, notification, and return to deep sleep. The microphone, speaker, and stored voice-reply path have been exercised on hardware. The latest session timing and hardened firmware still need a final flashed hardware retest; battery life and closed-enclosure current have not been measured. This is a working prototype, not a qualified outdoor product.
 
-- [GIF or short video of doorbell will go here]
+## How it fits together
 
-## Current Status
-
-The Rev C PCB is assembled and in hardware bring-up. A battery-powered QXGA
-`2048x1536` capture reached the Raspberry Pi gateway, appeared in Doorlink, and
-triggered the configured notification/chime path. A subsequent production
-button wake also captured and displayed a correctly oriented QXGA portrait,
-delivered its notification, and returned to deep sleep. The gateway, dashboard,
-PostgreSQL, MinIO, MQTT, SSE, and notification services are implemented.
-
-The event-driven C++ firmware controller now builds. The isolated GPIO2 button
-and GPIO3 PIR wake/return-to-deep-sleep paths have passed on hardware,
-including early ring-LED acknowledgement for a button press. The complete
-production wake/capture/upload/sleep cycle has also passed from both button
-and PIR triggers, including Doorlink display and notifications. End-to-end
-notification latency was reduced by the early-trigger flow. Production now
-arms only the GPIO2 button by default; PIR remains available behind an explicit
-build option and in its isolated diagnostic, but cannot generate normal
-doorbell events accidentally. GPIO48 fades in, holds, and fades out after a
-button press while D3 provides immediate wake acknowledgement.
-The production controller now implements release-driven hold-to-message capture,
-session-grouped presses, a complete first local chime, interruptible local
-repress acknowledgement, and stored browser PTT replies in a bounded
-MQTT-controlled window. The earlier fixed five-second WAV
-and stored reply path were exercised end to end on the assembled board; the new
-hold thresholds, full-chime handoff, multi-press behavior, and latency still need
-an instrumented hardware retest. Battery life has not been measured.
-The pre-enclosure hardening revision adds signed/replay-resistant MQTT commands,
-strict gateway URL policy, absolute audio/session deadlines, and retained safe
-GPIO states through deep sleep. It is compiler- and regression-test-verified,
-but has not yet completed the final flashed battery acceptance run.
-The earlier MK1 heating fault was resolved by reworking its ungrounded center
-pad; see `docs/hardware-bringup.md` for the measured bring-up record.
-
-## Features
-
-**Implemented Software Stack:**
-
-- Real-time push notifications to Android and iOS via ntfy (using public ntfy.sh servers)
-- Self-hosted gateway on Raspberry Pi 4 (Spring Boot, Postgres, Mosquitto, MinIO)
-- High-density Next.js Dashboard for viewing historical events and active feeds
-- Local network media storage without third-party vendor cloud lock-in
-
-**Validated Or Implemented Hardware/Firmware:**
-
-- OV5640 QXGA still capture at 10 MHz with bounded camera power sequencing
-- Battery-only capture, Wi-Fi upload, gateway persistence, dashboard display, and notifications
-- Individually validated ICS-43434 microphone and MAX98357A speaker paths
-- C++ wake/capture/upload/sleep controller with C hardware drivers
-- Hardware-validated visitor WAV capture and stored half-duplex PTT reply path
-
-**Still Pending Hardware Validation:**
-
-- Active, idle, and deep-sleep current
-- Corridor-lighting exposure and moving-person blur
-- Instrumented microphone-start and reply-latency measurements
-
-## System Architecture
-
-- Architecture diagram pending. Current deployment topology is documented in `docs/pi-deployment.md`.
-
-## Interaction Model (Audio & Wakeup)
-
-The firmware model is a bounded visitor session followed by a short, turn-based
-reply window. Full-duplex phone-call behavior is intentionally excluded; MQTT
-carries control messages while HTTP carries WAV media.
-
-1. **Trigger:** GPIO2 wakes on an active-low button press through EXT0. Before enabling the speaker, camera, or Wi-Fi, production firmware samples +BATT through the populated GPIO1 100k/100k divider and includes calibrated millivolts in event telemetry. GPIO3 PIR wake is disabled in the normal production build and is opt-in for future motion events.
-2. **First chime and hold:** The first local chime uses the camera-safe profile and may continue through the shutter. Retriggers share one 15-second wall limit, and an I2S stream that makes no progress for 1.5 seconds is torn down. A visitor still holding after the chime gets microphone capture until release or 15 seconds; clips shorter than one second of microphone audio are discarded.
-3. **Capture:** With RF off, firmware enables U9 and captures the initial QXGA JPEG before connecting Wi-Fi. Later presses refresh it only after it is 15 seconds old.
-4. **Later presses:** Every valid down-edge becomes another ordered press in the same session and restarts LED feedback. When I2S is idle, an onboard chime starts immediately; when a local chime is already audible, it rewinds in place so rapid presses remain perceptible. A deliberate hold continuing past 1,200 ms or arriving homeowner audio stops interruptible repress audio cleanly and takes priority. Repress chimes never queue behind active dialogue.
-5. **Upload:** Image and visitor recordings have stable per-press identifiers. The gateway groups them into one session, deduplicates retries per press, applies a 1-second leading-edge whole-home chime cooldown without queueing suppressed presses, and publishes lifecycle updates over SSE.
-6. **Reply window:** Dashboard PTT replies are stored WAV turns. Gateway commands are HMAC-signed with unique replay IDs; firmware accepts reply and acknowledgement URLs only from the configured gateway. A reply that arrives during visitor capture waits until the visitor releases; the microphone stays off during speaker playback.
-7. **Shutdown:** At the 60-second idle or 90-second absolute deadline, firmware closes the gateway session, releases network/media resources, latches camera, amplifier, and I2S controls safe, and enters deep sleep.
-
-The dashboard Active Event, Event Log, and Calendar show one expandable visitor
-session with all presses, visitor messages, and homeowner replies. See
-`docs/behavioral_spec.md` for the locked interaction contract.
-
-The System Health response and dashboard show the last reported battery voltage
-and a clearly marked, approximate single-cell Li-ion percentage. This is
-event-driven telemetry, not a continuously updated fuel gauge. The board does
-not expose charger state or the optional battery thermistor to the MCU, and
-battery life remains unqualified until current measurements are complete.
-
-## Hardware
-
-- [Photo of assembled enclosure and custom PCB]
-
-## Components
-
-| Component                       | Purpose               |
-| ------------------------------- | --------------------- |
-| ESP32-S3-WROOM-1-N16R8          | Main MCU (Octal SPI)* |
-| OV5640 (24-pin FPC)             | Camera                |
-| ICS-43434                       | Visitor microphone*   |
-| MAX98357A + 4Ω, 3W-rated speaker | Homeowner reply audio |
-| MCP73871                        | LiPo charger and power-path manager |
-| TPS63802                        | 3.3 V buck-boost regulator |
-| TPS22919                        | Firmware-controlled camera power switch |
-| XC6206P282MR & XC6206P152MR     | 2.8V and 1.5V Camera LDOs |
-| SRV05-4                         | ESD Protection        |
-| 22mm Momentary Button           | Doorbell trigger      |
-| Raspberry Pi 4 (4GB)            | Local gateway server  |
-| 80×130×70mm black ABS enclosure | Housing construction target |
-
-*\* Note: The ESP32-S3 and ICS-43434 are hand-soldered onto the board to maintain economy-level PCBA constraints with JLCPCB.*
-
-### Wiring And PCB
-
-The KiCad design, routed netlist, Gerbers, BOM exports, and assembly notes live under `pcb/`. The firmware pin map is mirrored from the routed netlist in `main/board_pins.h`.
-
-## Software Stack
-
-- **Firmware:** C/C++ (ESP-IDF framework)
-- **Gateway:** Spring Boot, Docker Compose
-- **Messaging:** Eclipse Mosquitto (MQTT)
-- **Storage:** MinIO (S3-compatible object storage)
-- **Database:** PostgreSQL
-- **Notifications:** ntfy
-- **Dashboard:** Next.js 14
-
-## Development And Deployment Workflow
-
-Development happens from this Arch server checkout. The Raspberry Pi is the always-on gateway target running Docker infrastructure, the Spring Boot gateway, and the Next.js dashboard. Spring Boot and Next.js are managed by systemd units tracked under `scripts/systemd/`.
-
-Normal workflow:
-
-1. Edit and verify changes on the Arch development machine.
-2. Build and deploy only the changed application from Arch:
-   `./scripts/build-pi-production.sh --dashboard-only --restart` or
-   `./scripts/build-pi-production.sh --gateway-only --restart`.
-3. Commit and push changes after verification.
-4. Pull on the Pi only when tracked infrastructure or systemd configuration changed.
-
-See `docs/pi-deployment.md` for the current Pi topology,
-`docs/hardware-bringup.md` for the board bring-up record, and
-`docs/enclosure-construction-guide.md` for the measured-fit enclosure workflow.
-
-## Getting Started For Development
-
-### Prerequisites
-
-- Java 21 for the Spring Boot gateway
-- Node.js/npm for the dashboard
-- ESP-IDF installed for firmware builds
-- Docker + Docker Compose on the Raspberry Pi gateway
-- WiFi credentials
-
-### Infrastructure On The Raspberry Pi
-
-```bash
-git clone https://github.com/calebhabesh/smart-doorbell
-cd smart-doorbell
-docker compose up -d
+```mermaid
+flowchart LR
+    A[Doorbell PCB<br/>ESP32-S3 · camera · audio] -->|Wi-Fi| B[Raspberry Pi gateway<br/>Spring Boot]
+    B --> C[(PostgreSQL<br/>events)]
+    B --> D[(MinIO<br/>images and audio)]
+    B --> E[Next.js dashboard]
+    B --> F[ntfy notifications]
+    E -->|Stored voice replies| B
 ```
 
-This starts PostgreSQL, Mosquitto, and MinIO. On the Pi, `smart-doorbell-infra.service` runs the same compose bootstrap during boot before the gateway starts. Spring Boot and Next.js run as separate systemd services; see `docs/pi-deployment.md`.
+The firmware captures the image before joining Wi-Fi, then powers the camera down. Audio is turn-based: the visitor microphone and doorbell speaker do not run as a full-duplex call. The Raspberry Pi also runs Mosquitto for device commands.
 
-Application artifacts are cross-built and deployed from Arch with
-`./scripts/build-pi-production.sh --restart`; production application builds do
-not run on the Pi.
+## Hardware gallery
 
-### Backend Verification
+| KiCad Rev C board | Rev C schematic |
+| --- | --- |
+| [![KiCad 3D view of the Rev C PCB](docs/media/pcb-3d-view.png)](docs/media/pcb-3d-view.png) | [![Rev C electrical schematic](docs/media/schematic.png)](docs/media/schematic.png) |
 
-```bash
-cd gateway
-./mvnw compile
-# or
-./mvnw test
-```
+| Bench bring-up | Populated PCB | Enclosure wiring |
+| --- | --- | --- |
+| ![Board and peripherals during bench testing](docs/media/bench-bringup.jpg) | ![Rev C PCB fitted in the open enclosure](docs/media/assembled-pcb.jpg) | ![Doorbell board, battery, button, and speaker during enclosure assembly](docs/media/wired-interior.jpg) |
 
-### Dashboard Verification
+The board uses an ESP32-S3-WROOM-1-N16R8, OV5640 camera, ICS-43434 microphone, MAX98357A amplifier, MCP73871 charger, and TPS63802 3.3 V regulator. The [PCB overview](pcb/README.md) links the KiCad source and exact Rev C manufacturing files.
 
-```bash
-cd dashboard
-npm install
-npx tsc --noEmit
-npm run lint
-```
+## Explore the project
 
-### Firmware Setup
+| Area | Contents |
+| --- | --- |
+| [`main/`](main/) | ESP-IDF firmware and routed board pin map |
+| [`gateway/`](gateway/) | Spring Boot event API, persistence, media storage, and notifications |
+| [`dashboard/`](dashboard/) | Next.js event and intercom interface |
+| [`pcb/`](pcb/) | KiCad project and manufacturing records |
+| [`docs/parts.md`](docs/parts.md) | Main unit parts and CAD cost |
+| [`docs/firmware-architecture.md`](docs/firmware-architecture.md) | Firmware flow and validation status |
+| [`docs/hardware-bringup.md`](docs/hardware-bringup.md) | Detailed Rev C hardware test record |
 
-```bash
-cp main/config.example.h main/config.h
-# Set Wi-Fi, GATEWAY_API_URL, and the same GATEWAY_API_KEY used by the gateway.
+## Run locally
 
-# Host regression tests for MQTT assembly and gateway URL policy
-./scripts/test-firmware-guards.sh
+Install Docker Compose, Java 21, Node.js/npm, and the dashboard dependencies (`cd dashboard && npm ci`). From the repository root, run `./scripts/run-dev.sh` to start the isolated development stack. The gateway uses port 8081 and the dashboard uses [localhost:3001](http://localhost:3001). On first run, enter the setup token printed by the launcher. Ctrl+C stops the stack. The local credentials in `.env.dev` are for development only.
 
-# Hardware-safe core-only build (default)
-idf.py build
+Firmware builds require ESP-IDF. Copy `main/config.example.h` to the ignored `main/config.h`, set your Wi-Fi and gateway values, then see [firmware architecture](docs/firmware-architecture.md) for the safe and production build commands. Raspberry Pi deployment is documented in [docs/pi-deployment.md](docs/pi-deployment.md).
 
-# Event-driven production build in an isolated directory
-idf.py -B build-production -D SDKCONFIG=sdkconfig.production \
-  -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.production.defaults' build
-```
+## License
 
-The production build is intentionally separate from the safe build. Deploy the
-matching signed-command gateway before flashing it, then complete
-`docs/firmware-release-checklist.md` before sealing the enclosure.
-
-## Project Structure
-
-```
-├── main/              # ESP-IDF C/C++ firmware, services, board pin map, and config template
-├── gateway/           # Spring Boot backend
-├── dashboard/         # Next.js dashboard
-├── pcb/               # KiCad project, Gerbers, production files, and PCB notes
-├── docs/              # Firmware architecture, Pi deployment, bring-up checklist, design notes
-├── scripts/           # Test assets, utility scripts, and Raspberry Pi systemd unit files
-├── docker-compose.yml # PostgreSQL, Mosquitto, and MinIO infrastructure
-├── sdkconfig.defaults # Hardware-safe ESP32-S3 defaults
-└── sdkconfig.production.defaults # Production-controller configuration layer
-```
-
-## Future Improvements
-
-- Measure active and deep-sleep current after the battery-path fault is resolved
-- Corridor-lighting and moving-subject camera validation
-- Retest the immediate greeting schedule and measure button-to-microphone latency
-- Measure reply latency, recorded speech level, and active-session current
-- Backend media proxy or presigned URLs for MinIO objects
-- Motion detection as secondary wakeup trigger
+Software and written documentation: [MIT](LICENSE). KiCad hardware designs and manufacturing files under `pcb/`: [CERN-OHL-P-2.0](pcb/LICENSE). [Project photographs](docs/media/README.md) are © 2026 Caleb Habesh, all rights reserved.

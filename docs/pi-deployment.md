@@ -5,7 +5,7 @@ This document outlines the deployment topology for the Smart Doorbell system on 
 ## Network Topology
 
 - **Host:** Raspberry Pi 4 (4GB)
-- **Local IP Address:** `192.168.1.10` (Ensure this is set as a static IP on your router)
+- **Local IP Address:** assign the Pi a stable LAN address; examples below use `192.168.1.10`.
 
 ### Active Services & Ports
 
@@ -149,6 +149,19 @@ cd /home/ethioprince/dev/smart-doorbell
 ```
 
 The script prints the path to a log under `/tmp/smart-doorbell-diagnostics/` with process CPU usage, memory pressure, Docker stats, and recent service logs.
+
+## Gateway environment
+
+Before deploying a gateway build from the public configuration, set these values in the Pi's ignored `.env` file. The checked-in defaults use localhost and leave Home Assistant chimes disabled.
+
+```dotenv
+INTERCOM_DEVICE_BASE_URL=http://192.168.1.10:8080
+DASHBOARD_URL=https://doorbell.example.com
+CHIME_PROVIDER=homeassistant
+CHIME_HOMEASSISTANT_WEBHOOK_URL=http://192.168.1.10:8123/api/webhook/your-private-id
+```
+
+Replace the addresses and private webhook ID with your own. If Home Assistant is not used, set `CHIME_PROVIDER=none` and omit its webhook URL. Keep the webhook ID out of git.
 
 ## Firmware Configuration (`config.h`)
 

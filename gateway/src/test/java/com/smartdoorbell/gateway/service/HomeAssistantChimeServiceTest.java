@@ -42,7 +42,7 @@ class HomeAssistantChimeServiceTest {
 
     @Test
     void rapidRingsDeliverOnlyLeadingWebhookWithNoTrailingQueue() throws Exception {
-        String webhookUrl = "http://home-assistant/api/webhook/REDACTED_HISTORICAL_VALUE";
+        String webhookUrl = "http://home-assistant/api/webhook/test-webhook-id";
         ReflectionTestUtils.setField(service, "webhookUrl", webhookUrl);
         ReflectionTestUtils.setField(service, "minIntervalMs", 75L);
 
@@ -64,7 +64,7 @@ class HomeAssistantChimeServiceTest {
 
     @Test
     void slowWebhookCannotAccumulateQueuedDeliveries() throws Exception {
-        String webhookUrl = "http://home-assistant/api/webhook/REDACTED_HISTORICAL_VALUE";
+        String webhookUrl = "http://home-assistant/api/webhook/test-webhook-id";
         ReflectionTestUtils.setField(service, "webhookUrl", webhookUrl);
         ReflectionTestUtils.setField(service, "minIntervalMs", 0L);
         CountDownLatch dispatchStarted = new CountDownLatch(1);

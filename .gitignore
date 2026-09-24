@@ -110,6 +110,7 @@ backups/
 
 # Tooling and scripts
 .superpowers/
+.antigravitycli/
 docs/superpowers/plans/
 netlist_report*.txt
 parse_netlist*.py

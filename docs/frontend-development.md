@@ -5,11 +5,13 @@ the Arch development server with hot reloading while reading current sessions,
 media, health, settings, and server-sent events from the Raspberry Pi gateway.
 
 ```bash
-./scripts/run-dashboard-dev.sh
+SMART_DOORBELL_DEV_GATEWAY_URL=http://192.168.1.10:8080 ./scripts/run-dashboard-dev.sh
 ```
 
+Replace the example address with your Raspberry Pi gateway's LAN address.
+
 The launcher starts scanning at port 3001 and prints the URL using the first
-available port. For example, when LineWatchTO already owns port 3001, the
+available port. For example, when another service already owns port 3001, the
 dashboard normally starts at `http://localhost:3002`. Changes under
 `dashboard/src/` should appear without rebuilding or deploying the production
 dashboard.
@@ -18,7 +20,7 @@ From another computer, keep the service loopback-only and create an SSH tunnel
 using the selected port. For port 3002:
 
 ```bash
-ssh -L 3002:127.0.0.1:3002 ethioking@192.168.1.20
+ssh -L 3002:127.0.0.1:3002 user@dev-machine.local
 ```
 
 You can then use `http://localhost:3002` in that computer's browser. For direct
@@ -27,7 +29,7 @@ the raw development port to the internet; place a development hostname behind
 an authenticated tunnel such as Cloudflare Access.
 
 The browser only talks to the local Next.js server. Next.js proxies reads to the
-Pi gateway at `http://192.168.1.10:8080`, so the browser does not need direct
+Pi gateway set in `SMART_DOORBELL_DEV_GATEWAY_URL`, so the browser does not need direct
 database, MinIO, API-key, or CORS access. The development proxy blocks writes
 to event, device, and settings data. Its one exception is the token-backed
 device enrollment request, which creates a revocable browser session. Controls

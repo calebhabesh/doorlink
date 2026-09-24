@@ -6,7 +6,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-DEV_GATEWAY_URL="${SMART_DOORBELL_DEV_GATEWAY_URL:-http://192.168.1.10:8080}"
+DEV_GATEWAY_URL="${SMART_DOORBELL_DEV_GATEWAY_URL:-}"
+if [[ -z "$DEV_GATEWAY_URL" ]]; then
+  echo "Set SMART_DOORBELL_DEV_GATEWAY_URL to the gateway URL before starting." >&2
+  exit 1
+fi
 DEV_HOST="${SMART_DOORBELL_DEV_HOST:-127.0.0.1}"
 DEV_PORT_START="${SMART_DOORBELL_DEV_PORT:-3001}"
 DEV_BROWSER_HOST="$DEV_HOST"

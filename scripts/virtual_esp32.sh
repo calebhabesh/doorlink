@@ -13,7 +13,7 @@ if [ ! -z "$1" ]; then
   fi
 fi
 
-IMAGE_FILE="$(dirname "$0")/test-assets/test-image.jpg"
+IMAGE_FILE="$(dirname "$0")/../docs/hardware/camera/bringup-captures/qxga-clean-internal-colorbar.jpg"
 AUDIO_FILE="$(dirname "$0")/test-assets/test-audio.mp3"
 EVENT_TYPE="DOORBELL_PRESS"
 

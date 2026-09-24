@@ -18,7 +18,7 @@ API read/write, event stream, and media response.
 ## 1. Keep or create the tunnel
 
 In **Cloudflare Zero Trust → Networks → Tunnels**, keep the `doorbell-pi`
-connector and its public hostname:
+connector and its public hostname (replace these examples with yours):
 
 - Hostname: `doorbell.example.com`
 - Service: `HTTP`

@@ -41,7 +41,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "intercom.device-base-url=http://doorbell-gateway:8080"
 })
 class SystemControllerTest {
-    private static final String EVENT_KEY = "0123456789abcdef0123456789abcdef-1";
+    private static final String EVENT_KEY = "0123456789abcdef0123456789abcdef-1"; // gitleaks:allow - fixed test event ID
 
     @Autowired
     private MockMvc mockMvc;

@@ -1,8 +1,8 @@
 # OV5640 357-V1 seller documentation
 
-`DCXYX-LZTKQJ-5M-357-V1-seller-drawing.jpg` is the mechanical and pinout
-drawing supplied by the AliExpress seller for the fixed-focus
-`DCXYX-LZTKQJ-5M-357-V1` OV5640 camera module.
+The pinout below is transcribed from a mechanical drawing supplied by the
+AliExpress seller for the fixed-focus `DCXYX-LZTKQJ-5M-357-V1` OV5640 camera
+module. The seller's original image is not redistributed here.
 
 The drawing identifies the 24 contacts as:
 

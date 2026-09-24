@@ -39,7 +39,7 @@ public class SystemController {
     private final ObjectMapper objectMapper;
     private final EventController eventController;
 
-    @Value("${intercom.device-base-url:http://192.168.1.10:8080}")
+    @Value("${intercom.device-base-url:http://127.0.0.1:8080}")
     private String deviceBaseUrl;
 
     @Value("${intercom.session.max-age-seconds:90}")
