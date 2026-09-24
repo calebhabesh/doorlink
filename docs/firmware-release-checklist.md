@@ -38,7 +38,7 @@ cd gateway
 cd ..
 source /home/ethioking/.espressif/v6.0.1/esp-idf/export.sh
 idf.py -B build-production -D SDKCONFIG=sdkconfig.production \
-  -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.production.defaults' build
+  -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;config/firmware/sdkconfig.production.defaults' build
 ```
 
 ## Rollout order

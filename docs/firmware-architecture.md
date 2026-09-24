@@ -84,7 +84,7 @@ Production-controller build, isolated from the safe `sdkconfig`:
 
 ```bash
 idf.py -B build-production -D SDKCONFIG=sdkconfig.production \
-  -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.production.defaults' build
+  -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;config/firmware/sdkconfig.production.defaults' build
 ```
 
 Both configurations build with ESP-IDF 6.0.1. The hardened production image is

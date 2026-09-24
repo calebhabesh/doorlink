@@ -1,3 +1,5 @@
-# Project media
+# Project Media
 
-The schematic and PCB 3D screenshots show the Rev C hardware design and follow the [hardware license](../../pcb/LICENSE). The bench, board, wiring, and enclosure photographs in this folder are © 2026 Caleb Habesh, all rights reserved.
+The schematic, PCB copper layer, and PCB 3D screenshots show the Rev C hardware design and follow the [hardware license](../../pcb/LICENSE).
+
+The project photographs in this folder are dedicated to the public domain under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).

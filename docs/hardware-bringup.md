@@ -1265,7 +1265,7 @@ Build the isolated diagnostic with the production application disabled:
 ```bash
 source /home/ethioking/.espressif/v6.0.1/esp-idf/export.sh
 idf.py -B build-mic -D SDKCONFIG=sdkconfig.mic \
-  -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.mic.defaults' build
+  -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;config/firmware/sdkconfig.mic.defaults' build
 ```
 
 For the current Rev C battery-start investigation, disconnect J1 and all
