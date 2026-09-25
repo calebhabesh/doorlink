@@ -58,6 +58,14 @@ The board uses an ESP32-S3-WROOM-1-N16R8, OV5640 camera, ICS-43434 microphone, M
 | [`docs/firmware-architecture.md`](docs/firmware-architecture.md) | Firmware flow and validation status |
 | [`docs/hardware-bringup.md`](docs/hardware-bringup.md) | Detailed Rev C hardware test record |
 
+### Dashboard Preview
+
+<p align="center">
+  <a href="docs/media/dashboard-sample.webp"><img src="docs/media/dashboard-sample.webp" alt="Doorlink dashboard showing a sample visitor session, conversation timeline, and recent sessions" width="900"></a>
+</p>
+
+The dashboard is shown with synthetic sample sessions and a generated porch image. No visitor or household data is included.
+
 ## Run Locally
 
 Install Docker Compose, Java 21, Node.js/npm, and the dashboard dependencies (`cd dashboard && npm ci`). From the repository root, run `./scripts/run-dev.sh` to start the isolated development stack. The gateway uses port 8081 and the dashboard uses [localhost:3001](http://localhost:3001). On first run, enter the setup token printed by the launcher. Ctrl+C stops the stack. The local credentials in `.env.dev` are for development only.
