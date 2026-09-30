@@ -48,6 +48,12 @@ fi
 export GATEWAY_URL="$DEV_GATEWAY_URL"
 export GATEWAY_READ_ONLY=true
 export NEXT_TELEMETRY_DISABLED=1
+export PATH="$PROJECT_DIR/dashboard/node_modules/.bin:$PATH"
+
+if [[ ! -x "$PROJECT_DIR/dashboard/node_modules/.bin/next" ]]; then
+  echo "Installing dashboard dependencies..." >&2
+  npm --prefix "$PROJECT_DIR/dashboard" install
+fi
 
 echo "Open the hot-reloading dashboard at http://$DEV_BROWSER_HOST:$DEV_PORT"
 echo "Using live Raspberry Pi data from $DEV_GATEWAY_URL (read-only proxy)"
@@ -56,4 +62,5 @@ if (( DEV_PORT != DEV_PORT_START )); then
 fi
 
 cd "$PROJECT_DIR/dashboard"
-exec npm run dev -- --hostname "$DEV_HOST" -p "$DEV_PORT"
+exec ./node_modules/.bin/next dev --hostname "$DEV_HOST" -p "$DEV_PORT"
+

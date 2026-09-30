@@ -9,6 +9,7 @@ DEV_BOOTSTRAP_TOKEN="${HOUSEHOLD_BOOTSTRAP_TOKEN:-$(openssl rand -hex 24)}"
 
 # Clean shutdown handler
 cleanup() {
+  local exit_status="${1:-0}"
   echo -e "\n\n🛑 Shutting down local development stack..."
   
   # Kill background Spring Boot and Next.js processes
@@ -27,11 +28,11 @@ cleanup() {
   docker compose --env-file "$ENV_FILE" down
   
   echo "✅ Local dev stack shut down cleanly."
-  exit 0
+  exit "$exit_status"
 }
 
 # Trap Ctrl+C (SIGINT) and termination (SIGTERM) signals
-trap cleanup SIGINT SIGTERM
+trap 'cleanup 0' SIGINT SIGTERM
 
 echo "🐳 Starting local Docker infrastructure (Postgres, Mosquitto, MinIO)..."
 docker compose --env-file "$ENV_FILE" up -d
@@ -43,13 +44,17 @@ BACKEND_PID=$!
 
 echo "⚡ Starting Next.js Dashboard on port 3001..."
 cd "$PROJECT_DIR/dashboard"
-GATEWAY_URL=http://127.0.0.1:8081 npm run dev -- -p 3001 &
+GATEWAY_URL=http://127.0.0.1:8081 ./node_modules/.bin/next dev -p 3001 &
 FRONTEND_PID=$!
 
-echo -e "\n🚀 All services running concurrently in this pane!"
+echo -e "\n🚀 Starting the local development stack in this pane."
+echo "👉 Open http://localhost:3001 once Next.js reports Ready."
 echo "👉 First-time dashboard setup token: $DEV_BOOTSTRAP_TOKEN"
 echo "👉 Press Ctrl+C to stop everything and clean up."
 echo "------------------------------------------------------------"
 
-# Wait for background jobs to finish
-wait
+# Stop the stack if either service exits, instead of appearing active with only one service.
+wait -n "$BACKEND_PID" "$FRONTEND_PID"
+status=$?
+echo "A development service exited (status $status)."
+cleanup 1
