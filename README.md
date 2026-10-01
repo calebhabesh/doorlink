@@ -64,7 +64,7 @@ The board uses an ESP32-S3-WROOM-1-N16R8, OV5640 camera, ICS-43434 microphone, M
   <a href="docs/media/dashboard-sample.webp"><img src="docs/media/dashboard-sample.webp" alt="Doorlink dashboard showing a sample visitor session, conversation timeline, and recent sessions" width="900"></a>
 </p>
 
-The dashboard is shown with synthetic sample sessions and a generated porch image. No visitor or household data is included.
+The dashboard is shown with synthetic sample sessions and a generated doorbell-camera view looking outward from the porch toward the steps, front path, and street. No visitor or household data is included.
 
 ## Run Locally
 
