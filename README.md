@@ -58,13 +58,13 @@ The board uses an ESP32-S3-WROOM-1-N16R8, OV5640 camera, ICS-43434 microphone, M
 | [`docs/firmware-architecture.md`](docs/firmware-architecture.md) | Firmware flow and validation status |
 | [`docs/hardware-bringup.md`](docs/hardware-bringup.md) | Detailed Rev C hardware test record |
 
-### Dashboard Preview
+### Dashboard Preview (Synthetic Data)
 
 <p align="center">
-  <a href="docs/media/dashboard-sample.webp"><img src="docs/media/dashboard-sample.webp" alt="Doorlink dashboard showing a sample visitor session, conversation timeline, and recent sessions" width="900"></a>
+  <a href="docs/media/dashboard-sample.webp"><img src="docs/media/dashboard-sample.webp" alt="Doorlink dashboard showing synthetic session data and a generated doorbell-camera view" width="900"></a>
 </p>
 
-The dashboard is shown with synthetic sample sessions and a generated doorbell-camera view looking outward from the porch toward the steps, front path, and street. No visitor or household data is included.
+This preview uses synthetic session data and a generated doorbell-camera view. My actual dashboard is hosted on a subdomain with authenticated access. It is not shown here for privacy reasons.
 
 ## Run Locally
 
