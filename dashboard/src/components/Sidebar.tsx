@@ -21,8 +21,8 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
     try {
       const response = await fetch('/api/household/session', { method: 'DELETE' });
       if (!response.ok) {
-        const body = await response.json().catch(() => ({ error: 'Could not sign out this device' }));
-        window.alert(body.error ?? 'Could not sign out this device');
+        const body = await response.json().catch(() => ({ error: 'Could not sign out' }));
+        window.alert(body.error ?? 'Could not sign out');
         return;
       }
     } catch {
@@ -75,7 +75,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
         onClick={logout}
         className="flex items-center border-t border-zinc-800 px-6 py-5 text-sm font-medium uppercase tracking-wider text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200 transition-colors focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:outline-none"
       >
-        <LogOut className="mr-4 h-5 w-5 shrink-0" /> Sign out this device
+        <LogOut className="mr-4 h-5 w-5 shrink-0" /> Sign out
       </button>
     </aside>
   );
