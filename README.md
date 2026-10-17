@@ -1,6 +1,6 @@
 # Doorlink
 
-Doorlink is a self-hosted smart doorbell built around a custom ESP32-S3 board and a Raspberry Pi. A button press wakes the board, captures a still image, and sends the event to a local gateway. The gateway stores the media, updates the web dashboard, and sends a notification. The doorbell plays a local chime; when configured, the gateway also sends a Home Assistant webhook to play a chime on all configured smart speakers in the home. Visitor recordings and stored, turn-based voice replies are also supported.
+Doorlink is a self-hosted smart doorbell built around a custom ESP32-S3 board and a Raspberry Pi. A button press wakes the board, captures a still image, and sends the event to a local gateway. The gateway stores the media, updates the web dashboard, and sends ntfy mobile notifications to household members. The doorbell plays a local chime; when configured, the gateway also sends a Home Assistant webhook to play a chime on all configured smart speakers in the home. Visitor recordings and stored, turn-based voice replies are also supported.
 
 <p align="center">
   <img src="docs/media/finished-enclosure.jpg" alt="Assembled Doorlink Prototype Mounted on a Wall" width="420">
@@ -28,6 +28,13 @@ flowchart LR
 ```
 
 The firmware captures the image before joining Wi-Fi, then powers the camera down. Audio is turn-based: the visitor microphone and doorbell speaker do not run as a full-duplex call. The Raspberry Pi also runs Mosquitto for device commands.
+
+### Household alerts
+
+- The gateway sends an HTTP webhook to a Home Assistant automation, which plays a chime on all configured smart speakers in the home. This supplements the doorbell's local chime.
+- Household members receive mobile notifications through the ntfy app, subscribed to a shared topic on ntfy.sh. Tapping a notification opens the Doorlink dashboard.
+
+The home installation uses both alert paths. See [gateway environment configuration](docs/pi-deployment.md#gateway-environment) for the Home Assistant webhook and ntfy topic settings. The local development profile disables both integrations.
 
 ## Hardware Gallery
 

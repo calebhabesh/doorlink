@@ -157,11 +157,14 @@ Before deploying a gateway build from the public configuration, set these values
 ```dotenv
 INTERCOM_DEVICE_BASE_URL=http://192.168.1.10:8080
 DASHBOARD_URL=https://doorbell.example.com
+NTFY_TOPIC=your-random-private-topic
 CHIME_PROVIDER=homeassistant
 CHIME_HOMEASSISTANT_WEBHOOK_URL=http://192.168.1.10:8123/api/webhook/your-private-id
 ```
 
 Replace the addresses and private webhook ID with your own. If Home Assistant is not used, set `CHIME_PROVIDER=none` and omit its webhook URL. Keep the webhook ID out of git.
+
+The Home Assistant automation plays a chime on the home's configured smart speakers, alongside the doorbell's local chime. Household members subscribe to the same `NTFY_TOPIC` on ntfy.sh in their ntfy mobile app to receive alerts. Tapping an alert opens `DASHBOARD_URL`. Keep the topic random and private, and out of git.
 
 ## Firmware Configuration (`config.h`)
 
