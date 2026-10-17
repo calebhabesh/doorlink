@@ -32,7 +32,7 @@ The firmware captures the image before joining Wi-Fi, then powers the camera dow
 ### Household alerts
 
 - The gateway sends an HTTP webhook to a Home Assistant automation, which plays a chime on all configured smart speakers in the home. This supplements the doorbell's local chime.
-- Household members receive mobile notifications through the ntfy app, subscribed to a shared topic on ntfy.sh. Tapping a notification opens the Doorlink dashboard.
+- Household members receive mobile notifications through the ntfy app, subscribed to a shared topic on ntfy.sh. Tapping a notification opens the Doorlink dashboard in their mobile browser.
 
 The home installation uses both alert paths. See [gateway environment configuration](docs/pi-deployment.md#gateway-environment) for the Home Assistant webhook and ntfy topic settings. The local development profile disables both integrations.
 
