@@ -1,4 +1,4 @@
-# <img src="dashboard/src/app/icon.svg" width="34" height="34" align="absmiddle" alt="" /> Doorlink
+# <img src="docs/media/logo.svg" width="34" height="34" align="absmiddle" alt="" /> Doorlink
 
 Living in an apartment without a concierge, you're often left guessing who's at the door, and asking questions like "did my package arrive?". Providing an interface for visitors to notify me of package deliveries and general presence is really convenient.
 
