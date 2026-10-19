@@ -1,4 +1,4 @@
-# <img src="docs/media/logo.svg" width="34" height="34" align="absmiddle" alt="" /> Doorlink
+<!--  --># <img src="docs/media/logo.svg" width="34" height="34" align="absmiddle" alt="" /> Doorlink
 
 Living in an apartment without a concierge, you're often left guessing who's at the door, and asking questions like "did my package arrive?". Providing an interface for visitors to notify me of package deliveries and general presence is really convenient.
 
@@ -6,6 +6,8 @@ Doorlink is a self-hosted smart doorbell built around a custom ESP32-S3 board an
 
 <p align="center">
   <img src="docs/media/finished-enclosure.jpg" alt="Assembled Doorlink Prototype Mounted on a Wall" width="420">
+  <br>
+  <em>See the <a href="#hardware-gallery">labeled front panel</a>.</em>
 </p>
 
 ## Prototype Status
@@ -47,6 +49,10 @@ The home installation uses both alert paths. See [gateway environment configurat
 | PCB Copper Layers (F.Cu and B.Cu) | Rev C Board Before ESP32 and Microphone Soldering |
 | :---: | :---: |
 | <a href="docs/media/pcb-copper-layers.png"><img src="docs/media/pcb-copper-layers.png" alt="PCB Copper Layers (F.Cu and B.Cu)" height="380"></a> | <a href="docs/media/rev-c-before-esp32-microphone.jpg"><img src="docs/media/rev-c-before-esp32-microphone.jpg" alt="Rev C Board Before ESP32 and Microphone Soldering" height="380"></a> |
+
+| Front Lid Marked Out Before Cutting | Finished Front Panel |
+| :---: | :---: |
+| <a href="docs/media/front-lid-marked-out.jpg"><img src="docs/media/front-lid-marked-out.jpg" alt="Front ABS lid covered in masking tape with hand-drawn camera, PIR, button, LED, and speaker cutout positions" height="380"></a> | <a href="docs/media/enclosure-labeled.jpg"><img src="docs/media/enclosure-labeled.jpg" alt="Mounted doorbell with labels for the camera, motion sensor, status light, doorbell button, speaker grille, charge light, ABS enclosure, and hidden left-side microphone port" height="380"></a> |
 
 | Bench Bring-Up | Populated PCB | Enclosure Wiring |
 | :---: | :---: | :---: |
