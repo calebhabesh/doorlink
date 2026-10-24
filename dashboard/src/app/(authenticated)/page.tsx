@@ -109,7 +109,7 @@ export default function Home() {
                       markImageKeyCached(activeCoverImageKey);
                       setIsImageLoaded(true);
                     }}
-                    className={`object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                    className={`visitor-photo object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
                   />
                 </>
               ) : (
@@ -251,7 +251,7 @@ export default function Home() {
                             fill
                             unoptimized
                             onLoad={() => markImageKeyCached(coverImageKey)}
-                            className="object-cover transition duration-300 group-hover:scale-105"
+                            className="visitor-photo object-cover transition duration-300 group-hover:scale-105"
                           />
                         ) : (
                           <div className="grid h-full place-items-center">

@@ -155,7 +155,7 @@ export default function EventLog() {
                                 fill
                                 unoptimized
                                 onLoad={() => markImageKeyCached(coverImageKey)}
-                                className="object-cover transition duration-300 group-hover:scale-105"
+                                className="visitor-photo object-cover transition duration-300 group-hover:scale-105"
                               />
                             ) : (
                               <div className="grid h-full place-items-center text-zinc-500 bg-zinc-900">
@@ -253,7 +253,7 @@ export default function EventLog() {
                             fill
                             unoptimized
                             onLoad={() => markImageKeyCached(coverImageKey)}
-                            className="object-cover"
+                            className="visitor-photo object-cover"
                           />
                         ) : (
                           <div className="grid h-full place-items-center text-zinc-500">

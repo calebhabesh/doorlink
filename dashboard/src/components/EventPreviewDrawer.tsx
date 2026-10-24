@@ -63,7 +63,7 @@ export default function EventPreviewDrawer({ session, onClose }: EventPreviewDra
                 markImageKeyCached(coverImageKey);
                 setIsImageLoaded(true);
               }}
-              className={`object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
+              className={`visitor-photo object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
             />
           </div>
         )}

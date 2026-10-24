@@ -107,3 +107,10 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* Current firmware captures with hmirror=1, so stored photos are mirrored
+   left to right. Remove this once the firmware sets hmirror=0, or new photos
+   will be mirrored again. Uses `scale` so hover zoom transforms still apply. */
+.visitor-photo {
+  scale: -1 1;
+}

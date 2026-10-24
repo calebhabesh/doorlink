@@ -89,7 +89,7 @@ export default function SessionTimeline({ session }: { session: VisitorSession }
                 <span className="font-mono text-[10px] text-zinc-500">After Press {item.pressNumber}</span>
               </div>
               <div className="relative aspect-video w-full border-t border-zinc-800 bg-zinc-900">
-                <Image src={`${MEDIA_BASE_URL}/${item.imageKey}`} alt={`Visitor snapshot after press ${item.pressNumber}`} fill unoptimized className="object-cover" />
+                <Image src={`${MEDIA_BASE_URL}/${item.imageKey}`} alt={`Visitor snapshot after press ${item.pressNumber}`} fill unoptimized className="visitor-photo object-cover" />
               </div>
             </figure>
           );
