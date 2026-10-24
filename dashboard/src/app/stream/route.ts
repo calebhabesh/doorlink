@@ -11,6 +11,8 @@ export async function GET(request: Request) {
         Cookie: request.headers.get('cookie') ?? '',
       },
       cache: "no-store",
+      // Release the gateway emitter as soon as the browser disconnects.
+      signal: request.signal,
     });
 
     if (!response.ok) {

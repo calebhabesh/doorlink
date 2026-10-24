@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   VisitorSession,
@@ -42,6 +42,31 @@ const SessionContext = createContext<SessionContextType | null>(null);
 const API_BASE_URL = '/api/events';
 const SESSIONS_INITIAL_LIMIT = 100;
 const HISTORY_RETRY_DELAY_MS = 5000;
+const STREAM_RETRY_DELAY_MS = 3000;
+const STREAM_STALL_TIMEOUT_MS = 25000;
+const PRESENTATION_STORAGE_KEY = 'doorlink.presentationSince';
+
+// Presentation mode (`?present`) hides every session that started before the
+// mode was enabled, so a screen recording only shows new visitors. The cutoff
+// is kept for the tab's lifetime; `?present=0` turns it off.
+function readPresentationSince(): number | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const param = new URLSearchParams(window.location.search).get('present');
+    if (param === '0' || param === 'off') {
+      window.sessionStorage.removeItem(PRESENTATION_STORAGE_KEY);
+      return null;
+    }
+    const stored = Number(window.sessionStorage.getItem(PRESENTATION_STORAGE_KEY));
+    if (param === null) return stored > 0 ? stored : null;
+    if (stored > 0) return stored;
+    const since = Date.now();
+    window.sessionStorage.setItem(PRESENTATION_STORAGE_KEY, String(since));
+    return since;
+  } catch {
+    return null;
+  }
+}
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [sessions, setSessions] = useState<VisitorSession[]>([]);
@@ -51,6 +76,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [isLoadingSessions, setIsLoadingSessions] = useState(true);
   const [sessionError, setSessionError] = useState<string | null>(null);
   const [newVisitorNotice, setNewVisitorNotice] = useState<NewVisitorNotice | null>(null);
+  const [presentationSince] = useState(readPresentationSince);
 
   // Preserved filters for Event Log across navigation
   const [eventLogSearch, setEventLogSearch] = useState('');
@@ -156,83 +182,131 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     unmountedRef.current = false;
     void loadSessionHistory();
 
-    const eventSource = new EventSource('/stream');
-    eventSourceRef.current = eventSource;
+    let source: EventSource | null = null;
+    let stallTimer: number | undefined;
+    let reconnectTimer: number | undefined;
 
-    // Notice: HTTP open does not mark "connected" yet.
-    // The brief requires: "Model stream state as connecting, connected, or disconnected.
-    // Mark Updates Live only after the application-level init event."
-    eventSource.onopen = () => {
-      // Stay in 'connecting' until the application-level 'init' event confirms backend readiness
-    };
+    // A stream closed by sign-out or unmount must not be reopened.
+    const streamStopped = () => unmountedRef.current || eventSourceRef.current === null;
 
-    eventSource.onerror = () => {
+    const reconnect = (delayMs: number) => {
+      window.clearTimeout(stallTimer);
+      window.clearTimeout(reconnectTimer);
+      source?.close();
       setConnectionStatus('connecting');
-      void loadSessionHistory();
+      reconnectTimer = window.setTimeout(() => {
+        if (!streamStopped()) connect();
+      }, delayMs);
     };
 
-    eventSource.addEventListener('init', () => {
-      setConnectionStatus('connected');
-      // Reconcile immediately after initial connect or reconnect
-      void loadSessionHistory();
-    });
+    // The gateway sends a heartbeat every 10 seconds. Silence means the
+    // connection died without an error (sleep, network change, proxy drop).
+    const markAlive = () => {
+      window.clearTimeout(stallTimer);
+      stallTimer = window.setTimeout(() => {
+        if (!streamStopped()) reconnect(0);
+      }, STREAM_STALL_TIMEOUT_MS);
+    };
 
-    eventSource.addEventListener('session-update', (event) => {
-      setConnectionStatus('connected');
-      try {
-        const incoming: VisitorSession = JSON.parse(event.data);
+    const connect = () => {
+      const eventSource = new EventSource('/stream');
+      source = eventSource;
+      eventSourceRef.current = eventSource;
+      markAlive();
 
-        // If history request is in flight, buffer this update so it gets replayed after the snapshot
-        if (historyLoadInFlightRef.current) {
-          inFlightBufferRef.current.push(incoming);
+      // Notice: HTTP open does not mark "connected" yet.
+      // The brief requires: "Model stream state as connecting, connected, or disconnected.
+      // Mark Updates Live only after the application-level init event."
+      eventSource.onopen = () => {
+        // Stay in 'connecting' until the application-level 'init' event confirms backend readiness
+      };
+
+      eventSource.onerror = () => {
+        setConnectionStatus('connecting');
+        void loadSessionHistory();
+        // The browser retries transient drops itself, but gives up for good
+        // after a non-stream response such as a proxy 502.
+        if (eventSource.readyState === EventSource.CLOSED && !streamStopped()) {
+          reconnect(STREAM_RETRY_DELAY_MS);
         }
+      };
 
-        setSessions((current) => {
-          const wasEmpty = current.length === 0;
-          const previousLatest = current[0]?.sessionId ?? null;
-          const isNewSession = !current.some((s) => s.sessionId === incoming.sessionId);
-          const nextSessions = upsertSession(current, incoming);
+      eventSource.addEventListener('init', () => {
+        markAlive();
+        setConnectionStatus('connected');
+        // Reconcile immediately after initial connect or reconnect
+        void loadSessionHistory();
+      });
 
-          // Handle auto-selection & new visitor notice
-          const currentActive = activeSessionIdRef.current;
-          const isViewingLatest = wasEmpty || currentActive === null || currentActive === previousLatest;
-          const isDashboard = pathnameRef.current === '/';
+      eventSource.addEventListener('heartbeat', markAlive);
 
-          if (isNewSession) {
-            if (isDashboard && isViewingLatest) {
-              setActiveSessionId(incoming.sessionId);
-              setNewVisitorNotice(null);
-            } else {
-              // User was viewing older history on Dashboard, or is on another route
-              setNewVisitorNotice({
-                sessionId: incoming.sessionId,
-                startedAt: incoming.startedAt,
-                pressCount: incoming.pressCount,
-              });
-            }
+      eventSource.addEventListener('session-update', (event) => {
+        markAlive();
+        setConnectionStatus('connected');
+        try {
+          const incoming: VisitorSession = JSON.parse(event.data);
+
+          // If history request is in flight, buffer this update so it gets replayed after the snapshot
+          if (historyLoadInFlightRef.current) {
+            inFlightBufferRef.current.push(incoming);
           }
 
-          return nextSessions;
-        });
-      } catch (err) {
-        console.error('Failed to parse session-update', err);
-      }
-    });
+          setSessions((current) => {
+            const wasEmpty = current.length === 0;
+            const previousLatest = current[0]?.sessionId ?? null;
+            const isNewSession = !current.some((s) => s.sessionId === incoming.sessionId);
+            const nextSessions = upsertSession(current, incoming);
+
+            // Handle auto-selection & new visitor notice
+            const currentActive = activeSessionIdRef.current;
+            const isViewingLatest = wasEmpty || currentActive === null || currentActive === previousLatest;
+            const isDashboard = pathnameRef.current === '/';
+
+            if (isNewSession) {
+              if (isDashboard && isViewingLatest) {
+                setActiveSessionId(incoming.sessionId);
+                setNewVisitorNotice(null);
+              } else {
+                // User was viewing older history on Dashboard, or is on another route
+                setNewVisitorNotice({
+                  sessionId: incoming.sessionId,
+                  startedAt: incoming.startedAt,
+                  pressCount: incoming.pressCount,
+                });
+              }
+            }
+
+            return nextSessions;
+          });
+        } catch (err) {
+          console.error('Failed to parse session-update', err);
+        }
+      });
+    };
+
+    connect();
 
     const reconcileWhenVisible = () => {
-      if (document.visibilityState === 'visible') {
-        void loadSessionHistory();
-      }
+      if (document.visibilityState !== 'visible') return;
+      void loadSessionHistory();
+      if (source?.readyState === EventSource.CLOSED && !streamStopped()) reconnect(0);
+    };
+    const reconnectWhenOnline = () => {
+      if (!streamStopped()) reconnect(0);
     };
     window.addEventListener('focus', reconcileWhenVisible);
+    window.addEventListener('online', reconnectWhenOnline);
     document.addEventListener('visibilitychange', reconcileWhenVisible);
 
     return () => {
       unmountedRef.current = true;
       if (retryTimerRef.current !== undefined) window.clearTimeout(retryTimerRef.current);
-      eventSource.close();
+      window.clearTimeout(stallTimer);
+      window.clearTimeout(reconnectTimer);
+      source?.close();
       eventSourceRef.current = null;
       window.removeEventListener('focus', reconcileWhenVisible);
+      window.removeEventListener('online', reconnectWhenOnline);
       document.removeEventListener('visibilitychange', reconcileWhenVisible);
     };
   }, [loadSessionHistory]);
@@ -249,10 +323,17 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
   }, [router]);
 
+  const visibleSessions = useMemo(
+    () => presentationSince === null
+      ? sessions
+      : sessions.filter((session) => new Date(session.startedAt).getTime() >= presentationSince),
+    [sessions, presentationSince],
+  );
+
   return (
     <SessionContext.Provider
       value={{
-        sessions,
+        sessions: visibleSessions,
         activeSessionId,
         setActiveSessionId,
         connectionStatus,
