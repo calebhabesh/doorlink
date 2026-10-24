@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { Check, Copy, Link2, Pencil, ShieldCheck, Smartphone, UserPlus, Users, X } from 'lucide-react';
+import { formatDateTime } from '../../../lib/dateFormat';
 
 type Device = {
   id: number;
@@ -323,7 +324,7 @@ export default function HouseholdPage() {
                                   </span>
                                 )}
                               </p>
-                              <p className="mt-1 truncate text-xs text-zinc-600">Last used {new Date(device.lastSeenAt).toLocaleString()}</p>
+                              <p className="mt-1 truncate text-xs text-zinc-600">Last used {formatDateTime(device.lastSeenAt)}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2 self-start sm:self-auto">
@@ -365,7 +366,7 @@ export default function HouseholdPage() {
                 <X />
               </button>
             </div>
-            <p className="mt-3 text-sm leading-6 text-zinc-400">They must open it on the phone and browser they want to authorize. The link expires {new Date(invitation.expiresAt).toLocaleString()}.</p>
+            <p className="mt-3 text-sm leading-6 text-zinc-400">They must open it on the phone and browser they want to authorize. The link expires {formatDateTime(invitation.expiresAt)}.</p>
             <div className="mt-5 break-all rounded-xl border border-zinc-700 bg-zinc-950 p-4 font-mono text-xs text-zinc-300">{invitation.enrollmentUrl}</div>
             <button
               type="button"

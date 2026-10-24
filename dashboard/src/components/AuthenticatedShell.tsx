@@ -4,9 +4,9 @@ import React, { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Sidebar from './Sidebar';
 import { Menu, X, Battery, Bell, ArrowRight } from 'lucide-react';
-import LogoIcon from './LogoIcon';
 import { getRouteByPathname } from '../lib/navigation';
 import { useSessionContext } from '../context/SessionContext';
+import { formatShortTime } from '../lib/dateFormat';
 
 export default function AuthenticatedShell({
   children,
@@ -61,12 +61,17 @@ export default function AuthenticatedShell({
     : connectionStatus === 'connecting'
       ? 'Connecting...'
       : 'Disconnected';
+  const mobileStatusLabel = connectionStatus === 'connected'
+    ? 'Live'
+    : connectionStatus === 'connecting'
+      ? 'Connecting'
+      : 'Offline';
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 lg:flex font-sans">
       {/* Mobile Header */}
       <div className="lg:hidden flex items-center justify-between px-4 h-16 border-b border-zinc-800 bg-zinc-950 sticky top-0 z-40">
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(true)}
@@ -75,20 +80,14 @@ export default function AuthenticatedShell({
           >
             <Menu className="w-6 h-6" />
           </button>
-          <div className="flex items-center gap-2">
-            <div className="relative w-8 h-8 flex items-center justify-center shrink-0">
-              <div className="absolute inset-0 bg-blue-500/25 blur-md rounded-full pointer-events-none scale-110 motion-reduce:animate-none animate-pulse" />
-              <LogoIcon className="w-7 h-7 relative z-10 filter drop-shadow-[0_0_8px_rgba(59,130,246,0.65)] hover:scale-110 transition-transform duration-300" />
-            </div>
-            {/* Semantic h1 on mobile that matches current route label */}
-            <h1 className="font-grotesk font-semibold text-lg tracking-tight text-zinc-100">
-              {currentRoute.label}
-            </h1>
-          </div>
+          {/* Semantic h1 on mobile, styled like the desktop header */}
+          <h1 className="min-w-0 truncate font-mono uppercase tracking-widest text-sm font-black text-zinc-100">
+            {currentRoute.label}
+          </h1>
         </div>
 
         {/* Mobile Status & Battery Indicators */}
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {batteryPercentage !== undefined && (
             <div
               className="flex items-center justify-center gap-1.5 bg-zinc-900 border border-zinc-800 h-7 px-2.5 rounded-full shadow-inner text-[10px] font-bold tracking-wider select-none text-zinc-400"
@@ -107,7 +106,7 @@ export default function AuthenticatedShell({
               <span className={`relative inline-flex rounded-full h-2 w-2 ${getDotColor()}`} />
             </div>
             <span className={`text-[10px] font-bold uppercase tracking-widest leading-none whitespace-nowrap ${getStatusColor()}`}>
-              {statusLabel}
+              {mobileStatusLabel}
             </span>
           </div>
         </div>
@@ -194,7 +193,7 @@ export default function AuthenticatedShell({
                   New visitor session started
                 </p>
                 <p className="font-mono text-xs text-zinc-400">
-                  {newVisitorNotice.pressCount} {newVisitorNotice.pressCount === 1 ? 'press' : 'presses'} · {new Date(newVisitorNotice.startedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                  {newVisitorNotice.pressCount} {newVisitorNotice.pressCount === 1 ? 'press' : 'presses'} · {formatShortTime(newVisitorNotice.startedAt)}
                 </p>
               </div>
             </div>

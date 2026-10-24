@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Clock } from 'lucide-react';
+import { formatLongDate, formatTime } from '../lib/dateFormat';
 
 export default function ClockGlobeCard() {
   const [time, setTime] = useState<Date | null>(null);
@@ -22,24 +23,12 @@ export default function ClockGlobeCard() {
     );
   }
 
-  // Format 12h time
-  const timeString = time.toLocaleTimeString(undefined, {
-    hour: 'numeric',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: true,
-  });
-
-  const dateString = time.toLocaleDateString(undefined, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  const timeString = formatTime(time);
+  const dateString = formatLongDate(time);
 
   // Accurate dynamic timezone formatting without hardcoded fallbacks
   const timeZoneName = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const timeZoneAbbr = new Intl.DateTimeFormat(undefined, { timeZoneName: 'short' })
+  const timeZoneAbbr = new Intl.DateTimeFormat('en-US', { timeZoneName: 'short' })
     .formatToParts(time)
     .find((part) => part.type === 'timeZoneName')?.value || '';
 

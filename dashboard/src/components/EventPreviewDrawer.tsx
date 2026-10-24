@@ -10,6 +10,7 @@ import {
   VisitorSession,
 } from '../lib/visitorSessions';
 import SessionTimeline from './SessionTimeline';
+import { formatDateTime } from '../lib/dateFormat';
 
 interface EventPreviewDrawerProps {
   session: VisitorSession | null;
@@ -45,7 +46,7 @@ export default function EventPreviewDrawer({ session, onClose }: EventPreviewDra
           <div>
             <p className="text-[10px] font-black tracking-[0.22em] text-emerald-400">Visitor Session</p>
             <h2 className="mt-2 text-2xl font-black text-zinc-100">{session.pressCount} {session.pressCount === 1 ? 'Press' : 'Presses'} · {session.recordingCount} {session.recordingCount === 1 ? 'Message' : 'Messages'}</h2>
-            <p className="mt-2 font-mono text-xs uppercase text-zinc-500">{new Date(session.startedAt).toLocaleString()}</p>
+            <p className="mt-2 font-mono text-xs uppercase text-zinc-500">{formatDateTime(session.startedAt)}</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close preview" className="rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-zinc-400 hover:text-white"><X className="h-5 w-5" /></button>
         </div>

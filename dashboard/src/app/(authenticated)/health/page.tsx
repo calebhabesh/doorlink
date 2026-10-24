@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Activity, Cpu, Database, HardDrive, Radio, Server } from 'lucide-react';
+import { formatDateTime, formatTime } from '../../../lib/dateFormat';
 
 type ComponentStatus = 'UP' | 'DOWN' | 'UNKNOWN';
 
@@ -78,7 +79,7 @@ export default function SystemHealth() {
 
   return (
     <div className="w-full max-w-[1200px] mx-auto flex flex-col h-full flex-1">
-      <div className="mb-8 flex items-center justify-between gap-3">
+      <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
             <Activity className="w-6 h-6 text-emerald-400" />
@@ -88,8 +89,8 @@ export default function SystemHealth() {
             <p className="text-sm text-zinc-400 font-medium">Measured gateway components and last reported physical doorbell telemetry</p>
           </div>
         </div>
-        <p className="text-xs text-zinc-500 font-mono">
-          {health?.checkedAt ? `Checked ${new Date(health.checkedAt).toLocaleTimeString()}` : 'Awaiting probe'}
+        <p className="shrink-0 text-xs text-zinc-500 font-mono">
+          {health?.checkedAt ? `Checked ${formatTime(health.checkedAt)}` : 'Awaiting probe'}
         </p>
       </div>
 
@@ -97,7 +98,7 @@ export default function SystemHealth() {
         <HealthCard icon={<Server className="w-5 h-5 text-blue-400" />} title="Gateway" status={gatewayStatus} value={gatewayStatus === 'UP' ? 'Online' : error ? 'Unreachable' : 'Checking'} detail={`Process uptime: ${formatDuration(health?.gateway.uptimeSeconds)}`} />
         <HealthCard icon={<Database className="w-5 h-5 text-indigo-400" />} title="PostgreSQL" status={health?.database.status} value={health?.database.status === 'UP' ? 'Connected' : 'Unavailable'} detail={health?.database.detail ?? 'Probe pending'} />
         <HealthCard icon={<HardDrive className="w-5 h-5 text-purple-400" />} title="MinIO" status={health?.storage.status} value={health?.storage.status === 'UP' ? 'Available' : 'Unavailable'} detail={health?.storage.detail ?? 'Probe pending'} />
-        <HealthCard icon={<Radio className="w-5 h-5 text-rose-400" />} title="MQTT" status={health?.mqtt.status} value={health?.mqtt.status === 'UP' ? 'Subscribed' : health?.mqtt.status === 'DOWN' ? 'Disconnected' : 'Unknown'} detail={health?.mqtt.lastChangedAt ? `Last state change: ${new Date(health.mqtt.lastChangedAt).toLocaleString()}` : 'No connection event observed yet'} />
+        <HealthCard icon={<Radio className="w-5 h-5 text-rose-400" />} title="MQTT" status={health?.mqtt.status} value={health?.mqtt.status === 'UP' ? 'Subscribed' : health?.mqtt.status === 'DOWN' ? 'Disconnected' : 'Unknown'} detail={health?.mqtt.lastChangedAt ? `Last state change: ${formatDateTime(health.mqtt.lastChangedAt)}` : 'No connection event observed yet'} />
 
         <div className="md:col-span-2 lg:col-span-4 bg-zinc-950 border border-zinc-800 p-6 rounded-3xl shadow-lg">
           <div className="flex justify-between items-start mb-5">
@@ -108,13 +109,13 @@ export default function SystemHealth() {
           {health?.device.status === 'KNOWN' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
               <Metric label="Device" value={health.device.deviceId ?? 'Not reported'} />
-              <Metric label="Last contact" value={health.device.lastSeen ? new Date(health.device.lastSeen).toLocaleString() : 'Not reported'} />
+              <Metric label="Last contact" value={health.device.lastSeen ? formatDateTime(health.device.lastSeen) : 'Not reported'} />
               <Metric label="Firmware" value={health.device.firmwareVersion ?? 'Not reported'} />
               <Metric label="Last event" value={health.device.lastEventType?.replaceAll('_', ' ') ?? 'Not reported'} />
               <Metric label="Wi-Fi RSSI at contact" value={health.device.wifiRssiDbm !== null && health.device.wifiRssiDbm !== undefined ? `${health.device.wifiRssiDbm} dBm` : 'Not reported'} />
               <Metric label="Battery voltage" value={health.device.batteryMillivolts !== null && health.device.batteryMillivolts !== undefined ? `${(health.device.batteryMillivolts / 1000).toFixed(3)} V` : 'Not reported'} />
               <Metric label="Estimated charge" value={health.device.batteryPercentageEstimate !== null && health.device.batteryPercentageEstimate !== undefined ? `~${health.device.batteryPercentageEstimate}%` : 'Not reported'} />
-              <Metric label="Battery sampled" value={health.device.batteryReportedAt ? new Date(health.device.batteryReportedAt).toLocaleString() : 'Not reported'} />
+              <Metric label="Battery sampled" value={health.device.batteryReportedAt ? formatDateTime(health.device.batteryReportedAt) : 'Not reported'} />
             </div>
           ) : (
             <p className="text-zinc-400">No production firmware telemetry has reached this gateway yet.</p>

@@ -6,6 +6,7 @@ import { Camera, CalendarDays, ChevronDown, Download, Eye, Search, X } from 'luc
 import EventPreviewDrawer from '../../../components/EventPreviewDrawer';
 import { getSessionCoverImageKey, markImageKeyCached, VisitorSession } from '../../../lib/visitorSessions';
 import { useSessionContext } from '../../../context/SessionContext';
+import { formatDateTime } from '../../../lib/dateFormat';
 
 const API_BASE_URL = '/api/events';
 const MEDIA_BASE_URL = `${API_BASE_URL}/media`;
@@ -141,7 +142,7 @@ export default function EventLog() {
                         }}
                         tabIndex={0}
                         role="button"
-                        aria-label={`View visitor session from ${new Date(session.startedAt).toLocaleString()}`}
+                        aria-label={`View visitor session from ${formatDateTime(session.startedAt)}`}
                         className="group cursor-pointer hover:bg-zinc-900/60 transition-all duration-200 hover:translate-x-0.5 focus-visible:outline-none focus-visible:bg-zinc-900/80"
                       >
                         {/* Event Thumbnail Snapshot */}
@@ -169,7 +170,7 @@ export default function EventLog() {
 
                         {/* Emphasized Date */}
                         <td className="whitespace-nowrap px-6 py-3.5 font-mono text-sm font-semibold text-zinc-200">
-                          {new Date(session.startedAt).toLocaleString()}
+                          {formatDateTime(session.startedAt)}
                         </td>
 
                         {/* De-emphasized Session ID with accessible tooltip */}
@@ -213,7 +214,7 @@ export default function EventLog() {
                               e.stopPropagation();
                               setSelectedSession(session);
                             }}
-                            aria-label={`Preview visitor session from ${new Date(session.startedAt).toLocaleString()}`}
+                            aria-label={`Preview visitor session from ${formatDateTime(session.startedAt)}`}
                             className="rounded-lg border border-zinc-700 bg-zinc-800 p-2 text-emerald-400 hover:border-emerald-500 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
                           >
                             <Eye className="h-4 w-4" />
@@ -273,7 +274,7 @@ export default function EventLog() {
                           </span>
                         </div>
                         <p className="mt-1 font-mono text-xs text-zinc-400">
-                          {new Date(session.startedAt).toLocaleString()}
+                          {formatDateTime(session.startedAt)}
                         </p>
                         <div className="mt-2 flex items-center justify-between">
                           <span className="font-mono text-[10px] text-zinc-500 truncate max-w-[150px]">

@@ -5,6 +5,7 @@ import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Eye, ChevronDown }
 import EventPreviewDrawer from '../../../components/EventPreviewDrawer';
 import { VisitorSession } from '../../../lib/visitorSessions';
 import { useSessionContext } from '../../../context/SessionContext';
+import { formatMonth, formatShortTime } from '../../../lib/dateFormat';
 
 export default function CalendarView() {
   const { sessions, isLoadingSessions } = useSessionContext();
@@ -33,7 +34,7 @@ export default function CalendarView() {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     if (exitTimeoutRef.current) clearTimeout(exitTimeoutRef.current);
     
-    const monthName = viewDate.toLocaleString('default', { month: 'long' });
+    const monthName = formatMonth(viewDate);
     const msg = hasEvent 
       ? `Showing events for ${monthName} ${day}, ${viewDate.getFullYear()}` 
       : `No events found for ${monthName} ${day}, ${viewDate.getFullYear()}`;
@@ -95,7 +96,7 @@ export default function CalendarView() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full lg:w-auto">
             <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-3">
               <CalendarIcon className="w-6 h-6 text-emerald-500 shrink-0" />
-              <span className="whitespace-nowrap">{viewDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</span>
+              <span className="whitespace-nowrap">{formatMonth(viewDate, { year: true })}</span>
             </h2>
             <div className="relative w-full sm:w-auto">
               <input 
@@ -171,7 +172,7 @@ export default function CalendarView() {
                   key={day}
                   type="button"
                   onClick={() => handleDayClick(day, hasEvent)}
-                  aria-label={`${viewDate.toLocaleString('default', { month: 'long' })} ${day}, ${viewYear}`}
+                  aria-label={`${formatMonth(viewDate)} ${day}, ${viewYear}`}
                   disabled={future}
                   className={`bg-zinc-950 min-h-[120px] p-4 flex flex-col items-start justify-start transition-colors group relative border-t border-transparent focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none ${
                     future ? 'opacity-40 cursor-not-allowed' : 'hover:bg-zinc-900 hover:border-zinc-800'
@@ -201,7 +202,7 @@ export default function CalendarView() {
         <div className="w-80 bg-zinc-950 border border-zinc-800 rounded-3xl p-6 flex flex-col h-full shrink-0 shadow-2xl animate-slide-in-right">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-black text-white uppercase tracking-tight">
-              {viewDate.toLocaleString('default', { month: 'short' })} {selectedDay}
+              {formatMonth(viewDate, { short: true })} {selectedDay}
             </h3>
             <button 
               type="button"
@@ -233,7 +234,7 @@ export default function CalendarView() {
                         </span>
                       )}
                       <span className="text-zinc-500 font-mono text-[10px]">
-                        {new Date(session.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }).toUpperCase()}
+                        {formatShortTime(session.startedAt)}
                       </span>
                     </div>
                   </div>

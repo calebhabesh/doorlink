@@ -14,6 +14,7 @@ import {
   VisitorSession,
 } from '../../lib/visitorSessions';
 import { useSessionContext } from '../../context/SessionContext';
+import { formatDate, formatDateTime, formatShortTime } from '../../lib/dateFormat';
 
 const API_BASE_URL = '/api/events';
 const MEDIA_BASE_URL = `${API_BASE_URL}/media`;
@@ -144,7 +145,7 @@ export default function Home() {
                     {activeSession.pressCount} {activeSession.pressCount === 1 ? 'Press' : 'Presses'} · {activeSession.recordingCount} {activeSession.recordingCount === 1 ? 'Message' : 'Messages'}
                   </h2>
                   <p className="mt-2 font-mono text-xs uppercase tracking-wider text-zinc-500">
-                    {new Date(activeSession.startedAt).toLocaleString()}
+                    {formatDateTime(activeSession.startedAt)}
                   </p>
                 </div>
                 {canReply && <PttButton sessionId={activeSession.sessionId} eventId={latestPressId} />}
@@ -267,11 +268,11 @@ export default function Home() {
                             {session.pressCount} {session.pressCount === 1 ? 'Press' : 'Presses'}
                           </span>
                           <span className="shrink-0 font-mono text-[9px] text-zinc-500">
-                            {new Date(session.startedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                            {formatShortTime(session.startedAt)}
                           </span>
                         </div>
                         <p className="mt-1 truncate font-mono text-[9px] text-zinc-600">
-                          {new Date(session.startedAt).toLocaleDateString()}
+                          {formatDate(session.startedAt)}
                         </p>
                         <div className="mt-2 flex items-center gap-3 text-[10px] font-semibold text-zinc-400">
                           <span className="flex items-center gap-1">

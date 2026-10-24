@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { Camera, Check, Clock3, Radio, Volume2 } from 'lucide-react';
 import { getSessionImages, HomeownerReply, VisitorPress, VisitorSession } from '../lib/visitorSessions';
 import AudioPlayer from './AudioPlayer';
+import { formatTime } from '../lib/dateFormat';
 
 const MEDIA_BASE_URL = '/api/events/media';
 
@@ -69,8 +70,8 @@ export default function SessionTimeline({ session }: { session: VisitorSession }
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-bold text-zinc-200">{pressRangeLabel(item.presses)}</p>
                 <p className="font-mono text-[10px] text-zinc-500">
-                  {new Date(item.presses[0].pressedAt).toLocaleTimeString()}
-                  {item.presses.length > 1 && ` – ${new Date(item.presses.at(-1)!.pressedAt).toLocaleTimeString()}`}
+                  {formatTime(item.presses[0].pressedAt)}
+                  {item.presses.length > 1 && ` – ${formatTime(item.presses.at(-1)!.pressedAt)}`}
                 </p>
               </div>
               <span className="shrink-0 rounded-full bg-zinc-800 px-3 py-1 text-[10px] font-bold text-zinc-400">
@@ -102,7 +103,7 @@ export default function SessionTimeline({ session }: { session: VisitorSession }
                   <span className="grid h-8 w-8 place-items-center rounded-full bg-emerald-500/10 text-xs font-black text-emerald-400">{item.press.pressNumber}</span>
                   <div>
                     <p className="flex items-center gap-2 text-sm font-bold text-zinc-200"><Volume2 className="h-4 w-4 text-emerald-400" /> Visitor Message</p>
-                    <p className="font-mono text-[10px] text-zinc-500">{new Date(item.press.pressedAt).toLocaleTimeString()}</p>
+                    <p className="font-mono text-[10px] text-zinc-500">{formatTime(item.press.pressedAt)}</p>
                   </div>
                 </div>
                 <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-[10px] font-bold text-emerald-300">Held {((item.press.durationMs ?? 0) / 1000).toFixed(1)}s</span>
@@ -121,7 +122,7 @@ export default function SessionTimeline({ session }: { session: VisitorSession }
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className="flex items-center gap-2 text-sm font-bold text-sky-300"><Radio className="h-4 w-4" /> Homeowner Reply</p>
-                <p className="mt-1 font-mono text-[10px] text-zinc-500">{new Date(item.reply.createdAt).toLocaleTimeString()}</p>
+                <p className="mt-1 font-mono text-[10px] text-zinc-500">{formatTime(item.reply.createdAt)}</p>
               </div>
               <span className="flex items-center gap-1.5 rounded-full bg-sky-500/10 px-3 py-1 text-[10px] font-bold text-sky-300">
                 {item.reply.deliveredAt ? <Check className="h-3 w-3" /> : <Clock3 className="h-3 w-3" />}
