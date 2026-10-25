@@ -2,7 +2,7 @@
 
 Living in an apartment without a concierge, you're often left guessing who's at the door, and asking questions like "did my package arrive?". Providing an interface for visitors to notify me of package deliveries and general presence is really convenient.
 
-Doorlink is a self-hosted smart doorbell built around a custom ESP32-S3 board and a Raspberry Pi, with no cloud subscription required. A button press wakes the board, captures a still image, and sends the event to a local gateway. The gateway stores the media, updates the web dashboard, and sends ntfy mobile notifications to household members. The doorbell plays a local chime; when configured, the gateway also sends a Home Assistant webhook to play a chime on all configured smart speakers in the home. Visitor recordings and stored, turn-based voice replies are also supported. A full parts and cost breakdown is in the [docs](docs/parts.md).
+Doorlink is a self-hosted smart doorbell built around a custom ESP32-S3 board and a Raspberry Pi, with no cloud subscription required. A button press wakes the board, captures a still image, and sends the event to a local gateway. The gateway stores the media, updates the web dashboard, and sends ntfy notifications to household members. The doorbell plays a local chime; when configured, the gateway also sends a Home Assistant webhook to play a chime on all configured smart speakers in the home. Visitor recordings and stored, turn-based voice replies are also supported. A full parts and cost breakdown is in the [docs](docs/parts.md).
 
 <p align="center">
   <img src="docs/media/finished-enclosure.jpg" alt="Assembled Doorlink Prototype Mounted on a Wall" width="420">
@@ -42,7 +42,7 @@ The firmware captures the image before joining Wi-Fi, then powers the camera dow
 ### Household alerts
 
 - The gateway sends an HTTP webhook to a Home Assistant automation, which plays a chime on all configured smart speakers in the home. This supplements the doorbell's local chime.
-- Household members receive mobile notifications through the ntfy app, subscribed to a shared topic on ntfy.sh. Tapping a notification opens the Doorlink dashboard in their mobile browser.
+- Household members receive notifications through ntfy on their phones or computers, subscribed to a shared topic on ntfy.sh. Tapping a notification opens the Doorlink dashboard in their browser.
 
 The home installation uses both alert paths. See [gateway environment configuration](docs/pi-deployment.md#gateway-environment) for the Home Assistant webhook and ntfy topic settings. The local development profile disables both integrations.
 

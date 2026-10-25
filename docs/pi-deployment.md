@@ -164,7 +164,7 @@ CHIME_HOMEASSISTANT_WEBHOOK_URL=http://192.168.1.10:8123/api/webhook/your-privat
 
 Replace the addresses and private webhook ID with your own. If Home Assistant is not used, set `CHIME_PROVIDER=none` and omit its webhook URL. Keep the webhook ID out of git.
 
-The Home Assistant automation plays a chime on the home's configured smart speakers, alongside the doorbell's local chime. Household members subscribe to the same `NTFY_TOPIC` on ntfy.sh in their ntfy mobile app to receive alerts. Tapping a notification opens the Doorlink dashboard at `DASHBOARD_URL` in their mobile browser. Keep the topic random and private, and out of git.
+The Home Assistant automation plays a chime on the home's configured smart speakers, alongside the doorbell's local chime. Household members subscribe to the same `NTFY_TOPIC` on ntfy.sh in an ntfy app on their phone or computer to receive alerts. Tapping a notification opens the Doorlink dashboard at `DASHBOARD_URL` in their browser. Keep the topic random and private, and out of git.
 
 ## Firmware Configuration (`config.h`)
 

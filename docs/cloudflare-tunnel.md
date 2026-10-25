@@ -88,7 +88,7 @@ enrollment screen on its next page request.
 ## ntfy membership
 
 Doorlink's current `ntfy.sh` topic is still a shared, hard-to-guess topic. Device
-revocation in Doorlink does not remotely unsubscribe the ntfy mobile app. If
+revocation in Doorlink does not remotely unsubscribe anyone's ntfy app. If
 notification subscription must be revoked per person too, use authenticated
 ntfy users/topic ACLs (hosted or self-hosted) and manage those subscriptions
 separately. Never put a permanent Doorlink session token in an ntfy URL.
