@@ -12,7 +12,7 @@ Doorlink is a self-hosted smart doorbell built around a custom ESP32-S3 board an
 
 ## Demo
 
-https://github.com/user-attachments/assets/23e6535b-7ed3-42f9-a9fb-ad1b97e52d9b
+https://github.com/user-attachments/assets/69bbac34-c78c-457d-b82e-8ea92b961eb2
 
 Recorded at my door on 2026-10-24: phone video of the doorbell beside a screen recording of the dashboard, synced and uncut. Part 1 shows a button press, the photo arriving, the desktop alert, and the Home Assistant chime. Part 2 shows a visitor voice message and a Push to Talk reply played back at the door. Each part ends with step timings from the gateway logs.
 
