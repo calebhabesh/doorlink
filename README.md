@@ -10,6 +10,12 @@ Doorlink is a self-hosted smart doorbell built around a custom ESP32-S3 board an
   <em>See the <a href="#hardware-gallery">labeled front panel</a>.</em>
 </p>
 
+## Demo
+
+https://github.com/user-attachments/assets/23e6535b-7ed3-42f9-a9fb-ad1b97e52d9b
+
+Recorded at my door on 2026-10-24: phone video of the doorbell beside a screen recording of the dashboard, synced and uncut. Part 1 shows a button press, the photo arriving, the desktop alert, and the Home Assistant chime. Part 2 shows a visitor voice message and a Push to Talk reply played back at the door. Each part ends with step timings from the gateway logs.
+
 ## Prototype Status
 
 The assembled Rev C board is mounted at my door on battery power and in daily use. Each button press wakes the board from deep sleep, captures a QXGA image, uploads it over Wi-Fi, updates the dashboard, sends notifications, and returns to deep sleep. In the 30 days to 2026-10-24, the gateway stored a photo for all 27 presses, with a median of 2.9 s from the press alert reaching the gateway to the photo being stored. The single-cell battery has not been charged since installation: over the first four weeks and 97 presses it fell from roughly 78% to 46%, which projects to an average draw under 1 mA and about 12 weeks per charge. That is an estimate from an approximate starting reading and voltage-based percentages, not a measured current or an observed full-charge runtime. The microphone, speaker, and stored voice-reply path have been exercised on hardware. This is a working prototype, not a qualified outdoor product.
@@ -79,7 +85,7 @@ The board uses an ESP32-S3-WROOM-1-N16R8, OV5640 camera, ICS-43434 microphone, M
   <a href="docs/media/dashboard-sample.webp"><img src="docs/media/dashboard-sample.webp" alt="Doorlink dashboard showing synthetic session data and a generated doorbell-camera view" width="900"></a>
 </p>
 
-This preview uses synthetic session data and a generated doorbell-camera view. My actual dashboard is hosted on a subdomain with authenticated access. It is not shown here for privacy reasons.
+This preview uses synthetic session data and a generated doorbell-camera view. My actual dashboard is hosted on a subdomain with authenticated access. The [demo](#demo) shows it in presentation mode, which hides sessions from before the recording.
 
 ## Run Locally
 
