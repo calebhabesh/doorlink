@@ -50,21 +50,17 @@ The home installation uses both alert paths. See [gateway environment configurat
 
 | Rev A | Rev B | Rev C |
 | :---: | :---: | :---: |
-| [![KiCad 3D render of the Rev A board](docs/media/pcb-rev-a-3d.jpg)](docs/media/pcb-rev-a-3d.jpg) | [![KiCad 3D render of the Rev B board](docs/media/pcb-rev-b-3d.jpg)](docs/media/pcb-rev-b-3d.jpg) | [![KiCad 3D render of the Rev C board](docs/media/pcb-rev-c-3d.jpg)](docs/media/pcb-rev-c-3d.jpg) |
+| [![KiCad 3D render of the Rev A board](docs/media/pcb-rev-a-3d.png)](docs/media/pcb-rev-a-3d.png) | [![KiCad 3D render of the Rev B board](docs/media/pcb-rev-b-3d.png)](docs/media/pcb-rev-b-3d.png) | [![KiCad 3D render of the Rev C board](docs/media/pcb-rev-c-3d.png)](docs/media/pcb-rev-c-3d.png) |
 
-All three revisions were assembled by JLCPCB and tested before settling on Rev C. Rev A to Rev B was the largest change, adding substantially more parts. Rev B to Rev C fixed the camera connector orientation and made smaller optimizations. Images are KiCad 3D renders of each revision.
+All three revisions were assembled by JLCPCB and tested before settling on Rev C. Rev A to Rev B was the largest change, adding substantially more components. Rev B to Rev C fixed the camera connector orientation and made smaller optimizations. Images are KiCad 3D renders of each revision.
 
 | Rev C Schematic |
 | :---: |
 | [![Rev C Schematic](docs/media/schematic.png)](docs/media/schematic.png) |
 
-| PCB Copper Layers (F.Cu and B.Cu) | Rev C Board Before ESP32 and Microphone Soldering |
-| :---: | :---: |
-| <a href="docs/media/pcb-copper-layers.png"><img src="docs/media/pcb-copper-layers.png" alt="PCB Copper Layers (F.Cu and B.Cu)" height="380"></a> | <a href="docs/media/rev-c-before-esp32-microphone.jpg"><img src="docs/media/rev-c-before-esp32-microphone.jpg" alt="Rev C Board Before ESP32 and Microphone Soldering" height="380"></a> |
-
-| Front Lid Marked Out Before Cutting | Finished Front Panel |
-| :---: | :---: |
-| <a href="docs/media/front-lid-marked-out.jpg"><img src="docs/media/front-lid-marked-out.jpg" alt="Front ABS lid covered in masking tape with hand-drawn camera, PIR, button, LED, and speaker cutout positions" height="380"></a> | <a href="docs/media/enclosure-labeled.jpg"><img src="docs/media/enclosure-labeled.jpg" alt="Mounted doorbell with labels for the camera, motion sensor, status light, doorbell button, speaker grille, charge light, ABS enclosure, and hidden left-side microphone port" height="380"></a> |
+| Copper Layers (F.Cu and B.Cu) | Rev C Before ESP32 and Mic Soldering | Front Lid Marked Out | Finished Front Panel |
+| :---: | :---: | :---: | :---: |
+| <a href="docs/media/pcb-copper-layers.png"><img src="docs/media/pcb-copper-layers.png" alt="PCB Copper Layers (F.Cu and B.Cu)" width="416"></a> | <a href="docs/media/rev-c-before-esp32-microphone.jpg"><img src="docs/media/rev-c-before-esp32-microphone.jpg" alt="Rev C Board Before ESP32 and Microphone Soldering" width="525"></a> | <a href="docs/media/front-lid-marked-out.jpg"><img src="docs/media/front-lid-marked-out.jpg" alt="Front ABS lid covered in masking tape with hand-drawn camera, PIR, button, LED, and speaker cutout positions" width="476"></a> | <a href="docs/media/enclosure-labeled.jpg"><img src="docs/media/enclosure-labeled.jpg" alt="Mounted doorbell with labels for the camera, motion sensor, status light, doorbell button, speaker grille, charge light, ABS enclosure, and hidden left-side microphone port" width="873"></a> |
 
 | Bench Bring-Up | Populated PCB | Enclosure Wiring |
 | :---: | :---: | :---: |
