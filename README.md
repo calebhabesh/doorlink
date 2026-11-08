@@ -48,9 +48,15 @@ The home installation uses both alert paths. See [gateway environment configurat
 
 ## Hardware Gallery
 
-| KiCad Rev C Board | Rev C Schematic |
-| :---: | :---: |
-| [![KiCad Rev C Board](docs/media/pcb-3d-view.png)](docs/media/pcb-3d-view.png) | [![Rev C Schematic](docs/media/schematic.png)](docs/media/schematic.png) |
+| Rev A | Rev B | Rev C |
+| :---: | :---: | :---: |
+| [![KiCad 3D render of the Rev A board](docs/media/pcb-rev-a-3d.jpg)](docs/media/pcb-rev-a-3d.jpg) | [![KiCad 3D render of the Rev B board](docs/media/pcb-rev-b-3d.jpg)](docs/media/pcb-rev-b-3d.jpg) | [![KiCad 3D render of the Rev C board](docs/media/pcb-rev-c-3d.jpg)](docs/media/pcb-rev-c-3d.jpg) |
+
+All three revisions were assembled by JLCPCB and tested before settling on Rev C. Rev A to Rev B was the largest change, adding substantially more parts. Rev B to Rev C fixed the camera connector orientation and made smaller optimizations. Images are KiCad 3D renders of each revision.
+
+| Rev C Schematic |
+| :---: |
+| [![Rev C Schematic](docs/media/schematic.png)](docs/media/schematic.png) |
 
 | PCB Copper Layers (F.Cu and B.Cu) | Rev C Board Before ESP32 and Microphone Soldering |
 | :---: | :---: |
