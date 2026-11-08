@@ -52,7 +52,7 @@ The home installation uses both alert paths. See [gateway environment configurat
 | :---: | :---: | :---: |
 | [![KiCad 3D render of the Rev A board](docs/media/pcb-rev-a-3d.png)](docs/media/pcb-rev-a-3d.png) | [![KiCad 3D render of the Rev B board](docs/media/pcb-rev-b-3d.png)](docs/media/pcb-rev-b-3d.png) | [![KiCad 3D render of the Rev C board](docs/media/pcb-rev-c-3d.png)](docs/media/pcb-rev-c-3d.png) |
 
-All three revisions were assembled by JLCPCB and tested before settling on Rev C. Rev A to Rev B was the largest change, adding substantially more components. Rev B to Rev C fixed the camera connector orientation and made smaller optimizations. Images are KiCad 3D renders of each revision.
+All three revisions were assembled by JLCPCB and tested before settling on Rev C. Rev A to Rev B was the largest change, adding substantially more components. Rev B to Rev C corrected the mirrored pin mapping on the 24-pin camera FPC connector and made smaller optimizations. Images are KiCad 3D renders of each revision.
 
 | Rev C Schematic |
 | :---: |
