@@ -7,7 +7,7 @@ Doorlink is a self-hosted smart doorbell built around a custom ESP32-S3 board an
 <p align="center">
   <img src="docs/media/finished-enclosure.jpg" alt="Assembled Doorlink Prototype Mounted on a Wall" width="420">
   <br>
-  <em>See the <a href="#hardware-gallery">labeled front panel</a>.</em>
+  <em>See the <a href="#finished-front-panel">labeled front panel</a>.</em>
 </p>
 
 ## Demo
@@ -57,6 +57,8 @@ All three revisions were assembled by JLCPCB and tested before settling on Rev C
 | Rev C Schematic |
 | :---: |
 | [![Rev C Schematic](docs/media/schematic.png)](docs/media/schematic.png) |
+
+<a id="finished-front-panel"></a>
 
 | Copper Layers (F.Cu and B.Cu) | Rev C Before ESP32 and Mic Soldering | Front Lid Marked Out | Finished Front Panel |
 | :---: | :---: | :---: | :---: |
