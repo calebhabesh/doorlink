@@ -60,7 +60,7 @@ All three revisions were assembled by JLCPCB and tested before settling on Rev C
 
 <a id="finished-front-panel"></a>
 
-| Copper Layers (F.Cu and B.Cu) | Rev C Before ESP32 and Mic Soldering | Front Lid Marked Out | Finished Front Panel |
+| Copper Layers (F.Cu and B.Cu) | Rev C Before ESP32 and Mic Soldering | Front Lid Marked Out | Finished Front Panel (Labelled) |
 | :---: | :---: | :---: | :---: |
 | <a href="docs/media/pcb-copper-layers.png"><img src="docs/media/pcb-copper-layers.png" alt="PCB Copper Layers (F.Cu and B.Cu)" width="416"></a> | <a href="docs/media/rev-c-before-esp32-microphone.jpg"><img src="docs/media/rev-c-before-esp32-microphone.jpg" alt="Rev C Board Before ESP32 and Microphone Soldering" width="525"></a> | <a href="docs/media/front-lid-marked-out.jpg"><img src="docs/media/front-lid-marked-out.jpg" alt="Front ABS lid covered in masking tape with hand-drawn camera, PIR, button, LED, and speaker cutout positions" width="476"></a> | <a href="docs/media/enclosure-labeled.jpg"><img src="docs/media/enclosure-labeled.jpg" alt="Mounted doorbell with labels for the camera, motion sensor, status light, doorbell button, speaker grille, charge light, ABS enclosure, and hidden left-side microphone port" width="873"></a> |
 
