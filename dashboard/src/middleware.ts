@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 const DEVICE_COOKIE = 'doorlink_device';
+// Private household dashboard: keep every page, redirect and API response out of search engines.
+const ROBOTS = 'noindex, nofollow, noarchive';
 
 function gatewayUrl(path: string): URL {
   return new URL(path, process.env.GATEWAY_URL || 'http://127.0.0.1:8080');
@@ -59,6 +61,12 @@ function redirectWithCookieCleanup(request: NextRequest, destination: string): N
 }
 
 export async function middleware(request: NextRequest) {
+  const response = await route(request);
+  response.headers.set('X-Robots-Tag', ROBOTS);
+  return response;
+}
+
+async function route(request: NextRequest): Promise<NextResponse> {
   const path = request.nextUrl.pathname;
 
   if (path.startsWith('/api/')) {

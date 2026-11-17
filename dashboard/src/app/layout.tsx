@@ -20,6 +20,7 @@ export const metadata: Metadata = {
   },
   description: "Doorlink event dashboard",
   applicationName: "Doorlink",
+  robots: { index: false, follow: false },
   icons: {
     icon: "/icon.svg",
   },
