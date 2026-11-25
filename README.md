@@ -70,6 +70,10 @@ All three revisions were assembled by JLCPCB and tested before settling on Rev C
 
 The board uses an ESP32-S3-WROOM-1-N16R8, OV5640 camera, ICS-43434 microphone, MAX98357A amplifier, MCP73871 charger, and TPS63802 3.3 V regulator. The [PCB overview](pcb/README.md) links the KiCad source and exact Rev C manufacturing files.
 
+### Door Mounting
+
+The enclosure is attached to my apartment door with two pairs of white Command Large picture-hanging strips, arranged vertically on its back. 3M rates four pairs for 16 lb (7.2 kg), so two pairs work out to about 8 lb (3.6 kg). That is several times the doorbell's weight, and more than enough to hold it securely in daily use. The strips are removable, so there are no holes for building management to object to. The mount is not tamper-proof: someone determined enough could pull the doorbell off the door. 😅
+
 ## Explore the Project
 
 | Area | Contents |
